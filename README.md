@@ -1,7 +1,7 @@
 # vulkan-cpp
 
 Vulkan abstraction library using C++11 for memory, resource management and type and thread safety as well as system independency.
-The goal is to be able to quickly write Vulkan code that is readable and clearly states its purpose, instead of being overwhelmed by pointer arithmetics, memory alignment and the lowely black screen of death.
+The goal is to be able to quickly write Vulkan code that is readable and clearly states its purpose, instead of being overwhelmed by pointer arithmetics, memory alignment and the lovely "Vulkan/OpenGL" black screen of death.
 
 ### Resource management
 
@@ -41,7 +41,7 @@ will keep a reference to an object, where functions only using the argument for 
 as well as `std::reference_wrapper` (`std::ref`).
 
 ### Multithreading
-In the works. The idea is to cover the locking required according to the Vulkan specification, 2.4 Threading Behavior.
+In the works. The idea is to cover the locking required according to the Vulkan specification, 2.4 Threading Behavior.
 
 ### Android support.
 In the works. Waiting for the NDK :)
