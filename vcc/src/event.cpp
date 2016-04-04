@@ -30,10 +30,12 @@ VkResult status(event_type &event) {
 }
 
 void set(event_type &event) {
+	std::lock_guard<std::mutex> lock(internal::get_mutex(event));
 	VKCHECK(vkSetEvent(internal::get_instance(*internal::get_parent(event)), internal::get_instance(event)));
 }
 
 void reset(event_type &event) {
+	std::lock_guard<std::mutex> lock(internal::get_mutex(event));
 	VKCHECK(vkResetEvent(internal::get_instance(*internal::get_parent(event)), internal::get_instance(event)));
 }
 

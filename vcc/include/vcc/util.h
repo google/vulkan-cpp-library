@@ -66,6 +66,48 @@ std::vector<T> vector_from_variadic_movables(ValuesT &&...values) {
 
 VCC_LIBRARY void diagnostic_print(const char *filename, const char *function, int line, const char *fmt, ...);
 
+// TODO(gardell): Temporary fix for order-independent locking.
+// Boost provides an order-independent lock for iterators
+// but C++11 only for variadic arguments.
+// We need order-independent even for dynamic arguments.
+// std::vector for now as we require RandomAccessIterator.
+template<typename LockableT>
+void lock(std::vector<LockableT> &locks) {
+	switch (locks.size()) {
+	case 0:
+		break;
+	case 1:
+		locks.front().lock();
+		break;
+	case 2:
+		std::lock(locks[0], locks[1]);
+		break;
+	case 3:
+		std::lock(locks[0], locks[1], locks[2]);
+		break;
+	case 4:
+		std::lock(locks[0], locks[1], locks[2], locks[3]);
+		break;
+	case 5:
+		std::lock(locks[0], locks[1], locks[2], locks[3], locks[4]);
+		break;
+	case 6:
+		std::lock(locks[0], locks[1], locks[2], locks[3], locks[4], locks[5]);
+		break;
+	case 7:
+		std::lock(locks[0], locks[1], locks[2], locks[3], locks[4], locks[5],
+			locks[6]);
+		break;
+	case 8:
+		std::lock(locks[0], locks[1], locks[2], locks[3], locks[4], locks[5],
+			locks[6], locks[7]);
+		break;
+	default:
+		throw std::logic_error("Can't lock more than 8 Lockable while "
+			"guaranteeing order-independent locking! Feel free to add more cases.");
+	}
+}
+
 namespace internal {
 
 struct pass {

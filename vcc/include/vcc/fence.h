@@ -51,6 +51,9 @@ VCC_LIBRARY VkResult wait(device::device_type &device,
 		bool wait_all,
 		std::chrono::nanoseconds timeout);
 
+VCC_LIBRARY void reset(device::device_type &device,
+	const std::vector<type::supplier<fence_type>> &fences);
+
 }  // namespace fence
 }  // namespace vcc
 

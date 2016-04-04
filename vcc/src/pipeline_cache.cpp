@@ -50,6 +50,7 @@ void merge(const pipeline_cache_type &pipeline_cache,
 			[](const type::supplier<pipeline_cache_type> &cache){
 		return internal::get_instance(*cache);
 	});
+	std::lock_guard<std::mutex> lock(internal::get_mutex(pipeline_cache));
 	VKCHECK(vkMergePipelineCaches(internal::get_instance(*internal::get_parent(pipeline_cache)),
 		internal::get_instance(pipeline_cache), (uint32_t) caches.size(), &caches.front()));
 }

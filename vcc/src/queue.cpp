@@ -48,7 +48,7 @@ queue_type get_present_queue(const type::supplier<device::device_type> &device,
 	for (std::size_t i = 0; i < queue_props.size(); ++i) {
 		if (vcc::surface::physical_device_support(device::get_physical_device(*device),
 				surface, (uint32_t) i)) {
-			get_device_queue(type::supplier<device::device_type>(device),
+			return get_device_queue(type::supplier<device::device_type>(device),
 				(uint32_t) i, 0);
 		}
 	}
@@ -88,7 +88,7 @@ inline void submit(queue_type &queue,
 		const std::vector<wait_semaphore> &wait_semaphores,
 		const std::vector<type::supplier<command_buffer::command_buffer_type>> &command_buffers,
 		const std::vector<type::supplier<semaphore::semaphore_type>> &signal_semaphores,
-		VkFence fence) {
+		const fence::fence_type *fence) {
 	std::vector<VkCommandBuffer> converted_command_buffers;
 	converted_command_buffers.reserve(command_buffers.size());
 	for (const type::supplier<command_buffer::command_buffer_type> &command_buffer : command_buffers) {
@@ -111,12 +111,30 @@ inline void submit(queue_type &queue,
 	VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO, NULL };
 	submit.waitSemaphoreCount = (uint32_t)converted_wait_semaphores.size();
 	submit.pWaitSemaphores = converted_wait_semaphores.empty() ? NULL : &converted_wait_semaphores.front();
-	//submit.pWaitDstStageMask = wait_mask.empty() ? NULL : &wait_mask.front();
+	submit.pWaitDstStageMask = wait_mask.empty() ? NULL : wait_mask.data();
 	submit.commandBufferCount = (uint32_t)converted_command_buffers.size();
 	submit.pCommandBuffers = converted_command_buffers.data();
 	submit.signalSemaphoreCount = (uint32_t)converted_signal_semaphores.size();
 	submit.pSignalSemaphores = converted_signal_semaphores.empty() ? NULL : &converted_signal_semaphores.front();
-	VKCHECK(vkQueueSubmit(internal::get_instance(queue), 1, &submit, fence));
+	std::vector<std::unique_lock<std::mutex>> locks;
+	locks.reserve(wait_semaphores.size() + signal_semaphores.size());
+	for (const wait_semaphore &semaphore : wait_semaphores) {
+		locks.emplace_back(internal::get_mutex(*semaphore.semaphore), std::defer_lock);
+	}
+	for (const type::supplier<semaphore::semaphore_type> &semaphore : signal_semaphores) {
+		locks.emplace_back(internal::get_mutex(*semaphore), std::defer_lock);
+	}
+	util::lock(locks);
+	if (fence) {
+		std::lock(internal::get_mutex(queue), internal::get_mutex(*fence));
+		std::lock_guard<std::mutex> queue_lock(internal::get_mutex(queue), std::adopt_lock);
+		std::lock_guard<std::mutex> fence_lock(internal::get_mutex(*fence), std::adopt_lock);
+		VKCHECK(vkQueueSubmit(internal::get_instance(queue), 1, &submit,
+			internal::get_instance(*fence)));
+	} else {
+		std::lock_guard<std::mutex> queue_lock(internal::get_mutex(queue));
+		VKCHECK(vkQueueSubmit(internal::get_instance(queue), 1, &submit, VK_NULL_HANDLE));
+	}
 }
 
 void submit(queue_type &queue,
@@ -124,27 +142,34 @@ void submit(queue_type &queue,
 		const std::vector<type::supplier<command_buffer::command_buffer_type>> &command_buffers,
 		const std::vector<type::supplier<semaphore::semaphore_type>> &signal_semaphores,
 		const fence::fence_type &fence) {
-	submit(queue, wait_semaphores, command_buffers, signal_semaphores, internal::get_instance(fence));
+	submit(queue, wait_semaphores, command_buffers, signal_semaphores, &fence);
 }
 
 void submit(queue_type &queue,
 	const std::vector<wait_semaphore> &wait_semaphores,
 	const std::vector<type::supplier<command_buffer::command_buffer_type>> &command_buffers,
 	const std::vector<type::supplier<semaphore::semaphore_type>> &signal_semaphores) {
-	submit(queue, wait_semaphores, command_buffers, signal_semaphores, VK_NULL_HANDLE);
+	submit(queue, wait_semaphores, command_buffers, signal_semaphores, nullptr);
 }
 
 void wait_idle(queue_type &queue) {
 	VKCHECK(vkQueueWaitIdle(internal::get_instance(queue)));
 }
 
-VkResult present(queue_type &queue, const std::vector<type::supplier<semaphore::semaphore_type>> &semaphores, const std::vector<type::supplier<swapchain::swapchain_type>> &swapchains, const std::vector<uint32_t> &image_indices) {
+VkResult present(queue_type &queue,
+		const std::vector<type::supplier<semaphore::semaphore_type>> &semaphores,
+		const std::vector<type::supplier<swapchain::swapchain_type>> &swapchains,
+		const std::vector<uint32_t> &image_indices) {
 	VkPresentInfoKHR info = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, NULL};
 	info.waitSemaphoreCount = (uint32_t) semaphores.size();
+	std::vector<std::unique_lock<std::mutex>> locks;
+	locks.reserve(1 + semaphores.size() + swapchains.size());
+	locks.emplace_back(internal::get_mutex(queue), std::defer_lock);
 	std::vector<VkSemaphore> converted_semaphores;
 	converted_semaphores.reserve(semaphores.size());
 	for (const type::supplier<semaphore::semaphore_type> &semaphore : semaphores) {
 		converted_semaphores.push_back(internal::get_instance(*semaphore));
+		locks.emplace_back(internal::get_mutex(*semaphore), std::defer_lock);
 	}
 	info.pWaitSemaphores = semaphores.empty() ? NULL : &converted_semaphores.front();
 	info.swapchainCount = (uint32_t) swapchains.size();
@@ -152,10 +177,12 @@ VkResult present(queue_type &queue, const std::vector<type::supplier<semaphore::
 	converted_swapchains.reserve(swapchains.size());
 	for (const type::supplier<swapchain::swapchain_type> &swapchain : swapchains) {
 		converted_swapchains.push_back(internal::get_instance(*swapchain));
+		locks.emplace_back(internal::get_mutex(*swapchain), std::defer_lock);
 	}
 	info.pSwapchains = swapchains.empty() ? NULL : &converted_swapchains.front();
 	info.pImageIndices = image_indices.empty() ? NULL : &image_indices.front();
 	info.pResults = NULL;
+	util::lock(locks);
 	return vkQueuePresentKHR(internal::get_instance(queue), &info);
 }
 

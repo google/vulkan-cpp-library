@@ -134,6 +134,8 @@ public:
 	serialize_type() = default;
 	serialize_type(const serialize_type&) = delete;
 	serialize_type(serialize_type&&) = default;
+	serialize_type &operator=(const serialize_type&) = delete;
+	serialize_type &operator=(serialize_type&&) = default;
 
 	template<typename... T>
 	serialize_type(memory_layout layout, const supplier<view_type<T>>&... views)

@@ -26,7 +26,6 @@ namespace swapchain {
 
 swapchain_type create(const type::supplier<device::device_type> &device, const create_info_type &create_info) {
 	VkSwapchainCreateInfoKHR create = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, NULL, 0 };
-	create.surface = internal::get_instance(*create_info.surface);
 	create.minImageCount = create_info.minImageCount;
 	create.imageFormat = create_info.imageFormat;
 	create.imageColorSpace = create_info.imageColorSpace;
@@ -39,9 +38,27 @@ swapchain_type create(const type::supplier<device::device_type> &device, const c
 	create.compositeAlpha = (VkCompositeAlphaFlagBitsKHR) create_info.compositeAlpha;
 	create.presentMode = create_info.presentMode;
 	create.clipped = create_info.clipped;
-	create.oldSwapchain = create_info.oldSwapchain ? internal::get_instance(*create_info.oldSwapchain) : VK_NULL_HANDLE;
+	create.oldSwapchain = create_info.oldSwapchain
+		? internal::get_instance(*create_info.oldSwapchain) : VK_NULL_HANDLE;
 	VkSwapchainKHR swapchain;
-	VKCHECK(vkCreateSwapchainKHR(internal::get_instance(*device), &create, NULL, &swapchain));
+	{
+		if (create_info.oldSwapchain) {
+			std::lock(internal::get_mutex(*create_info.surface), internal::get_mutex(*create_info.oldSwapchain));
+			std::lock_guard<std::mutex> surface_lock(
+				internal::get_mutex(*create_info.surface), std::adopt_lock);
+			std::lock_guard<std::mutex> old_swapchain_lock(
+				internal::get_mutex(*create_info.oldSwapchain), std::adopt_lock);
+			create.surface = internal::get_instance(*create_info.surface);
+			VKCHECK(vkCreateSwapchainKHR(internal::get_instance(*device), &create,
+				NULL, &swapchain));
+		} else {
+			std::lock_guard<std::mutex> surface_lock(
+				internal::get_mutex(*create_info.surface));
+			create.surface = internal::get_instance(*create_info.surface);
+			VKCHECK(vkCreateSwapchainKHR(internal::get_instance(*device), &create,
+				NULL, &swapchain));
+		}
+	}
 	return swapchain_type(swapchain, device, create_info.imageFormat);
 }
 
@@ -65,6 +82,10 @@ std::tuple<VkResult, uint32_t> acquire_next_image(swapchain_type &swapchain,
 		const semaphore::semaphore_type &semaphore,
 		const fence::fence_type &fence) {
 	uint32_t image_index;
+	std::lock(internal::get_mutex(swapchain), internal::get_mutex(semaphore));
+	std::lock_guard<std::mutex> swapchain_lock(internal::get_mutex(swapchain), std::adopt_lock);
+	std::lock_guard<std::mutex> semaphore_lock(internal::get_mutex(semaphore), std::adopt_lock);
+	std::lock_guard<std::mutex> fence_lock(internal::get_mutex(fence), std::adopt_lock);
 	const VkResult result(vkAcquireNextImageKHR(
 		internal::get_instance(*internal::get_parent(swapchain)),
 		internal::get_instance(swapchain), timeout.count(),

@@ -122,7 +122,7 @@ private:
 		: array(std::forward<container_type>(std::get<0>(copy))), revision(std::get<1>(copy)) {}
 
 	std::tuple<container_type, revision_type> internal_copy() const {
-		std::unique_lock<std::mutex> lock(this->lock);
+		std::lock_guard<std::mutex> lock(this->lock);
 		return std::make_tuple(array, revision);
 	}
 

@@ -42,10 +42,13 @@ VkMemoryRequirements get_memory_requirements(const image::image_type &image) {
 
 void bind(const type::supplier<memory_type> &memory, VkDeviceSize offset,
 		image::image_type &image) {
-	VKCHECK(vkBindImageMemory(
-		vcc::internal::get_instance(*vcc::internal::get_parent(image)),
-		vcc::internal::get_instance(image),
-		vcc::internal::get_instance(*memory), offset));
+	{
+		std::lock_guard<std::mutex> lock(vcc::internal::get_mutex(image));
+		VKCHECK(vkBindImageMemory(
+			vcc::internal::get_instance(*vcc::internal::get_parent(image)),
+			vcc::internal::get_instance(image),
+			vcc::internal::get_instance(*memory), offset));
+	}
 	vcc::internal::get_memory(image) = memory;
 	vcc::internal::get_offset(image) = offset;
 }
@@ -61,10 +64,13 @@ VkMemoryRequirements get_memory_requirements(
 
 void bind(const type::supplier<memory_type> &memory, VkDeviceSize offset,
 		buffer::buffer_type &buffer) {
-	VKCHECK(vkBindBufferMemory(
-		vcc::internal::get_instance(*vcc::internal::get_parent(buffer)),
-		vcc::internal::get_instance(buffer),
-		vcc::internal::get_instance(*memory), offset));
+	{
+		std::lock_guard<std::mutex> lock(vcc::internal::get_mutex(buffer));
+		VKCHECK(vkBindBufferMemory(
+			vcc::internal::get_instance(*vcc::internal::get_parent(buffer)),
+			vcc::internal::get_instance(buffer),
+			vcc::internal::get_instance(*memory), offset));
+	}
 	vcc::internal::get_memory(buffer) = memory;
 	vcc::internal::get_offset(buffer) = offset;
 }
@@ -73,6 +79,7 @@ void bind(const type::supplier<memory_type> &memory, VkDeviceSize offset,
 
 map_type::~map_type() {
 	if (memory) {
+		std::lock_guard<std::mutex> lock(vcc::internal::get_mutex(*memory));
 		vkUnmapMemory(
 			vcc::internal::get_instance(*vcc::internal::get_parent(*memory)),
 			vcc::internal::get_instance(*memory));
@@ -83,9 +90,12 @@ map_type::~map_type() {
 map_type map(const type::supplier<memory_type> &memory, VkDeviceSize offset,
 		VkDeviceSize size) {
 	map_type mapped(memory);
-	VKCHECK(vkMapMemory(
-		vcc::internal::get_instance(*vcc::internal::get_parent(*mapped.memory)),
-		vcc::internal::get_instance(*mapped.memory), offset, size, 0, &mapped.data));
+	{
+		std::lock_guard<std::mutex> lock(vcc::internal::get_mutex(*memory));
+		VKCHECK(vkMapMemory(
+			vcc::internal::get_instance(*vcc::internal::get_parent(*mapped.memory)),
+			vcc::internal::get_instance(*mapped.memory), offset, size, 0, &mapped.data));
+	}
 	return std::move(mapped);
 }
 

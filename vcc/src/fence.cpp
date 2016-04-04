@@ -45,5 +45,22 @@ VkResult wait(device::device_type &device,
 	return result;
 }
 
+void reset(device::device_type &device,
+	const std::vector<type::supplier<fence_type>> &fences) {
+	std::vector<VkFence> converted_fences;
+	converted_fences.reserve(fences.size());
+	for (const type::supplier<fence_type> &fence : fences) {
+		converted_fences.push_back(internal::get_instance(*fence));
+	}
+	std::vector<std::unique_lock<std::mutex>> locks;
+	locks.reserve(fences.size());
+	for (const type::supplier<fence_type> &fence : fences) {
+		locks.emplace_back(internal::get_mutex(*fence), std::defer_lock);
+	}
+	util::lock(locks);
+	VKCHECK(vkResetFences(internal::get_instance(device), uint32_t(fences.size()),
+		converted_fences.data()));
+}
+
 }  // namespace fence
 }  // namespace vcc

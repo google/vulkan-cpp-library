@@ -324,13 +324,17 @@ std::vector<command_buffer_type> allocate(
 		const type::supplier<device::device_type> &device,
 		const type::supplier<command_pool::command_pool_type> &command_pool,
 		VkCommandBufferLevel level, uint32_t commandBufferCount) {
+	std::vector<VkCommandBuffer> buffers(commandBufferCount);
 	VkCommandBufferAllocateInfo info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, NULL};
-	info.commandPool = vcc::internal::get_instance(*command_pool);
 	info.level = level;
 	info.commandBufferCount = commandBufferCount;
-	std::vector<VkCommandBuffer> buffers(commandBufferCount);
-	VKCHECK(vkAllocateCommandBuffers(vcc::internal::get_instance(*device), &info,
-		buffers.data()));
+	{
+		std::lock_guard<std::mutex> command_pool_lock(
+			vcc::internal::get_mutex(*command_pool));
+		info.commandPool = vcc::internal::get_instance(*command_pool);
+		VKCHECK(vkAllocateCommandBuffers(vcc::internal::get_instance(*device),
+			&info, buffers.data()));
+	}
 	std::vector<command_buffer_type> command_buffers;
 	command_buffers.reserve(commandBufferCount);
 	for (VkCommandBuffer buffer : buffers) {
@@ -345,7 +349,8 @@ begin_type::~begin_type() {
 
 begin_type::begin_type(
 	const type::supplier<command_buffer_type> &command_buffer)
-	: command_buffer(command_buffer) {}
+	: command_buffer(command_buffer),
+	  command_buffer_lock(vcc::internal::get_mutex(*command_buffer)) {}
 
 begin_type begin(const type::supplier<command_buffer_type> &command_buffer,
 	VkCommandBufferUsageFlags flags,

@@ -73,7 +73,7 @@ struct render_thread {
 	}
 
 	void post(callback_type &&callback) {
-		std::unique_lock<std::mutex> lock(tasks_mutex);
+		std::lock_guard<std::mutex> lock(tasks_mutex);
 		tasks.push_back(std::forward<callback_type>(callback));
 	}
 
@@ -178,24 +178,22 @@ struct window_data_type {
 #elif defined(__ANDROID__)
 			android_app* state,
 #endif // __ANDROID__
-			type::supplier<instance::instance_type> &&instance, VkExtent2D extent,
-			resize_callback_type resize_callback, draw_callback_type draw_callback,
-			type::supplier<device::device_type> &&device, initialize_callback_type initialize_callback,
-			queue_callback_type queue_callback,
-			const input_callbacks_type &input_callbacks) :
+			const type::supplier<instance::instance_type> &instance,
+			const type::supplier<queue::queue_type> &graphics_queue,
+			VkExtent2D extent,
+			const type::supplier<device::device_type> &device) :
 #ifdef WIN32
 				connection(hinstance),
 #elif defined(__ANDROID__)
 				state(state),
 #endif // WIN32
-				instance(std::forward<type::supplier<instance::instance_type>>(instance)),
+				instance(instance),
 				extent(extent),
 				resize_callback(resize_callback),
 				draw_callback(draw_callback),
-				device(std::forward<type::supplier<device::device_type>>(device)),
-				initialize_callback(initialize_callback),
-				queue_callback(queue_callback),
+				device(device),
 				input_callbacks(input_callbacks),
+				graphics_queue(graphics_queue),
 				render_thread([this]() {draw(); }) {}
 
 	void draw();
@@ -212,10 +210,8 @@ struct window_data_type {
 	draw_callback_type draw_callback;
 
 	type::supplier<device::device_type> device;
-	initialize_callback_type initialize_callback;
-	queue_callback_type queue_callback;
 	input_callbacks_type input_callbacks;
-	queue::queue_type graphics_queue;
+	type::supplier<queue::queue_type> graphics_queue;
 	queue::queue_type present_queue;
 	VkFormat format;
 	VkColorSpaceKHR color_space;
@@ -237,21 +233,25 @@ struct window_type {
 	std::unique_ptr<internal::window_data_type> data;
 };
 
-// queue_callback is called within the scope of this function. Return a graphics and a present capable queue (can be the same queue).
-// The window will use the present queue to present the surface images. Before calling the draw_callback, it will make sure the
-// surface images are ready for usage by the graphics queue.
+inline VkFormat get_format(const window_type &window) {
+	return window.data->format;
+}
+
 VCC_LIBRARY window_type create(
 #ifdef _WIN32
 		HINSTANCE hinstance,
 #elif defined(__ANDROID__)
 		android_app* state,
 #endif // __ANDROID__
-		type::supplier<instance::instance_type> &&instance, type::supplier<device::device_type> &&device,
-	VkExtent2D extent, VkFormat format, const std::string &title,
-	const initialize_callback_type &initialize_callback, const queue_callback_type &queue_callback,
-	const resize_callback_type &resize_callback, const draw_callback_type &draw_callback, const input_callbacks_type &input_callbacks = input_callbacks_type());
+	const type::supplier<instance::instance_type> &instance,
+	const type::supplier<device::device_type> &device,
+	const type::supplier<queue::queue_type> &graphics_queue,
+	VkExtent2D extent, VkFormat format, const std::string &title);
 
-VCC_LIBRARY int run(window_type &window);
+VCC_LIBRARY int run(window_type &window,
+	const resize_callback_type &resize_callback,
+	const draw_callback_type &draw_callback,
+	const input_callbacks_type &input_callbacks = input_callbacks_type());
 
 }  // namespace window
 }  // namespace vcc

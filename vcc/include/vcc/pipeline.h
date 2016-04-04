@@ -69,10 +69,42 @@ struct tessellation_state {
 	uint32_t patchControlPoints;
 };
 
-struct viewport_state {
+struct viewport_state_type {
+	// Either viewport_count = viewports.size
+	// or viewports.empty
+	// which only works if viewports are a dynamic state.
+	uint32_t viewport_count;
 	std::vector<VkViewport> viewports;
+	// Either scissor_count = scissors.size
+	// or scissors.empty
+	// which only works if viewports are a dynamic state.
+	uint32_t scissor_count;
 	std::vector<VkRect2D> scissors;
 };
+
+inline viewport_state_type viewport_state(uint32_t viewport_count, uint32_t scissor_count) {
+	return viewport_state_type{ viewport_count, {}, scissor_count };
+}
+
+inline viewport_state_type viewport_state(
+		const std::vector<VkViewport> &viewports,
+		const std::vector<VkRect2D> &scissors) {
+	return viewport_state_type{ uint32_t(viewports.size()), viewports,
+		uint32_t(scissors.size()), scissors };
+}
+
+inline viewport_state_type viewport_state(
+	const std::vector<VkViewport> &viewports, uint32_t scissor_count) {
+	return viewport_state_type{ uint32_t(viewports.size()), viewports,
+		scissor_count };
+}
+
+inline viewport_state_type viewport_state(
+	uint32_t viewport_count,
+	const std::vector<VkRect2D> &scissors) {
+	return viewport_state_type{ viewport_count, {}, uint32_t(scissors.size()),
+		scissors };
+}
 
 struct rasterization_state {
 	VkBool32 depthClampEnable;
@@ -122,7 +154,7 @@ struct pipeline_type
 		const vertex_input_state &vertexInputState,
 		const input_assembly_state &inputAssemblyState,
 		const tessellation_state *tessellationState,
-		const viewport_state &viewportState,
+		const viewport_state_type &viewportState,
 		const rasterization_state &rasterizationState,
 		const multisample_state &multisampleState,
 		const depth_stencil_state &depthStencilState,
@@ -173,7 +205,7 @@ VCC_LIBRARY pipeline_type create_graphics(const type::supplier<device::device_ty
 	const vertex_input_state &vertexInputState,
 	const input_assembly_state &inputAssemblyState,
 	const tessellation_state &tessellationState,
-	const viewport_state &viewportState,
+	const viewport_state_type &viewportState,
 	const rasterization_state &rasterizationState,
 	const multisample_state &multisampleState,
 	const depth_stencil_state &depthStencilState,
@@ -191,7 +223,7 @@ VCC_LIBRARY pipeline_type create_graphics(const type::supplier<device::device_ty
 	const std::vector<shader_stage_type> &stages,
 	const vertex_input_state &vertexInputState,
 	const input_assembly_state &inputAssemblyState,
-	const viewport_state &viewportState,
+	const viewport_state_type &viewportState,
 	const rasterization_state &rasterizationState,
 	const multisample_state &multisampleState,
 	const depth_stencil_state &depthStencilState,

@@ -163,15 +163,15 @@ void window_data_type::draw() {
 	vcc::command_buffer::command_buffer_type command_buffer(std::move(vcc::command_buffer::allocate(device, std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 	vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0, vcc::command_buffer::pipeline_barrier{ VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
 		{ vcc::command_buffer::image_memory_barrier{ 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		queue::get_family_index(present_queue), queue::get_family_index(graphics_queue),
+		queue::get_family_index(present_queue), queue::get_family_index(*graphics_queue),
 		std::ref(get_image(swapchain_images[current_buffer])), { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } } } });
-	vcc::queue::submit(graphics_queue, {}, { std::ref(command_buffer) }, {});
+	vcc::queue::submit(*graphics_queue, {}, { std::ref(command_buffer) }, {});
 
 	draw_callback(current_buffer);
 
 	vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0, vcc::command_buffer::pipeline_barrier{ VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
 		{ vcc::command_buffer::image_memory_barrier{ 0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		queue::get_family_index(graphics_queue), queue::get_family_index(present_queue),
+		queue::get_family_index(*graphics_queue), queue::get_family_index(present_queue),
 		std::ref(get_image(swapchain_images[current_buffer])), { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } } } });
 	vcc::queue::submit(present_queue, { vcc::queue::wait_semaphore{ std::ref(presentCompleteSemaphore) } }, { std::ref(command_buffer) }, {});
 
@@ -214,31 +214,12 @@ void initialize(internal::window_data_type &data,
 	data.window = window;
 #endif // _WIN32
 
-	std::tie(data.graphics_queue, data.present_queue) = data.queue_callback(data.surface);
+	data.present_queue = queue::get_present_queue(data.device, data.surface);
 
-	const VkPhysicalDevice physical_device(device::get_physical_device(*data.device));
-	const std::vector<VkQueueFamilyProperties> queue_props(physical_device::queue_famility_properties(physical_device));
-	assert(!queue_props.empty());
-
-	uint32_t presentQueueNodeIndex = UINT_MAX;
-	if (vcc::surface::physical_device_support(physical_device, data.surface, queue::get_family_index(data.graphics_queue))) {
-		presentQueueNodeIndex = queue::get_family_index(data.graphics_queue);
-	}
-	else {
-		for (uint32_t i = 0; i < queue_props.size(); i++) {
-			if (vcc::surface::physical_device_support(physical_device, data.surface, i)) {
-				presentQueueNodeIndex = i;
-				break;
-			}
-		}
-		assert(presentQueueNodeIndex != UINT_MAX);
-	}
-
-	// TODO(gardell): Use family_index of present_queue and delete presentQueueNodeIndex.
-	// Also, create cmd_pool for both graphics and present.
-	data.cmd_pool = vcc::command_pool::create(type::supplier<device::device_type>(data.device), 0, presentQueueNodeIndex);
+	data.cmd_pool = vcc::command_pool::create(type::supplier<device::device_type>(data.device), 0, vcc::queue::get_family_index(data.present_queue));
 
 	// Get the list of VkFormat's that are supported:
+	const VkPhysicalDevice physical_device(device::get_physical_device(*data.device));
 	const std::vector<VkSurfaceFormatKHR> surface_formats(vcc::surface::physical_device_formats(physical_device, data.surface));
 	// If the format list includes just one entry of VK_FORMAT_UNDEFINED,
 	// the surface has no preferred format.  Otherwise, at least one
@@ -247,8 +228,6 @@ void initialize(internal::window_data_type &data,
 	assert(!surface_formats.empty());
 	data.format = surface_formats.front().format == VK_FORMAT_UNDEFINED ? VK_FORMAT_B8G8R8A8_UNORM : surface_formats.front().format;
 	data.color_space = surface_formats.front().colorSpace;
-
-	data.initialize_callback(data.format);
 }
 
 #ifdef _WIN32
@@ -380,37 +359,34 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
 
 window_type create(
 #ifdef _WIN32
-		HINSTANCE hInstance,
+	HINSTANCE hinstance,
 #elif defined(__ANDROID__)
-		android_app* state,
+	android_app* state,
 #endif // __ANDROID__
-		type::supplier<instance::instance_type> &&instance, type::supplier<device::device_type> &&device,
-	VkExtent2D extent, VkFormat format, const std::string &title, const initialize_callback_type &initialize_callback,
-	const queue_callback_type &queue_callback, const resize_callback_type &resize_callback, const draw_callback_type &draw_callback,
-	const input_callbacks_type &input_callbacks) {
+	const type::supplier<instance::instance_type> &instance,
+	const type::supplier<device::device_type> &device,
+	const type::supplier<queue::queue_type> &graphics_queue,
+	VkExtent2D extent, VkFormat format, const std::string &title) {
 
 	std::unique_ptr<internal::window_data_type> data(new internal::window_data_type(
 #ifdef _WIN32
-		hInstance,
+		hinstance,
 #elif defined(__ANDROID__)
 		state,
 #endif // _WIN32
-		type::supplier<instance::instance_type>(instance), extent,
-		resize_callback, draw_callback,
-		std::forward<type::supplier<device::device_type>>(device),
-		initialize_callback, queue_callback, input_callbacks));
+		instance,  graphics_queue, extent, device));
 
 #ifdef _WIN32
 	WNDCLASSEX  win_class;
 	win_class.cbSize = sizeof(WNDCLASSEX);
 
-	if (!GetClassInfoEx(hInstance, class_name, &win_class)) {
+	if (!GetClassInfoEx(hinstance, class_name, &win_class)) {
 		// Initialize the window class structure:
 		win_class.style = CS_HREDRAW | CS_VREDRAW;
 		win_class.lpfnWndProc = WndProc;
 		win_class.cbClsExtra = 0;
 		win_class.cbWndExtra = 0;
-		win_class.hInstance = hInstance; // hInstance
+		win_class.hInstance = hinstance; // hInstance
 		win_class.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 		win_class.hCursor = LoadCursor(NULL, IDC_ARROW);
 		win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
@@ -428,7 +404,7 @@ window_type create(
 	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 	if (!CreateWindowEx(0, class_name, title.c_str(),
 		WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_SYSMENU,
-		100, 100, wr.right - wr.left, wr.bottom - wr.top, NULL, NULL, hInstance, data.get())) {
+		100, 100, wr.right - wr.left, wr.bottom - wr.top, NULL, NULL, hinstance, data.get())) {
 		throw vcc::vcc_exception("CreateWindowEx failed");
 	}
 #elif defined(__ANDROID__)
@@ -440,7 +416,12 @@ window_type create(
 	return window_type{std::move(data)};
 }
 
-int run(window_type &window) {
+int run(window_type &window, const resize_callback_type &resize_callback,
+	const draw_callback_type &draw_callback,
+	const input_callbacks_type &input_callbacks) {
+	window.data->resize_callback = resize_callback;
+	window.data->draw_callback = draw_callback;
+	window.data->input_callbacks = input_callbacks;
 #ifdef _WIN32
 	MSG msg;
 	for (;;) {

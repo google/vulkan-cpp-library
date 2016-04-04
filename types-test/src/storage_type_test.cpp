@@ -71,12 +71,12 @@ TEST(ArrayTypeTest, Mutate) {
 	type::t_array<float> array({1, 2, 3});
 	{
 		type::mutable_t_array<float> mutable_array(type::mutate(array));
-		std::iota(mutable_array.begin(), mutable_array.end(), 4);
+		std::iota(mutable_array.begin(), mutable_array.end(), 4.f);
 		for (std::size_t i = 0; i < 3; ++i)
-			EXPECT_EQ(4 + i, mutable_array[i]);
+			EXPECT_EQ(float(4 + i), mutable_array[i]);
 	}
 	for (std::size_t i = 0; i < 3; ++i)
-		EXPECT_EQ(4 + i, array[i]);
+		EXPECT_EQ(float(4 + i), array[i]);
 }
 
 TEST(ArrayTypeTest, MutateMove) {

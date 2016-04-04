@@ -29,6 +29,34 @@ struct queue_type;
 }  // namespace queue
 
 namespace data {
+namespace internal {
+
+template<typename T>
+auto get_mutex(const T &value)->decltype(value.mutex)& {
+	return value.mutex;
+}
+
+template<typename T>
+auto get_buffer(T &value)->decltype(value.buffer)& {
+	return value.buffer;
+}
+
+template<typename T>
+auto get_serialize(T &value)->decltype(value.serialize)& {
+	return value.serialize;
+}
+
+template<typename T>
+auto get_buffer(const T &value)->const decltype(value.buffer)& {
+	return value.buffer;
+}
+
+template<typename T>
+auto get_serialize(const T &value)->const decltype(value.serialize)& {
+	return value.serialize;
+}
+
+}  // namespace internal
 
 /**
  * data::buffer_type takes a set of data::array_view_type, for example data::vec3_array,
@@ -51,8 +79,33 @@ class buffer_type {
 	friend VCC_LIBRARY void flush(buffer_type &buffer);
 	friend VCC_LIBRARY void flush(queue::queue_type &queue,
 		buffer_type &buffer);
+	template<typename U>
+	friend auto internal::get_mutex(const U &value)->decltype(value.mutex)&;
+	template<typename U>
+	friend auto internal::get_buffer(U &value)->decltype(value.buffer)&;
+	template<typename U>
+	friend auto internal::get_serialize(U &value)->decltype(value.serialize)&;
+	template<typename U>
+	friend auto internal::get_buffer(const U &value)->const decltype(value.buffer)&;
+	template<typename U>
+	friend auto internal::get_serialize(const U &value)->const decltype(value.serialize)&;
 public:
 	buffer_type() = default;
+	buffer_type(const buffer_type&) = delete;
+	buffer_type(buffer_type &&copy) {
+		std::unique_lock<std::mutex> lock(copy.mutex);
+		serialize = std::move(copy.serialize);
+		buffer = std::move(copy.buffer);
+	}
+	buffer_type &operator=(const buffer_type&) = delete;
+	buffer_type &operator=(buffer_type &&copy) {
+		std::lock(mutex, copy.mutex);
+		std::unique_lock<std::mutex> lock(mutex, std::adopt_lock);
+		std::unique_lock<std::mutex> copy_lock(copy.mutex, std::adopt_lock);
+		serialize = std::move(copy.serialize);
+		buffer = std::move(copy.buffer);
+		return *this;
+	}
 
 private:
 	template<typename... StorageType>
@@ -68,9 +121,10 @@ private:
 		  buffer(std::forward<buffer::buffer_type>(
 			  buffer::create(device, flags, type::size(serialize), usage,
 				  sharingMode, queueFamilyIndices))) {}
-public:// TODO(gardell): Make private, add internal::get_buffer accessor.
+
 	type::serialize_type serialize;
 	buffer::buffer_type buffer;
+	mutable std::mutex mutex;
 };
 
 /*
@@ -211,7 +265,7 @@ inline buffer_memory_barrier_type buffer_memory_barrier(
 	return buffer_memory_barrier_type{
 		srcAccessMask, dstAccessMask,
 		srcQueueFamilyIndex, dstQueueFamilyIndex,
-		std::ref(buffer->buffer), offset, size
+		std::ref(data::internal::get_buffer(*buffer)), offset, size
 	};
 }
 

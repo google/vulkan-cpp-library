@@ -24,17 +24,24 @@ namespace data {
 
 void flush(buffer_type &buffer) {
 	if (type::dirty(buffer.serialize)) {
-		const memory::map_type map(memory::map(vcc::internal::get_memory(buffer.buffer), vcc::internal::get_offset(buffer.buffer), type::size(buffer.serialize)));
-		type::flush(buffer.serialize, (uint8_t *)map.data + vcc::internal::get_offset(buffer.buffer));
+		std::unique_lock<std::mutex> lock(buffer.mutex);
+		if (type::dirty(buffer.serialize)) {
+			const memory::map_type map(memory::map(
+				vcc::internal::get_memory(buffer.buffer),
+				vcc::internal::get_offset(buffer.buffer),
+				type::size(buffer.serialize)));
+			type::flush(buffer.serialize,
+				(uint8_t *)map.data + vcc::internal::get_offset(buffer.buffer));
+		}
 	}
 }
 
 void flush(queue::queue_type &queue, buffer_type &buffer) {
 	flush(buffer);
 	command_pool::command_pool_type command_pool(command_pool::create(
-		internal::get_parent(queue), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, queue::get_family_index(queue)));
+		vcc::internal::get_parent(queue), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, queue::get_family_index(queue)));
 	command_buffer::command_buffer_type cmd(std::move(
-		command_buffer::allocate(internal::get_parent(queue),
+		command_buffer::allocate(vcc::internal::get_parent(queue),
 			std::ref(command_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1)
 		.front()));
 
@@ -52,9 +59,9 @@ void flush(queue::queue_type &queue, buffer_type &buffer) {
 			{}
 		});
 	// Must block until our command finish executing.
-	fence::fence_type fence(vcc::fence::create(internal::get_parent(queue)));
+	fence::fence_type fence(vcc::fence::create(vcc::internal::get_parent(queue)));
 	queue::submit(queue, {}, { std::move(cmd) }, {}, fence);
-	fence::wait(*internal::get_parent(queue), { std::ref(fence) }, true,
+	fence::wait(*vcc::internal::get_parent(queue), { std::ref(fence) }, true,
 		std::chrono::nanoseconds::max());
 }
 
@@ -67,7 +74,7 @@ namespace internal {
 void cmd(cmd_args &args, const bind_index_data_buffer_type&bidb) {
 	const type::supplier<data::buffer_type> &buffer(bidb.buffer);
 	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-	cmd(args, bind_index_buffer_type{std::ref(buffer->buffer), bidb.offset, bidb.indexType});
+	cmd(args, bind_index_buffer_type{std::ref(data::internal::get_buffer(*buffer)), bidb.offset, bidb.indexType});
 }
 
 void cmd(cmd_args &args, const bind_vertex_data_buffers_type&bvdb) {
@@ -75,7 +82,7 @@ void cmd(cmd_args &args, const bind_vertex_data_buffers_type&bvdb) {
 	buffers.reserve(bvdb.buffers.size());
 	for (const type::supplier<data::buffer_type> &buffer : bvdb.buffers) {
 		args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-		buffers.push_back(std::ref(buffer->buffer));
+		buffers.push_back(std::ref(data::internal::get_buffer(*buffer)));
 	}
 	cmd(args, bind_vertex_buffers_type{std::move(buffers), bvdb.offsets});
 }
@@ -83,31 +90,31 @@ void cmd(cmd_args &args, const bind_vertex_data_buffers_type&bvdb) {
 void cmd(cmd_args &args, const draw_indirect_data_type&did) {
 	const type::supplier<data::buffer_type> &buffer(did.buffer);
 	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-	cmd(args, draw_indirect_type{std::ref(buffer->buffer), did.offset, did.drawCount, did.stride});
+	cmd(args, draw_indirect_type{std::ref(data::internal::get_buffer(*buffer)), did.offset, did.drawCount, did.stride});
 }
 
 void cmd(cmd_args &args, const draw_indexed_indirect_data_type&diid) {
 	const type::supplier<data::buffer_type> &buffer(diid.buffer);
 	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-	cmd(args, draw_indexed_indirect_type{std::ref(buffer->buffer), diid.offset, diid.drawCount, diid.stride});
+	cmd(args, draw_indexed_indirect_type{std::ref(data::internal::get_buffer(*buffer)), diid.offset, diid.drawCount, diid.stride});
 }
 
 void cmd(cmd_args &args, const dispatch_indirect_data_type&did) {
 	const type::supplier<data::buffer_type> &buffer(did.buffer);
 	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-	cmd(args, dispatch_indirect_type{std::ref(buffer->buffer), did.offset});
+	cmd(args, dispatch_indirect_type{std::ref(data::internal::get_buffer(*buffer)), did.offset});
 }
 
 void cmd(cmd_args &args, const copy_data_buffer_type&cdb) {
 	const type::supplier<data::buffer_type> &buffer(cdb.srcBuffer);
 	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-	cmd(args, copy_buffer_type{std::ref(buffer->buffer), cdb.dstBuffer, cdb.regions});
+	cmd(args, copy_buffer_type{std::ref(data::internal::get_buffer(*buffer)), cdb.dstBuffer, cdb.regions});
 }
 
 void cmd(cmd_args &args, const copy_data_buffer_to_image_type&cdbti) {
 	const type::supplier<data::buffer_type> &buffer(cdbti.srcBuffer);
 	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-	cmd(args, copy_buffer_to_image_type{std::ref(buffer->buffer), cdbti.dstImage, cdbti.dstImageLayout, cdbti.regions});
+	cmd(args, copy_buffer_to_image_type{std::ref(data::internal::get_buffer(*buffer)), cdbti.dstImage, cdbti.dstImageLayout, cdbti.regions});
 }
 
 }  // namespace internal
@@ -121,7 +128,7 @@ buffer_info_data_type buffer_info(const type::supplier<data::buffer_type> &buffe
 }
 
 buffer_info_data_type buffer_info(const type::supplier<data::buffer_type> &buffer) {
-	const std::size_t size(type::size(buffer->serialize));
+	const std::size_t size(type::size(data::internal::get_serialize(*buffer)));
 	return buffer_info_data_type{ buffer, 0, size };
 }
 
@@ -132,7 +139,9 @@ void add(update_storage &storage, const write_buffer_data_type &wbdt) {
 	buffer_infos.reserve(wbdt.buffers.size());
 	for (std::size_t i = 0; i < wbdt.buffers.size(); ++i) {
 		const buffer_info_data_type &buffer(wbdt.buffers[i]);
-		buffer_infos.push_back(buffer_info_type{std::ref(buffer.buffer->buffer), buffer.offset, buffer.range});
+		buffer_infos.push_back(buffer_info_type{
+			std::ref(data::internal::get_buffer(*buffer.buffer)),
+			buffer.offset, buffer.range});
 		const type::supplier<data::buffer_type> &buf(buffer.buffer);
 		wbdt.dst_set->pre_execute_callbacks.put(vcc::internal::bind_point_type{wbdt.dst_binding, uint32_t(wbdt.dst_array_element + i)},
 			[buf](queue::queue_type &queue) {data::flush(queue, *buf); });
@@ -153,11 +162,11 @@ namespace memory {
 namespace internal {
 
 VkMemoryRequirements get_memory_requirements(const data::buffer_type &buffer) {
-	return get_memory_requirements(buffer.buffer);
+	return get_memory_requirements(data::internal::get_buffer(buffer));
 }
 
 void bind(const type::supplier<memory_type> &memory, VkDeviceSize offset, data::buffer_type &buffer) {
-	return bind(memory, offset, buffer.buffer);
+	return bind(memory, offset, data::internal::get_buffer(buffer));
 }
 
 }  // namespace internal

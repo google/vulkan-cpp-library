@@ -28,6 +28,7 @@ void update(device::device_type &device, const ArgsT &... args) {
 	util::internal::pass( (internal::count(storage, args), 1)...);
 	storage.reserve();
 	util::internal::pass((internal::add(storage, args), 1)...);
+	vcc::util::lock(storage.deferred_locks);
 	VKTRACE(vkUpdateDescriptorSets(vcc::internal::get_instance(device),
 		(uint32_t) storage.write_sets.size(), storage.write_sets.data(),
 		(uint32_t) storage.copy_sets.size(), storage.copy_sets.data()));

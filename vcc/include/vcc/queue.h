@@ -42,15 +42,25 @@ private:
 	queue_type(VkQueue instance,
 		const type::supplier<device::device_type> &parent, uint32_t family_index)
 		: movable_with_parent(instance, parent),
-		family_index(family_index) {}
+		  family_index(family_index) {}
 	uint32_t family_index;
 };
 
-VCC_LIBRARY queue_type get_device_queue(const type::supplier<device::device_type> &device, uint32_t queue_family_index, uint32_t queue_index);
+VCC_LIBRARY queue_type get_device_queue(
+	const type::supplier<device::device_type> &device,
+	uint32_t queue_family_index, uint32_t queue_index);
+
+VCC_LIBRARY queue_type get_graphics_queue(
+	const type::supplier<device::device_type> &device);
+VCC_LIBRARY queue_type get_present_queue(
+	const type::supplier<device::device_type> &device,
+	surface::surface_type &surface);
 
 // Helper method that returns two queues (possibly the same) where the first supports graphics and the other present.
 // Tries to return the same queue twice if it finds one capable of both.
-VCC_LIBRARY std::pair<queue_type, queue_type> get_graphics_and_present_queues(const type::supplier<device::device_type> &device, surface::surface_type &surface);
+VCC_LIBRARY std::pair<queue_type, queue_type> get_graphics_and_present_queues(
+	const type::supplier<device::device_type> &device,
+	surface::surface_type &surface);
 
 struct wait_semaphore {
 	type::supplier<semaphore::semaphore_type> semaphore;

@@ -26,6 +26,11 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vcc", "vcc\vcc\vcc.vcxproj", "{3BB1AA44-0CD3-473A-B78E-0F6F4041551C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cube", "sample\cube\cube\cube.vcxproj", "{D346CBAC-778B-46F2-847A-9131029747B8}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3BB1AA44-0CD3-473A-B78E-0F6F4041551C} = {3BB1AA44-0CD3-473A-B78E-0F6F4041551C}
+		{48F3225F-E412-4008-BF4B-E297B1A5949C} = {48F3225F-E412-4008-BF4B-E297B1A5949C}
+		{0C5191D8-DF96-42CB-AEA3-993390806916} = {0C5191D8-DF96-42CB-AEA3-993390806916}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

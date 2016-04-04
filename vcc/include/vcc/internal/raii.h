@@ -61,6 +61,11 @@ auto get_instance(const T &value)->const decltype(value.instance)& {
 }
 
 template<typename T>
+auto get_mutex(const T &value)->decltype(value.mutex)& {
+	return value.mutex;
+}
+
+template<typename T>
 auto get_parent(T &value)->decltype(value.parent)& {
 	return value.parent;
 }
@@ -86,6 +91,8 @@ struct movable_with_parent {
 	template<typename U>
 	friend auto get_instance(const U &value)->const decltype(value.instance)&;
 	template<typename U>
+	friend auto get_mutex(const U &value)->decltype(value.mutex)&;
+	template<typename U>
 	friend auto get_parent(U &value)->decltype(value.parent)&;
 	template<typename U>
 	friend auto get_parent(const U &value)->const decltype(value.parent)&;
@@ -93,9 +100,18 @@ struct movable_with_parent {
 protected:
 	movable_with_parent() = default;
 	movable_with_parent(const movable_with_parent &) = delete;
-	movable_with_parent(movable_with_parent &&instance) = default;
+	movable_with_parent(movable_with_parent &&copy) {
+		std::lock_guard<std::mutex> lock(copy.mutex);
+		instance = std::move(copy.instance);
+		parent = std::move(copy.parent);
+	}
 	movable_with_parent &operator=(const movable_with_parent &) = delete;
-	movable_with_parent &operator=(movable_with_parent &&copy) = default;
+	movable_with_parent &operator=(movable_with_parent &&copy) {
+		std::lock_guard<std::mutex> lock(copy.mutex);
+		instance = std::move(copy.instance);
+		parent = std::move(copy.parent);
+		return *this;
+	}
 
 	movable_with_parent(T instance, const type::supplier<ParentT> &parent)
 		: instance(instance), parent(parent) {}
@@ -103,6 +119,7 @@ protected:
 private:
 	handle_type<T> instance;
 	type::supplier<ParentT> parent;
+	mutable std::mutex mutex;
 };
 
 // This generic is used for VkInstance and VkDevice.
@@ -111,15 +128,21 @@ template<typename T,
 struct movable_destructible {
 	template<typename U>
 	friend auto get_instance(const U &value)->const decltype(value.instance)&;
+	template<typename U>
+	friend auto get_mutex(const U &value)->decltype(value.mutex)&;
 	typedef T value_type;
 
 protected:
 	movable_destructible() : instance(VK_NULL_HANDLE) {};
 	movable_destructible(const movable_destructible &) = delete;
-	movable_destructible(movable_destructible &&instance) = default;
+	movable_destructible(movable_destructible &&copy) {
+		std::lock_guard<std::mutex> lock(copy.mutex);
+		instance = std::move(copy.instance);
+	}
 	movable_destructible &operator=(const movable_destructible &) = delete;
 	movable_destructible &operator=(movable_destructible &&copy) {
 		destroy();
+		std::lock_guard<std::mutex> lock(copy.mutex);
 		instance = std::move(copy.instance);
 		return *this;
 	}
@@ -128,12 +151,14 @@ protected:
 		destroy();
 	}
 
-	handle_type<T> instance;
-
 	explicit movable_destructible(T instance) : instance(instance) {}
 private:
+	handle_type<T> instance;
+	mutable std::mutex mutex;
+
 	void destroy() {
 		if (instance) {
+			std::lock_guard<std::mutex> lock(mutex);
 			PFN_vkDestroy(instance, NULL);
 		}
 	}
@@ -145,6 +170,8 @@ template<typename T, typename ParentT, void (VKAPI_PTR *PFN_vkDestroy)(
 struct movable_destructible_with_parent {
 	template<typename U>
 	friend auto get_instance(const U &value)->const decltype(value.instance)&;
+	template<typename U>
+	friend auto get_mutex(const U &value)->decltype(value.mutex)&;
 	template<typename U>
 	friend auto get_parent(U &value)->decltype(value.parent)&;
 	template<typename U>
@@ -160,12 +187,17 @@ protected:
 	movable_destructible_with_parent(
 		const movable_destructible_with_parent &) = delete;
 	movable_destructible_with_parent(
-		movable_destructible_with_parent &&copy) = default;
+			movable_destructible_with_parent &&copy) {
+		std::lock_guard<std::mutex> lock(copy.mutex);
+		instance = std::move(copy.instance);
+		parent = std::move(copy.parent);
+	}
 	movable_destructible_with_parent &operator=(
 		const movable_destructible_with_parent &) = delete;
 	movable_destructible_with_parent &operator=(
 			movable_destructible_with_parent &&copy) {
 		destroy();
+		std::lock_guard<std::mutex> lock(copy.mutex);
 		instance = std::move(copy.instance);
 		parent = std::move(copy.parent);
 		return *this;
@@ -178,14 +210,16 @@ protected:
 	movable_destructible_with_parent(T instance,
 		const type::supplier<ParentT> &parent)
 		: instance(instance),
-		parent(parent) {}
+		  parent(parent) {}
 
 private:
 	handle_type<T> instance;
 	type::supplier<ParentT> parent;
+	mutable std::mutex mutex;
 
 	void destroy() {
 		if (instance && parent) {
+			std::lock_guard<std::mutex> lock(mutex);
 			PFN_vkDestroy(get_instance(*parent), instance, NULL);
 		}
 	}
@@ -199,6 +233,8 @@ struct movable_allocated_with_pool_parent1 {
 	template<typename U>
 	friend auto get_instance(const U &value)->const decltype(value.instance)&;
 	template<typename U>
+	friend auto get_mutex(const U &value)->decltype(value.mutex)&;
+	template<typename U>
 	friend auto get_parent(U &value)->decltype(value.parent)&;
 	template<typename U>
 	friend auto get_parent(const U &value)->const decltype(value.parent)&;
@@ -209,12 +245,18 @@ protected:
 	movable_allocated_with_pool_parent1(
 		const movable_allocated_with_pool_parent1 &) = delete;
 	movable_allocated_with_pool_parent1(
-		movable_allocated_with_pool_parent1 &&) = default;
+			movable_allocated_with_pool_parent1 &&copy) {
+		std::lock_guard<std::mutex> lock(copy.mutex);
+		instance = std::move(copy.instance);
+		pool = std::move(copy.pool);
+		parent = std::move(copy.parent);
+	}
 	movable_allocated_with_pool_parent1 &operator=(
 		const movable_allocated_with_pool_parent1 &) = delete;
 	movable_allocated_with_pool_parent1 &operator=(
 			movable_allocated_with_pool_parent1 &&copy) {
 		destroy();
+		std::lock_guard<std::mutex> lock(copy.mutex);
 		instance = std::move(copy.instance);
 		pool = std::move(copy.pool);
 		parent = std::move(copy.parent);
@@ -234,9 +276,13 @@ private:
 	handle_type<T> instance;
 	type::supplier<PoolT> pool;
 	type::supplier<ParentT> parent;
+	mutable std::mutex mutex;
 
 	void destroy() {
 		if (instance && parent && pool) {
+			std::lock(get_mutex(*pool), mutex);
+			std::lock_guard<std::mutex> pool_lock(get_mutex(*pool), std::adopt_lock);
+			std::lock_guard<std::mutex> lock(mutex, std::adopt_lock);
 			PFN_vkFree(get_instance(*parent), get_instance(*pool), 1, &instance);
 		}
 	}
@@ -250,6 +296,8 @@ struct movable_allocated_with_pool_parent2 {
 	template<typename U>
 	friend auto get_instance(const U &value)->const decltype(value.instance)&;
 	template<typename U>
+	friend auto get_mutex(const U &value)->decltype(value.mutex)&;
+	template<typename U>
 	friend auto get_parent(U &value)->decltype(value.parent)&;
 	template<typename U>
 	friend auto get_parent(const U &value)->const decltype(value.parent)&;
@@ -261,12 +309,18 @@ protected:
 	movable_allocated_with_pool_parent2(
 		const movable_allocated_with_pool_parent2 &) = delete;
 	movable_allocated_with_pool_parent2(
-		movable_allocated_with_pool_parent2 &&) = default;
+			movable_allocated_with_pool_parent2 &&copy) {
+		std::lock_guard<std::mutex> lock(copy.mutex);
+		instance = std::move(copy.instance);
+		pool = std::move(copy.pool);
+		parent = std::move(copy.parent);
+	}
 	movable_allocated_with_pool_parent2 &operator=(
 		const movable_allocated_with_pool_parent2 &) = delete;
 	movable_allocated_with_pool_parent2 &operator=(
 		movable_allocated_with_pool_parent2 &&copy) {
 		destroy();
+		std::lock_guard<std::mutex> lock(copy.mutex);
 		instance = std::move(copy.instance);
 		pool = std::move(copy.pool);
 		parent = std::move(copy.parent);
@@ -286,9 +340,13 @@ private:
 	handle_type<T> instance;
 	type::supplier<PoolT> pool;
 	type::supplier<ParentT> parent;
+	mutable std::mutex mutex;
 
 	void destroy() {
 		if (instance && pool && parent) {
+			std::lock(internal::get_mutex(*pool), mutex);
+			std::lock_guard<std::mutex> pool_lock(internal::get_mutex(*pool), std::adopt_lock);
+			std::lock_guard<std::mutex> lock(mutex, std::adopt_lock);
 			PFN_vkFree(get_instance(*parent), internal::get_instance(*pool), 1,
 				&instance);
 		}
@@ -303,6 +361,8 @@ template<typename T, typename ParentT, typename MemoryT,
 struct movable_destructible_with_parent_and_memory {
 	template<typename U>
 	friend auto get_instance(const U &value)->const decltype(value.instance)&;
+	template<typename U>
+	friend auto get_mutex(const U &value)->decltype(value.mutex)&;
 	template<typename U>
 	friend auto get_parent(U &value)->decltype(value.parent)&;
 	template<typename U>
@@ -319,12 +379,19 @@ protected:
 	movable_destructible_with_parent_and_memory(
 		const movable_destructible_with_parent_and_memory &) = delete;
 	movable_destructible_with_parent_and_memory(
-		movable_destructible_with_parent_and_memory &&) = default;
+		movable_destructible_with_parent_and_memory &&copy) {
+		std::lock_guard<std::mutex> lock(copy.mutex);
+		instance = std::move(copy.instance);
+		parent = std::move(copy.parent);
+		memory = std::move(copy.memory);
+		offset = copy.offset;
+	}
 	movable_destructible_with_parent_and_memory &operator=(
 		const movable_destructible_with_parent_and_memory &) = delete;
 	movable_destructible_with_parent_and_memory &operator=(
 			movable_destructible_with_parent_and_memory &&copy) {
 		destroy();
+		std::lock_guard<std::mutex> lock(copy.mutex);
 		instance = std::move(copy.instance);
 		parent = std::move(copy.parent);
 		memory = std::move(copy.memory);
@@ -345,9 +412,11 @@ private:
 	type::supplier<ParentT> parent;
 	type::supplier<MemoryT> memory;
 	VkDeviceSize offset;
+	mutable std::mutex mutex;
 
 	void destroy() {
 		if (instance && parent) {
+			std::lock_guard<std::mutex> lock(mutex);
 			PFN_vkDestroy(get_instance(*parent), instance, NULL);
 		}
 	}
@@ -364,6 +433,8 @@ struct movable_conditional_destructible_with_parent_and_memory {
 	template<typename U>
 	friend auto get_parent(const U &value)->const decltype(value.parent)&;
 	template<typename U>
+	friend auto get_mutex(const U &value)->decltype(value.mutex)&;
+	template<typename U>
 	friend auto get_memory(U &value)->decltype(value.memory)&;
 	template<typename U>
 	friend VkDeviceSize &get_offset(U &value);
@@ -375,12 +446,19 @@ protected:
 	movable_conditional_destructible_with_parent_and_memory(
 		const movable_conditional_destructible_with_parent_and_memory &) = delete;
 	movable_conditional_destructible_with_parent_and_memory(
-		movable_conditional_destructible_with_parent_and_memory &&) = default;
+			movable_conditional_destructible_with_parent_and_memory &&copy) {
+		std::lock_guard<std::mutex> lock(copy.mutex);
+		instance = std::move(copy.instance);
+		parent = std::move(copy.parent);
+		destructible = copy.destructible;
+		memory = std::move(copy.memory);
+	}
 	movable_conditional_destructible_with_parent_and_memory &operator=(
 		const movable_conditional_destructible_with_parent_and_memory &) = delete;
 	movable_conditional_destructible_with_parent_and_memory &operator=(
 			movable_conditional_destructible_with_parent_and_memory &&copy) {
 		destroy();
+		std::lock_guard<std::mutex> lock(copy.mutex);
 		instance = std::move(copy.instance);
 		parent = std::move(copy.parent);
 		destructible = copy.destructible;
@@ -399,6 +477,7 @@ protected:
 
 private:
 	handle_type<T> instance;
+	mutable std::mutex mutex;
 	type::supplier<ParentT> parent;
 	bool destructible;
 	type::supplier<MemoryT> memory;
@@ -406,6 +485,7 @@ private:
 
 	void destroy() {
 		if (destructible && instance && parent) {
+			std::lock_guard<std::mutex> lock(mutex);
 			PFN_vkDestroy(get_instance(*parent), instance, NULL);
 		}
 	}

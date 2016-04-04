@@ -120,14 +120,6 @@ type::ushort_array indices({
 int main(int argc, const char **argv) {
 
 	vcc::instance::instance_type instance;
-	vcc::device::device_type device;
-	vcc::queue::queue_type queue;
-
-	vcc::command_pool::command_pool_type cmd_pool;
-	std::vector<vcc::command_buffer::command_buffer_type> command_buffers;
-
-	vcc::debug::debug_type debug;
-
 	{
 		const std::set<std::string> extensions = { VK_KHR_SURFACE_EXTENSION_NAME,
 #ifdef WIN32
@@ -142,6 +134,7 @@ int main(int argc, const char **argv) {
 		instance = vcc::instance::create({}, extensions);
 	}
 
+	vcc::device::device_type device;
 	{
 		const VkPhysicalDevice physical_device(
 			vcc::physical_device::enumerate(instance).front());
@@ -160,17 +153,25 @@ int main(int argc, const char **argv) {
 			},
 			{}, extensions, {});
 	}
+	vcc::queue::queue_type queue(
+		vcc::queue::get_graphics_queue(std::ref(device)));
+	vcc::command_pool::command_pool_type cmd_pool(
+		vcc::command_pool::create(std::ref(device), 0,
+		vcc::queue::get_family_index(queue)));
 
 	vcc::descriptor_set_layout::descriptor_set_layout_type desc_layout(
 		vcc::descriptor_set_layout::create(std::ref(device),
-		{
-			vcc::descriptor_set_layout::descriptor_set_layout_binding{ 0,
-				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT,{} },
-			vcc::descriptor_set_layout::descriptor_set_layout_binding{ 1,
-				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT,{} },
-			vcc::descriptor_set_layout::descriptor_set_layout_binding{ 2,
-				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT,{} }
-		}));
+			{
+				vcc::descriptor_set_layout::descriptor_set_layout_binding{ 0,
+					VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+					VK_SHADER_STAGE_VERTEX_BIT,{} },
+				vcc::descriptor_set_layout::descriptor_set_layout_binding{ 1,
+					VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+					VK_SHADER_STAGE_FRAGMENT_BIT,{} },
+				vcc::descriptor_set_layout::descriptor_set_layout_binding{ 2,
+					VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+					VK_SHADER_STAGE_FRAGMENT_BIT,{} }
+			}));
 	vcc::pipeline_layout::pipeline_layout_type pipeline_layout(vcc::pipeline_layout::create(
 		std::ref(device), { std::ref(desc_layout) }));
 
@@ -183,15 +184,15 @@ int main(int argc, const char **argv) {
 		vcc::shader_module::create(std::ref(device),
 			std::ifstream("cube-frag.spv", std::ios_base::binary | std::ios_base::in)));
 
+	vcc::descriptor_pool::descriptor_pool_type desc_pool(
+		vcc::descriptor_pool::create(std::ref(device), 0, 1,
+			{ { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 } }));
+
 	vcc::descriptor_set::descriptor_set_type desc_set(std::move(
 		vcc::descriptor_set::create(std::ref(device),
-			vcc::descriptor_pool::create(std::ref(device), 0, 1,
-				{ { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 } }),
-		{ std::ref(desc_layout) }).front()));
-
-	const glm::mat4 view_matrix(glm::lookAt(glm::vec3(0.0f, 6.0f, 6.0f),
-		glm::vec3(0, 0, 0), glm::vec3(0.0f, 1.0f, 0.0)));
+			std::ref(desc_pool),
+			{ std::ref(desc_layout) }).front()));
 
 	glm::mat4 projection_matrix;
 
@@ -215,211 +216,213 @@ int main(int argc, const char **argv) {
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 		index_buffer);
 
-	vcc::render_pass::render_pass_type render_pass;
-	vcc::pipeline::pipeline_type pipeline;
+	{
+		auto image(vcc::image::create(std::ref(queue),
+			0, VK_IMAGE_USAGE_SAMPLED_BIT, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
+			VK_SHARING_MODE_EXCLUSIVE, {},
+			std::ifstream("textures/png/PNG_transparency_demonstration_1.png",
+				std::ios_base::binary | std::ios_base::in)));
 
+		auto image_view(vcc::image_view::create(std::move(image),
+			{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }));
+
+		auto sampler(vcc::sampler::create(
+			std::ref(device), VK_FILTER_NEAREST, VK_FILTER_NEAREST,
+			VK_SAMPLER_MIPMAP_MODE_NEAREST,
+			VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+			VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+			VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+			0, VK_TRUE, 1, VK_FALSE, VK_COMPARE_OP_NEVER, 0, 0,
+			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE, VK_FALSE));
+
+		vcc::descriptor_set::update(device,
+			vcc::descriptor_set::write_buffer(std::ref(desc_set), 0, 0,
+				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				{ vcc::descriptor_set::buffer_info(std::ref(matrix_uniform_buffer)) }),
+			vcc::descriptor_set::write_image{ std::ref(desc_set), 1, 0,
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{
+					vcc::descriptor_set::image_info{ std::move(sampler),
+						std::move(image_view), VK_IMAGE_LAYOUT_GENERAL }
+				} });
+	}
+
+	const glm::mat4 view_matrix(glm::lookAt(glm::vec3(0.0f, 6.0f, 6.0f),
+		glm::vec3(0, 0, 0), glm::vec3(0.0f, 1.0f, 0.0)));
 	float x_angle(0), y_angle(0);
 	bool mouse_down(false);
 	int last_x, last_y;
 	const float scale_x(128), scale_y(128);
 
+	std::vector<vcc::command_buffer::command_buffer_type> command_buffers;
+
 	vcc::window::window_type window(vcc::window::create(
 		GetModuleHandle(NULL),
-		std::ref(instance), std::ref(device), VkExtent2D{ 500, 500 }, VK_FORMAT_A8B8G8R8_UINT_PACK32, "Cube demo",
-		[&](VkFormat format) {
-			vcc::image::image_type image(vcc::image::create(std::ref(queue),
-				0,
-				VK_IMAGE_USAGE_SAMPLED_BIT,
-				VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
-				VK_SHARING_MODE_EXCLUSIVE,
-				{},
-				std::ifstream("textures/png/PNG_transparency_demonstration_1.png", std::ios_base::binary | std::ios_base::in)));
+		std::ref(instance), std::ref(device), std::ref(queue),
+		VkExtent2D{ 500, 500 }, VK_FORMAT_A8B8G8R8_UINT_PACK32, "Cube demo"));
 
-			vcc::descriptor_set::update(device,
-				vcc::descriptor_set::write_buffer(std::ref(desc_set), 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				{ vcc::descriptor_set::buffer_info(std::ref(matrix_uniform_buffer)) }),
-				vcc::descriptor_set::write_image{ std::ref(desc_set), 1, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				{
-					vcc::descriptor_set::image_info{
-						vcc::sampler::create(
-							std::ref(device), VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST,
-							VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-							0, VK_TRUE, 1, VK_FALSE, VK_COMPARE_OP_NEVER, 0, 0, VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE, VK_FALSE),
-						vcc::image_view::create(std::move(image), { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }),
-						VK_IMAGE_LAYOUT_GENERAL
-					}
-				} });
-
-			render_pass = vcc::render_pass::create(
-				std::ref(device),
-				{
-					VkAttachmentDescription{ 0, format, VK_SAMPLE_COUNT_1_BIT,
-						VK_ATTACHMENT_LOAD_OP_CLEAR,
-						VK_ATTACHMENT_STORE_OP_STORE,
-						VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-						VK_ATTACHMENT_STORE_OP_DONT_CARE,
-						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
-					VkAttachmentDescription{ 0, VK_FORMAT_D16_UNORM,
-						VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR,
-						VK_ATTACHMENT_STORE_OP_DONT_CARE,
-						VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-						VK_ATTACHMENT_STORE_OP_DONT_CARE,
-						VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-						VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL }
-				},
-				{
-					vcc::render_pass::subpass_description_type{
-						{},
-						{ VkAttachmentReference{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL } },
-						{},
-						VkAttachmentReference{ 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL },
-						{}
-					}
-				},
-				{});
-
-			pipeline = vcc::pipeline::create_graphics(std::ref(device), pipelineCache, 0,
-				{
-					vcc::pipeline::shader_stage(VK_SHADER_STAGE_VERTEX_BIT, std::ref(vert_shader_module), "main",{}),
-					vcc::pipeline::shader_stage(VK_SHADER_STAGE_FRAGMENT_BIT, std::ref(frag_shader_module), "main")
-				},
-				vcc::pipeline::vertex_input_state{
-					{
-						VkVertexInputBindingDescription{ 0, sizeof(glm::vec4) * 2, VK_VERTEX_INPUT_RATE_VERTEX }
-					},
-					{
-						VkVertexInputAttributeDescription{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
-						VkVertexInputAttributeDescription{ 1, 0, VK_FORMAT_R32G32_SFLOAT, sizeof(glm::vec4) }
-					}
-				},
-				vcc::pipeline::input_assembly_state{ VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_FALSE },
-				vcc::pipeline::viewport_state{ { VkViewport{ 0, 0, 0, 0, 0, 0 } },{ VkRect2D{ VkOffset2D{}, VkExtent2D{} } } },
-				vcc::pipeline::rasterization_state{ VK_FALSE, VK_FALSE,
-					VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE,
-					VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_FALSE, 0, 0, 0, 0 },
-				vcc::pipeline::multisample_state{ VK_SAMPLE_COUNT_1_BIT,
-					VK_FALSE, 0,{}, VK_FALSE, VK_FALSE },
-				vcc::pipeline::depth_stencil_state{
-					VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS_OR_EQUAL, VK_FALSE,
-					VK_FALSE,
-					{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
-						VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
-					{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
-						VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
-					0, 0 },
-				vcc::pipeline::color_blend_state{ VK_FALSE, VK_LOGIC_OP_CLEAR,
-				{ VkPipelineColorBlendAttachmentState{ VK_FALSE, VK_BLEND_FACTOR_ZERO,
-					VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD,
-					VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
-					VK_BLEND_OP_ADD, 0xF } },
-				{ 0, 0, 0, 0 } },
-				vcc::pipeline::dynamic_state{ { VK_DYNAMIC_STATE_VIEWPORT,
-					VK_DYNAMIC_STATE_SCISSOR } },
-				std::ref(pipeline_layout), std::ref(render_pass), 0);
+	vcc::render_pass::render_pass_type render_pass(vcc::render_pass::create(
+		std::ref(device),
+		{
+			VkAttachmentDescription{ 0, vcc::window::get_format(window),
+				VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR,
+				VK_ATTACHMENT_STORE_OP_STORE, VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
+			VkAttachmentDescription{ 0, VK_FORMAT_D16_UNORM,
+				VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR,
+				VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL }
 		},
-		[&](vcc::surface::surface_type &surface) {
-			std::pair<vcc::queue::queue_type, vcc::queue::queue_type> queues(
-				vcc::queue::get_graphics_and_present_queues(std::ref(device), surface));
-			queue = vcc::queue::get_device_queue(std::ref(device),
-				vcc::queue::get_family_index(queues.first), 0);
-			cmd_pool = vcc::command_pool::create(std::ref(device), 0,
-				vcc::queue::get_family_index(queue));
-			return std::move(queues);
-		},
-		[&](VkExtent2D extent, VkFormat format,
-				std::vector<vcc::window::swapchain_type> &swapchain_images) {
-			projection_matrix = glm::perspective(45.f, float(extent.width) / extent.height, 1.f, 100.f);
-
-			command_buffers = vcc::command_buffer::allocate(std::ref(device),
-				std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-				(uint32_t)swapchain_images.size());
-
-			std::shared_ptr<vcc::image::image_type> depth_image =
-				std::make_shared<vcc::image::image_type>(vcc::image::create(
-					std::ref(device), 0, VK_IMAGE_TYPE_2D, VK_FORMAT_D16_UNORM,
-					{ extent.width, extent.height, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT,
-					VK_IMAGE_TILING_OPTIMAL,
-					VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-					VK_SHARING_MODE_EXCLUSIVE, {}, VK_IMAGE_LAYOUT_UNDEFINED));
-			vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *depth_image);
-
-			vcc::command_buffer::command_buffer_type command_buffer(
-				std::move(vcc::command_buffer::allocate(std::ref(device),
-					std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-			vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
-				vcc::command_buffer::pipeline_barrier(
-					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
-					{ vcc::command_buffer::image_memory_barrier{ 0,
-						VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-						VK_IMAGE_LAYOUT_UNDEFINED,
-						VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-						VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-						depth_image, { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 } } }));
-			vcc::queue::submit(queue, {}, { std::ref(command_buffer) }, {});
-			vcc::queue::wait_idle(queue);
-
-			for (std::size_t i = 0; i < swapchain_images.size(); ++i) {
-				vcc::command_buffer::compile(command_buffers[i], 0, VK_FALSE,
-					0, 0,
-					vcc::command_buffer::render_pass(
-						std::ref(render_pass),
-						vcc::framebuffer::create(std::ref(device), std::ref(render_pass),
-						{
-							std::ref(vcc::window::get_image_view(swapchain_images[i])),
-							vcc::image_view::create(depth_image,{
-								VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 })
-						}, extent, 1),
-						VkRect2D{ 0, 0, extent.width, extent.height },
-						{
-							vcc::command_buffer::clear_color({ { .2f, .2f, .2f, .2f } }),
-							vcc::command_buffer::clear_depth_stencil({ 1, 0 })
-						},
-						VK_SUBPASS_CONTENTS_INLINE,
-						vcc::command_buffer::bind_pipeline{
-							VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
-						vcc::command_buffer::bind_vertex_data_buffers(
-							{ std::ref(vertex_buffer) }, { 0, 0 }),
-						vcc::command_buffer::bind_index_data_buffer(
-							std::ref(index_buffer), 0, VK_INDEX_TYPE_UINT16),
-						vcc::command_buffer::bind_descriptor_sets{
-							VK_PIPELINE_BIND_POINT_GRAPHICS,
-							std::ref(pipeline_layout), 0,
-							{ std::ref(desc_set) },{} },
-						vcc::command_buffer::set_viewport{
-							0,{ { 0.f, 0.f, float(extent.width), float(extent.height), 0.f, 1.f } } },
-						vcc::command_buffer::set_scissor{ 0,{ { { 0, 0 }, extent } } },
-						vcc::command_buffer::draw_indexed{ (uint32_t)indices.size(), 1, 0, 0, 0 }));
+		{
+			vcc::render_pass::subpass_description_type{
+				{}, { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL } }, {},
+				{ 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL }, {}
 			}
+		}, {}));
+
+	vcc::pipeline::pipeline_type pipeline(vcc::pipeline::create_graphics(std::ref(device), pipelineCache, 0,
+		{
+			vcc::pipeline::shader_stage(VK_SHADER_STAGE_VERTEX_BIT,
+				std::ref(vert_shader_module), "main"),
+			vcc::pipeline::shader_stage(VK_SHADER_STAGE_FRAGMENT_BIT,
+				std::ref(frag_shader_module), "main")
+		},
+		vcc::pipeline::vertex_input_state{
+			{
+				VkVertexInputBindingDescription{ 0, sizeof(glm::vec4) * 2,
+					VK_VERTEX_INPUT_RATE_VERTEX }
+			},
+			{
+				VkVertexInputAttributeDescription{ 0, 0,
+					VK_FORMAT_R32G32B32_SFLOAT, 0 },
+				VkVertexInputAttributeDescription{ 1, 0,
+					VK_FORMAT_R32G32_SFLOAT, sizeof(glm::vec4) }
+			}
+		},
+		vcc::pipeline::input_assembly_state
+			{VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_FALSE },
+		vcc::pipeline::viewport_state(1, 1),
+		vcc::pipeline::rasterization_state{ VK_FALSE, VK_FALSE,
+			VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE,
+			VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_FALSE, 0, 0, 0, 0 },
+		vcc::pipeline::multisample_state{ VK_SAMPLE_COUNT_1_BIT,
+			VK_FALSE, 0,{}, VK_FALSE, VK_FALSE },
+		vcc::pipeline::depth_stencil_state{
+			VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS_OR_EQUAL, VK_FALSE, VK_FALSE,
+			{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
+				VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
+			{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
+				VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
+			0, 0 },
+		vcc::pipeline::color_blend_state{ VK_FALSE, VK_LOGIC_OP_CLEAR,
+			{ VkPipelineColorBlendAttachmentState{ VK_FALSE, VK_BLEND_FACTOR_ZERO,
+				VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD,
+				VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
+				VK_BLEND_OP_ADD, 0xF } },
+			{ 0, 0, 0, 0 } },
+		vcc::pipeline::dynamic_state{ { VK_DYNAMIC_STATE_VIEWPORT,
+			VK_DYNAMIC_STATE_SCISSOR } },
+		std::ref(pipeline_layout), std::ref(render_pass), 0));
+
+	return vcc::window::run(window,
+		[&](VkExtent2D extent, VkFormat format,
+			std::vector<vcc::window::swapchain_type> &swapchain_images) {
+		projection_matrix = glm::perspective(45.f, float(extent.width) / extent.height, 1.f, 100.f);
+
+		command_buffers = vcc::command_buffer::allocate(std::ref(device),
+			std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			(uint32_t)swapchain_images.size());
+
+		auto depth_image(std::make_shared<vcc::image::image_type>(
+			vcc::image::create(
+				std::ref(device), 0, VK_IMAGE_TYPE_2D, VK_FORMAT_D16_UNORM,
+				{ extent.width, extent.height, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT,
+				VK_IMAGE_TILING_OPTIMAL,
+				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+				VK_SHARING_MODE_EXCLUSIVE, {}, VK_IMAGE_LAYOUT_UNDEFINED)));
+		vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *depth_image);
+
+		vcc::command_buffer::command_buffer_type command_buffer(
+			std::move(vcc::command_buffer::allocate(std::ref(device),
+				std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
+		vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
+			vcc::command_buffer::pipeline_barrier(
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
+				{ vcc::command_buffer::image_memory_barrier{ 0,
+				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+				VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+				depth_image,{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 } } }));
+		vcc::queue::submit(queue, {}, { std::ref(command_buffer) }, {});
+		vcc::queue::wait_idle(queue);
+
+		for (std::size_t i = 0; i < swapchain_images.size(); ++i) {
+			auto framebuffer(vcc::framebuffer::create(std::ref(device),
+				std::ref(render_pass),
+				{
+					std::ref(vcc::window::get_image_view(swapchain_images[i])),
+					vcc::image_view::create(depth_image,{
+						VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 })
+				}, extent, 1));
+			vcc::command_buffer::compile(command_buffers[i], 0, VK_FALSE,
+				0, 0,
+				vcc::command_buffer::render_pass(std::ref(render_pass),
+					std::move(framebuffer), VkRect2D{ { 0, 0 }, extent },
+					{
+						vcc::command_buffer::clear_color({ { .2f, .2f, .2f, .2f } }),
+						vcc::command_buffer::clear_depth_stencil({ 1, 0 })
+					},
+					VK_SUBPASS_CONTENTS_INLINE,
+					vcc::command_buffer::bind_pipeline{
+						VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
+					vcc::command_buffer::bind_vertex_data_buffers(
+						{ std::ref(vertex_buffer) }, { 0, 0 }),
+					vcc::command_buffer::bind_index_data_buffer(
+						std::ref(index_buffer), 0, VK_INDEX_TYPE_UINT16),
+					vcc::command_buffer::bind_descriptor_sets{
+						VK_PIPELINE_BIND_POINT_GRAPHICS,
+						std::ref(pipeline_layout), 0,
+						{ std::ref(desc_set) },{} },
+					vcc::command_buffer::set_viewport{
+						0, { { 0.f, 0.f, float(extent.width),
+							float(extent.height), 0.f, 1.f } } },
+					vcc::command_buffer::set_scissor{
+						0, { { { 0, 0 }, extent } } },
+					vcc::command_buffer::draw_indexed{
+						(uint32_t)indices.size(), 1, 0, 0, 0 }));
+		}
 		},
 		[&](uint32_t index) {
 			type::mutate(projection_modelview_matrix)[0] = projection_matrix
 				* view_matrix * glm::rotate(y_angle, glm::vec3(1, 0, 0))
 				* glm::rotate(x_angle, glm::vec3(0, 1, 0));
 			vcc::queue::submit(queue, {},
-				{ std::ref(command_buffers[index]) }, {});
+			{ std::ref(command_buffers[index]) }, {});
 		},
 		vcc::window::input_callbacks_type()
-			.set_mouse_down_callback([&mouse_down, &last_x, &last_y](
-					vcc::window::mouse_button_type, int x, int y) {
+		.set_mouse_down_callback([&mouse_down, &last_x, &last_y](
+			vcc::window::mouse_button_type, int x, int y) {
+			last_x = x;
+			last_y = y;
+			mouse_down = true;
+			return true;
+		}).set_mouse_up_callback([&mouse_down](
+			vcc::window::mouse_button_type, int x, int y) {
+			mouse_down = false;
+			return true;
+		}).set_mouse_move_callback([&](int x, int y) {
+			if (mouse_down) {
+				x_angle += (x - last_x) / scale_x;
+				y_angle += (y - last_y) / scale_y;
 				last_x = x;
 				last_y = y;
-				mouse_down = true;
-				return true;
-			}).set_mouse_up_callback([&mouse_down](
-					vcc::window::mouse_button_type, int x, int y) {
-				mouse_down = false;
-				return true;
-			}).set_mouse_move_callback([&](int x, int y) {
-				if (mouse_down) {
-					x_angle += (x - last_x) / scale_x;
-					y_angle += (y - last_y) / scale_y;
-					last_x = x;
-					last_y = y;
-				}
-				return true;
-			})));
-
-	return vcc::window::run(window);
+			}
+			return true;
+		}));
 }

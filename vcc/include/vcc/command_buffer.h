@@ -568,6 +568,7 @@ struct begin_type {
 	explicit begin_type(const type::supplier<command_buffer_type> &command_buffer);
 private:
 	type::supplier<command_buffer_type> command_buffer;
+	std::unique_lock<std::mutex> command_buffer_lock;
 };
 
 VCC_LIBRARY begin_type begin(

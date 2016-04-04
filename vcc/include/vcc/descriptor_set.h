@@ -164,6 +164,8 @@ struct update_storage {
 	std::vector<std::vector<VkDescriptorBufferInfo>> buffer_infos;
 	std::vector<std::vector<VkBufferView>> buffer_view;
 
+	std::vector<std::unique_lock<std::mutex>> deferred_locks;
+
 	VCC_LIBRARY void reserve();
 
 	std::size_t copy_sets_size = 0, write_sets_size = 0, image_info_size = 0, buffer_info_size = 0, buffer_view_size = 0;
