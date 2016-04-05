@@ -106,6 +106,7 @@ std::vector<const char *> to_pointers(const std::set<std::string> &set) {
 }
 
 void diagnostic_print(const char *filename, const char *function, int line, const char *fmt, ...) {
+#if 1
 	va_list args;
 	va_start(args, fmt);
 	fprintf(stderr, "%s(In %s:%d): ", filename, function, line);
@@ -113,6 +114,17 @@ void diagnostic_print(const char *filename, const char *function, int line, cons
 	fprintf(stderr, "\n");
 	fflush(stderr);
 	va_end(args);
+#else
+	std::stringstream ss;
+	ss << filename << "(In " << function << ':' << line << "): ";
+	char buffer[1024];
+	va_list args;
+	va_start(args, fmt);
+	vsprintf(buffer, fmt, args);
+	va_end(args);
+	ss << buffer << std::endl;
+	OutputDebugString(ss.str().c_str());
+#endif
 }
 
 }  // namespace util

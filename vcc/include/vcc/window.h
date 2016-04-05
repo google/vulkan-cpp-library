@@ -50,7 +50,7 @@ struct render_thread {
 
 	explicit render_thread(callback_type &&draw_callback)
 		: running(true), drawing(false),
-		thread([draw_callback, this]() {
+		  thread([draw_callback, this]() {
 		while (running) {
 			std::vector<callback_type> tasks;
 			{
@@ -80,7 +80,9 @@ struct render_thread {
 	void join() {
 		running = false;
 		cv.notify_one();
-		thread.join();
+		if (thread.joinable()) {
+			thread.join();
+		}
 	}
 
 	std::vector<callback_type> tasks;

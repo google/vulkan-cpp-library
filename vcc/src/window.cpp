@@ -62,7 +62,6 @@ namespace internal {
 
 window_data_type::~window_data_type() {
 	render_thread.join();
-
 #ifdef _WIN32
 	DestroyWindow(window);
 #endif // _WIN32
@@ -435,6 +434,7 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 		}
 		//draw(*window.data);
 	}
+	window.data->render_thread.join();
 	return (int) msg.wParam;
 #elif defined(__ANDROID__)
 
