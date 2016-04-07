@@ -18,6 +18,7 @@
 
 #include <glm/glm.hpp>
 #include <inttypes.h>
+#include <type/serialize.h>
 #include <type/storage.h>
 
 namespace type {
