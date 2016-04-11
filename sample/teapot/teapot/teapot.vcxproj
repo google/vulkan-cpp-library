@@ -101,8 +101,8 @@
       <AdditionalLibraryDirectories>$(SolutionDir)\Debug;$(SolutionDir)\lib;$(VulkanSdk)\Bin32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CustomBuildStep>
-      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)$(Configuration)\teapot-vert.spv" "$(ProjectDir)..\teapot.vert"
-$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)$(Configuration)\teapot-frag.spv" "$(ProjectDir)..\teapot.frag"</Command>
+      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)teapot-vert.spv" "$(ProjectDir)..\teapot.vert"
+$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)teapot-frag.spv" "$(ProjectDir)..\teapot.frag"</Command>
       <Outputs>$(SolutionDir)teapot-vert.spv;$(SolutionDir)teapot-frag.spv;%(Outputs)</Outputs>
       <Inputs>$(ProjectDir)..\teapot.vert;$(ProjectDir)..\teapot.frag;%(Inputs)</Inputs>
     </CustomBuildStep>
@@ -178,8 +178,8 @@ $(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)$(Configuration)\teapo
       <AdditionalLibraryDirectories>$(SolutionDir)\x64\Release;$(VulkanSdk)\Bin;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CustomBuildStep>
-      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)$(Configuration)\teapot-vert.spv" "$(ProjectDir)..\teapot.vert"
-$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)$(Configuration)\teapot-frag.spv" "$(ProjectDir)..\teapot.frag"</Command>
+      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)teapot-vert.spv" "$(ProjectDir)..\teapot.vert"
+$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)teapot-frag.spv" "$(ProjectDir)..\teapot.frag"</Command>
       <Inputs>$(ProjectDir)..\teapot.vert;$(ProjectDir)..\teapot.frag;%(Inputs)</Inputs>
       <Outputs>$(SolutionDir)teapot-vert.spv;$(SolutionDir)teapot-frag.spv;%(Outputs)</Outputs>
     </CustomBuildStep>

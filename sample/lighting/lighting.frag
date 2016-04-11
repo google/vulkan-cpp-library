@@ -84,7 +84,6 @@ void spotlight(in light_type light, in vec3 eye_position, in vec3 normal,
     ambient  += light.ambient * attenuation; 
     diffuse  += light.diffuse * nDotVP * attenuation;
     specular += light.specular * pf * attenuation;
-    diffuse = vec4(1.0);
 }
 
 void main() {

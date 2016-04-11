@@ -17,16 +17,13 @@
 
 #include <algorithm>
 #include <cassert>
-#include <chrono>
 #include <fstream>
-#include <sstream>
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <type/types.h>
 #include <vcc/buffer.h>
 #include <vcc/command_buffer.h>
 #include <vcc/command_pool.h>
-#include <vcc/debug.h>
 #include <vcc/descriptor_pool.h>
 #include <vcc/descriptor_set.h>
 #include <vcc/descriptor_set_update.h>
@@ -43,7 +40,6 @@
 #include <vcc/pipeline.h>
 #include <vcc/pipeline_cache.h>
 #include <vcc/pipeline_layout.h>
-#include <vcc/push_constant.h>
 #include <vcc/queue.h>
 #include <vcc/render_pass.h>
 #include <vcc/sampler.h>
@@ -121,12 +117,8 @@ int main(int argc, const char **argv) {
 
 	vcc::instance::instance_type instance;
 	{
-		const std::set<std::string> extensions = { VK_KHR_SURFACE_EXTENSION_NAME,
-#ifdef WIN32
-			VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-#else
-			VK_KHR_XCB_SURFACE_EXTENSION_NAME,
-#endif
+		const std::set<std::string> extensions = {
+			VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 		};
 		assert(vcc::enumerate::contains_all(
 			vcc::enumerate::instance_extension_properties(""),
@@ -153,41 +145,28 @@ int main(int argc, const char **argv) {
 			},
 			{}, extensions, {});
 	}
-	vcc::queue::queue_type queue(
-		vcc::queue::get_graphics_queue(std::ref(device)));
-	vcc::command_pool::command_pool_type cmd_pool(
-		vcc::command_pool::create(std::ref(device), 0,
-		vcc::queue::get_family_index(queue)));
 
 	vcc::descriptor_set_layout::descriptor_set_layout_type desc_layout(
 		vcc::descriptor_set_layout::create(std::ref(device),
-			{
-				vcc::descriptor_set_layout::descriptor_set_layout_binding{ 0,
-					VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
-					VK_SHADER_STAGE_VERTEX_BIT,{} },
-				vcc::descriptor_set_layout::descriptor_set_layout_binding{ 1,
-					VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
-					VK_SHADER_STAGE_FRAGMENT_BIT,{} },
-				vcc::descriptor_set_layout::descriptor_set_layout_binding{ 2,
-					VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
-					VK_SHADER_STAGE_FRAGMENT_BIT,{} }
-			}));
+		{
+			vcc::descriptor_set_layout::descriptor_set_layout_binding{ 0,
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+			VK_SHADER_STAGE_VERTEX_BIT,{} },
+			vcc::descriptor_set_layout::descriptor_set_layout_binding{ 1,
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+			VK_SHADER_STAGE_FRAGMENT_BIT,{} },
+			vcc::descriptor_set_layout::descriptor_set_layout_binding{ 2,
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+			VK_SHADER_STAGE_FRAGMENT_BIT,{} }
+		}));
+
 	vcc::pipeline_layout::pipeline_layout_type pipeline_layout(vcc::pipeline_layout::create(
 		std::ref(device), { std::ref(desc_layout) }));
 
-	vcc::pipeline_cache::pipeline_cache_type pipelineCache(vcc::pipeline_cache::create(std::ref(device)));
-
-	vcc::shader_module::shader_module_type vert_shader_module(
-		vcc::shader_module::create(std::ref(device),
-			std::ifstream("cube-vert.spv", std::ios_base::binary | std::ios_base::in)));
-	vcc::shader_module::shader_module_type frag_shader_module(
-		vcc::shader_module::create(std::ref(device),
-			std::ifstream("cube-frag.spv", std::ios_base::binary | std::ios_base::in)));
-
 	vcc::descriptor_pool::descriptor_pool_type desc_pool(
 		vcc::descriptor_pool::create(std::ref(device), 0, 1,
-			{ { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 } }));
+		{ { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 } }));
 
 	vcc::descriptor_set::descriptor_set_type desc_set(std::move(
 		vcc::descriptor_set::create(std::ref(device),
@@ -195,7 +174,6 @@ int main(int argc, const char **argv) {
 			{ std::ref(desc_layout) }).front()));
 
 	glm::mat4 projection_matrix;
-
 	type::mat4 projection_modelview_matrix;
 	vcc::data::buffer_type matrix_uniform_buffer(vcc::data::create(
 		type::linear, std::ref(device), 0, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -216,6 +194,8 @@ int main(int argc, const char **argv) {
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 		index_buffer);
 
+	vcc::queue::queue_type queue(vcc::queue::get_graphics_queue(
+		std::ref(device)));
 	{
 		auto image(vcc::image::create(std::ref(queue),
 			0, VK_IMAGE_USAGE_SAMPLED_BIT, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
@@ -254,8 +234,6 @@ int main(int argc, const char **argv) {
 	int last_x, last_y;
 	const float scale_x(128), scale_y(128);
 
-	std::vector<vcc::command_buffer::command_buffer_type> command_buffers;
-
 	vcc::window::window_type window(vcc::window::create(
 		GetModuleHandle(NULL),
 		std::ref(instance), std::ref(device), std::ref(queue),
@@ -284,7 +262,17 @@ int main(int argc, const char **argv) {
 			}
 		}, {}));
 
-	vcc::pipeline::pipeline_type pipeline(vcc::pipeline::create_graphics(std::ref(device), pipelineCache, 0,
+	vcc::shader_module::shader_module_type vert_shader_module(
+		vcc::shader_module::create(std::ref(device),
+			std::ifstream("cube-vert.spv", std::ios_base::binary | std::ios_base::in)));
+	vcc::shader_module::shader_module_type frag_shader_module(
+		vcc::shader_module::create(std::ref(device),
+			std::ifstream("cube-frag.spv", std::ios_base::binary | std::ios_base::in)));
+
+	vcc::pipeline_cache::pipeline_cache_type pipeline_cache(
+		vcc::pipeline_cache::create(std::ref(device)));
+	vcc::pipeline::pipeline_type pipeline(
+		vcc::pipeline::create_graphics(std::ref(device), pipeline_cache, 0,
 		{
 			vcc::pipeline::shader_stage(VK_SHADER_STAGE_VERTEX_BIT,
 				std::ref(vert_shader_module), "main"),
@@ -328,6 +316,9 @@ int main(int argc, const char **argv) {
 			VK_DYNAMIC_STATE_SCISSOR } },
 		std::ref(pipeline_layout), std::ref(render_pass), 0));
 
+	vcc::command_pool::command_pool_type cmd_pool(vcc::command_pool::create(
+		std::ref(device), 0, vcc::queue::get_family_index(queue)));
+	std::vector<vcc::command_buffer::command_buffer_type> command_buffers;
 	return vcc::window::run(window,
 		[&](VkExtent2D extent, VkFormat format,
 			std::vector<vcc::window::swapchain_type> &swapchain_images) {

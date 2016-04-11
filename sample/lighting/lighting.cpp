@@ -58,82 +58,33 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	vcc::instance::instance_type instance;
 	{
-		std::set<std::string> instance_validation_layers;
-		if (validate) {
-			std::set<std::string> required_instance_validation_layers{
-				//"VK_LAYER_LUNARG_api_dump",
-				"VK_LAYER_LUNARG_device_limits",
-				//"VK_LAYER_LUNARG_draw_state",
-				"VK_LAYER_LUNARG_image",
-				//"VK_LAYER_LUNARG_mem_tracker",
-				//"VK_LAYER_LUNARG_object_tracker",
-				"VK_LAYER_LUNARG_param_checker",
-				//"VK_LAYER_LUNARG_screenshot",
-				//"VK_LAYER_LUNARG_swapchain",
-				//"VK_LAYER_LUNARG_threading"
-				/*,
-				"VK_LAYER_LUNARG_vktrace"*/ };
-			assert(vcc::enumerate::contains_all(
-				vcc::enumerate::instance_layer_properties(),
-				required_instance_validation_layers));
-			instance_validation_layers = required_instance_validation_layers;
-		}
-
-		const std::set<std::string> required_extensions{
-			VK_KHR_SURFACE_EXTENSION_NAME,
-			VK_KHR_WIN32_SURFACE_EXTENSION_NAME };
-		const std::vector<VkExtensionProperties> instance_extensions(
-			vcc::enumerate::instance_extension_properties(""));
-		assert(vcc::enumerate::contains_all(instance_extensions,
-			required_extensions));
-		const std::vector<std::string> optional(vcc::enumerate::filter(
-			instance_extensions, { VK_KHR_SURFACE_EXTENSION_NAME }));
-		std::set<std::string> extensions(required_extensions.begin(),
-			required_extensions.end());
-		extensions.insert(optional.begin(), optional.end());
-
-		instance = vcc::instance::create(instance_validation_layers,
-			extensions);
+		const std::set<std::string> extensions = {
+			VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+		};
+		assert(vcc::enumerate::contains_all(
+			vcc::enumerate::instance_extension_properties(""),
+			extensions));
+		instance = vcc::instance::create({}, extensions);
 	}
 
 	vcc::device::device_type device;
 	{
 		const VkPhysicalDevice physical_device(
 			vcc::physical_device::enumerate(instance).front());
-		std::set<std::string> device_validation_layers;
-		if (validate) {
-			const std::set<std::string> required_validation_layers{
-				//"VK_LAYER_LUNARG_api_dump",
-				"VK_LAYER_LUNARG_device_limits",
-				//"VK_LAYER_LUNARG_draw_state",
-				//"VK_LAYER_LUNARG_image",
-				//"VK_LAYER_LUNARG_mem_tracker",
-				//"VK_LAYER_LUNARG_object_tracker",
-				"VK_LAYER_LUNARG_param_checker",
-				//"VK_LAYER_LUNARG_screenshot",
-				//"VK_LAYER_LUNARG_swapchain",
-				//"VK_LAYER_LUNARG_threading"
-				/*,
-				"VK_LAYER_LUNARG_vktrace"*/ };
-			assert(vcc::enumerate::contains_all(
-				vcc::enumerate::device_layer_properties(physical_device),
-				required_validation_layers));
-			device_validation_layers = required_validation_layers;
-		}
 
-		const std::set<std::string> dev_extensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-		const std::vector<VkExtensionProperties> device_extensions(
-			vcc::enumerate::device_extension_properties(physical_device, ""));
-		assert(vcc::enumerate::contains_all(device_extensions, dev_extensions));
+		const std::set<std::string> extensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+		assert(vcc::enumerate::contains_all(
+			vcc::enumerate::device_extension_properties(physical_device, ""),
+			extensions));
 
 		device = vcc::device::create(physical_device,
-			{ vcc::device::queue_create_info_type{
-				vcc::physical_device::get_queue_family_properties_with_flag(
-					vcc::physical_device::queue_famility_properties(physical_device),
-					VK_QUEUE_GRAPHICS_BIT),
+		{ vcc::device::queue_create_info_type{
+			vcc::physical_device::get_queue_family_properties_with_flag(
+			vcc::physical_device::queue_famility_properties(physical_device),
+				VK_QUEUE_GRAPHICS_BIT),
 				{ 0 } }
-			},
-			device_validation_layers, dev_extensions, {});
+		},
+		{}, extensions, {});
 	}
 
 	type::mat4 projection_matrix;

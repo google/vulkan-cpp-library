@@ -203,10 +203,17 @@ int main(int argc, const char **argv) {
 #endif // __ANDROID__
 	));
 
-	vcc::descriptor_pool::descriptor_pool_type desc_pool(vcc::descriptor_pool::create(std::ref(device), 0, 1, { VkDescriptorPoolSize{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }, VkDescriptorPoolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 } }));
-	vcc::descriptor_set::descriptor_set_type desc_set(std::move(vcc::descriptor_set::create(std::ref(device), std::ref(desc_pool), { std::ref(desc_layout) }).front()));
+	vcc::descriptor_pool::descriptor_pool_type desc_pool(
+		vcc::descriptor_pool::create(std::ref(device), 0, 1, {
+			VkDescriptorPoolSize{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+			VkDescriptorPoolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
+		}));
+	vcc::descriptor_set::descriptor_set_type desc_set(std::move(
+		vcc::descriptor_set::create(std::ref(device), std::ref(desc_pool),
+			{ std::ref(desc_layout) }).front()));
 
-	const glm::mat4 view_matrix(glm::lookAt(glm::vec3(0.0f, 30.0f, 30.0f), glm::vec3(0, 0, 0), glm::vec3(0.0f, 1.0f, 0.0)));
+	const glm::mat4 view_matrix(glm::lookAt(glm::vec3(0.0f, 30.0f, 30.0f),
+		glm::vec3(0, 0, 0), glm::vec3(0.0f, 1.0f, 0.0)));
 
 	const uint32_t num_instanced_drawings = 256;
 	type::mat4 projection_matrix;
