@@ -39,6 +39,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lighting", "sample\lighting
 		{0C5191D8-DF96-42CB-AEA3-993390806916} = {0C5191D8-DF96-42CB-AEA3-993390806916}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "normal-mapping-and-cube-texture", "sample\normal-mapping-and-cube-texture\normal-mapping-and-cube-texture\normal-mapping-and-cube-texture.vcxproj", "{343AA1A5-6270-4F03-BFAF-CCA44F97D9C0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -103,6 +105,14 @@ Global
 		{9088F975-A7F4-4BB0-B0D5-7802FA0B3EA4}.Release|Win32.Build.0 = Release|Win32
 		{9088F975-A7F4-4BB0-B0D5-7802FA0B3EA4}.Release|x64.ActiveCfg = Release|x64
 		{9088F975-A7F4-4BB0-B0D5-7802FA0B3EA4}.Release|x64.Build.0 = Release|x64
+		{343AA1A5-6270-4F03-BFAF-CCA44F97D9C0}.Debug|Win32.ActiveCfg = Debug|Win32
+		{343AA1A5-6270-4F03-BFAF-CCA44F97D9C0}.Debug|Win32.Build.0 = Debug|Win32
+		{343AA1A5-6270-4F03-BFAF-CCA44F97D9C0}.Debug|x64.ActiveCfg = Debug|x64
+		{343AA1A5-6270-4F03-BFAF-CCA44F97D9C0}.Debug|x64.Build.0 = Debug|x64
+		{343AA1A5-6270-4F03-BFAF-CCA44F97D9C0}.Release|Win32.ActiveCfg = Release|Win32
+		{343AA1A5-6270-4F03-BFAF-CCA44F97D9C0}.Release|Win32.Build.0 = Release|Win32
+		{343AA1A5-6270-4F03-BFAF-CCA44F97D9C0}.Release|x64.ActiveCfg = Release|x64
+		{343AA1A5-6270-4F03-BFAF-CCA44F97D9C0}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
