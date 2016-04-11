@@ -26,6 +26,7 @@
     <ClInclude Include="..\include\type\storage.h" />
     <ClInclude Include="..\include\type\supplier.h" />
     <ClInclude Include="..\include\type\transform.h" />
+    <ClInclude Include="..\include\type\types.h" />
     <ClInclude Include="..\include\type\view.h" />
   </ItemGroup>
   <ItemGroup>
