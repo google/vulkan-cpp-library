@@ -46,6 +46,15 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "normal-mapping-and-cube-tex
 		{0C5191D8-DF96-42CB-AEA3-993390806916} = {0C5191D8-DF96-42CB-AEA3-993390806916}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1FE4F2CB-1E7D-4348-950B-EC4DBB97EA2C}"
+	ProjectSection(SolutionItems) = preProject
+		CONTRIBUTING = CONTRIBUTING
+		LICENSE = LICENSE
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{F260C914-86FF-4E9E-BE5D-E2170A8D5E52}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -121,5 +130,11 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C9AF7BF7-6B13-44A5-8F58-606FBE3C0585} = {F260C914-86FF-4E9E-BE5D-E2170A8D5E52}
+		{D346CBAC-778B-46F2-847A-9131029747B8} = {F260C914-86FF-4E9E-BE5D-E2170A8D5E52}
+		{9088F975-A7F4-4BB0-B0D5-7802FA0B3EA4} = {F260C914-86FF-4E9E-BE5D-E2170A8D5E52}
+		{343AA1A5-6270-4F03-BFAF-CCA44F97D9C0} = {F260C914-86FF-4E9E-BE5D-E2170A8D5E52}
 	EndGlobalSection
 EndGlobal
