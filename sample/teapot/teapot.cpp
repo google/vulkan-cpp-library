@@ -205,7 +205,7 @@ int main(int argc, const char **argv) {
 
 	vcc::descriptor_pool::descriptor_pool_type desc_pool(
 		vcc::descriptor_pool::create(std::ref(device), 0, 1, {
-			VkDescriptorPoolSize{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+			VkDescriptorPoolSize{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 },
 			VkDescriptorPoolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
 		}));
 	vcc::descriptor_set::descriptor_set_type desc_set(std::move(

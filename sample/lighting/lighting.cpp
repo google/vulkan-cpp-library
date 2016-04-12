@@ -150,7 +150,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		}));
 	vcc::descriptor_pool::descriptor_pool_type desc_pool(
 		vcc::descriptor_pool::create(std::ref(device), 0, 1,
-		{ VkDescriptorPoolSize{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 } }));
+		{ VkDescriptorPoolSize{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 } }));
 	vcc::descriptor_set::descriptor_set_type desc_set(std::move(
 		vcc::descriptor_set::create(std::ref(device), std::ref(desc_pool),
 		{ std::ref(desc_layout) }).front()));

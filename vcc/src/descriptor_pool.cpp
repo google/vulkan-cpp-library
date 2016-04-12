@@ -18,11 +18,12 @@
 namespace vcc {
 namespace descriptor_pool {
 
-descriptor_pool_type create(type::supplier<device::device_type> &&device,
+descriptor_pool_type create(const type::supplier<device::device_type> &device,
 		VkDescriptorPoolCreateFlags flags,
 		uint32_t maxSets,
 		const std::vector<VkDescriptorPoolSize> &poolSizes) {
-	VkDescriptorPoolCreateInfo create = {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, NULL};
+	VkDescriptorPoolCreateInfo create = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, NULL};
 	create.flags = flags;
 	create.maxSets = maxSets;
 	create.poolSizeCount = (uint32_t) poolSizes.size();
@@ -30,7 +31,7 @@ descriptor_pool_type create(type::supplier<device::device_type> &&device,
 	VkDescriptorPool descriptor_pool;
 	VKCHECK(vkCreateDescriptorPool(internal::get_instance(*device), &create,
 		NULL, &descriptor_pool));
-	return descriptor_pool_type(descriptor_pool, std::forward<type::supplier<device::device_type>>(device));
+	return descriptor_pool_type(descriptor_pool, device);
 }
 
 }  // namespace descriptor_pool

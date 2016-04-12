@@ -43,7 +43,7 @@ private:
 };
 
 VCC_LIBRARY descriptor_pool_type create(
-	type::supplier<device::device_type> &&device,
+	const type::supplier<device::device_type> &device,
 	VkDescriptorPoolCreateFlags flags, uint32_t maxSets,
 	const std::vector<VkDescriptorPoolSize> &poolSizes);
 
