@@ -54,14 +54,26 @@ namespace util {
 VCC_LIBRARY std::vector<const char *> to_pointers(const std::vector<std::string> &vector);
 VCC_LIBRARY std::vector<const char *> to_pointers(const std::set<std::string> &set);
 
+// Returns a vector with the given movable-only arguments added in the
+// given order. Note that initializer-lists require copyable types.
 template<typename T, typename... ValuesT>
 std::vector<T> vector_from_variadic_movables(ValuesT &&...values) {
-	// Can't use initializer-list in these cases.
 	std::vector<T> vector;
 	vector.reserve(sizeof...(ValuesT));
 	// dummy integer array guarantees order of evaluation on early GCC versions (bug).
 	const int dummy[] = { (vector.push_back(std::forward<ValuesT>(values)), 0)... };
 	return std::move(vector);
+}
+
+// Returns a set with the given movable-only arguments added in the
+// given order. Note that initializer-lists require copyable types.
+template<typename T, typename... ValuesT>
+std::set<T> set_from_variadic_movables(ValuesT &&...values) {
+	// Can't use initializer-list in these cases.
+	std::set<T> set;
+	// dummy integer array guarantees order of evaluation on early GCC versions (bug).
+	const int dummy[] = { (set.insert(std::forward<ValuesT>(values)), 0)... };
+	return std::move(set);
 }
 
 VCC_LIBRARY void diagnostic_print(const char *filename, const char *function, int line, const char *fmt, ...);

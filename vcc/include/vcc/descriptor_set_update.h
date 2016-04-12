@@ -28,7 +28,17 @@ void update(device::device_type &device, const ArgsT &... args) {
 	util::internal::pass( (internal::count(storage, args), 1)...);
 	storage.reserve();
 	util::internal::pass((internal::add(storage, args), 1)...);
-	vcc::util::lock(storage.deferred_locks);
+	const std::set<std::mutex *> mutexes(
+		util::set_from_variadic_movables<std::mutex *>(
+			&vcc::internal::get_mutex(*args.dst_set)...));
+	std::vector<std::unique_lock<std::mutex>> deferred_locks;
+	deferred_locks.reserve(mutexes.size());
+	std::transform(mutexes.begin(), mutexes.end(),
+		std::back_inserter<decltype(deferred_locks)>(deferred_locks),
+		[](std::mutex *mutex) {
+			return std::unique_lock<std::mutex>(*mutex, std::defer_lock);
+		});
+	vcc::util::lock(deferred_locks);
 	VKTRACE(vkUpdateDescriptorSets(vcc::internal::get_instance(device),
 		(uint32_t) storage.write_sets.size(), storage.write_sets.data(),
 		(uint32_t) storage.copy_sets.size(), storage.copy_sets.data()));

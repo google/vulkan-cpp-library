@@ -67,7 +67,6 @@ void add(update_storage &storage, const copy &c) {
 	set.dstArrayElement = c.dst_array_element;
 	set.descriptorCount = c.descriptor_count;
 	storage.copy_sets.push_back(set);
-	storage.deferred_locks.emplace_back(vcc::internal::get_mutex(*c.dst_set), std::defer_lock);
 	for (uint32_t i = 0; i < c.descriptor_count; ++i) {
 		c.dst_set->references.clone(vcc::internal::bind_point_type{ c.dst_binding, uint32_t(c.dst_array_element + i) }, c.src_set->references);
 	}
@@ -90,7 +89,6 @@ void add(update_storage &storage, const write_image &write) {
 	set.pImageInfo = image_infos.data();
 	storage.image_infos.push_back(std::move(image_infos));
 	storage.write_sets.push_back(set);
-	storage.deferred_locks.emplace_back(vcc::internal::get_mutex(*write.dst_set), std::defer_lock);
 	for (uint32_t i = 0; i < write.images.size(); ++i) {
 		write.dst_set->references.put(vcc::internal::bind_point_type{
 			write.dst_binding, uint32_t(write.dst_array_element + i) },
@@ -158,7 +156,6 @@ void count(update_storage &storage, const write_buffer_view_type &write) {
 void update_storage::reserve() {
 	copy_sets.reserve(copy_sets_size);
 	write_sets.reserve(write_sets_size);
-	deferred_locks.reserve(copy_sets.size() + write_sets.size());
 	image_infos.reserve(image_info_size);
 	buffer_infos.reserve(buffer_info_size);
 	buffer_view.reserve(buffer_view_size);
