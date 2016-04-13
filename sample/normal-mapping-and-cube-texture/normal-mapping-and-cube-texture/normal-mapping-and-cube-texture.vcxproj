@@ -58,15 +58,19 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\Paths.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\Paths.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\Paths.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\Paths.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -121,6 +125,12 @@ $(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cub
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <CustomBuildStep>
+      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cube-texture-vert.spv" "$(ProjectDir)..\normal-mapping-and-cube-texture.vert"
+$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cube-texture-frag.spv" "$(ProjectDir)..\normal-mapping-and-cube-texture.frag"</Command>
+      <Outputs>$(SolutionDir)normal-mapping-and-cube-texture-vert.spv;$(SolutionDir)normal-mapping-and-cube-texture-frag.spv;%(Outputs)</Outputs>
+      <Inputs>$(ProjectDir)..\normal-mapping-and-cube-texture.vert;$(ProjectDir)..\normal-mapping-and-cube-texture.frag;%(Inputs)</Inputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -139,6 +149,12 @@ $(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cub
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <CustomBuildStep>
+      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cube-texture-vert.spv" "$(ProjectDir)..\normal-mapping-and-cube-texture.vert"
+$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cube-texture-frag.spv" "$(ProjectDir)..\normal-mapping-and-cube-texture.frag"</Command>
+      <Outputs>$(SolutionDir)normal-mapping-and-cube-texture-vert.spv;$(SolutionDir)normal-mapping-and-cube-texture-frag.spv;%(Outputs)</Outputs>
+      <Inputs>$(ProjectDir)..\normal-mapping-and-cube-texture.vert;$(ProjectDir)..\normal-mapping-and-cube-texture.frag;%(Inputs)</Inputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -157,6 +173,12 @@ $(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cub
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <CustomBuildStep>
+      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cube-texture-vert.spv" "$(ProjectDir)..\normal-mapping-and-cube-texture.vert"
+$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cube-texture-frag.spv" "$(ProjectDir)..\normal-mapping-and-cube-texture.frag"</Command>
+      <Outputs>$(SolutionDir)normal-mapping-and-cube-texture-vert.spv;$(SolutionDir)normal-mapping-and-cube-texture-frag.spv;%(Outputs)</Outputs>
+      <Inputs>$(ProjectDir)..\normal-mapping-and-cube-texture.vert;$(ProjectDir)..\normal-mapping-and-cube-texture.frag;%(Inputs)</Inputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="..\normal-mapping-and-cube-texture.frag" />

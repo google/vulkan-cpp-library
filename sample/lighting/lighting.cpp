@@ -112,7 +112,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		type::vec4(glm::vec4(0.f, 10.f, 0.f, 1.f)),
 		type::vec3(glm::vec3(1, 0, 0)), type::vec3(glm::vec3(0, 0, -1)),
 		type::float_type(-1), type::vec4(glm::vec4(0.2f, 0.2f, 0.2f, 1)),
-		type::vec4(glm::vec4(0.2f, 0.2f, 0.2f, 1.f)),
+		type::vec4(glm::vec4(0.9f, 0.9f, 0.9f, 1.f)),
 		type::vec4(glm::vec4(1.f, 1.f, 1.f, 1.f)), type::float_type(120.f)
 	};
 

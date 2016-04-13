@@ -82,7 +82,6 @@ int main(int argc, const char **argv) {
 				"VK_LAYER_LUNARG_image",
 				//"VK_LAYER_LUNARG_mem_tracker",
 				//"VK_LAYER_LUNARG_object_tracker",
-				"VK_LAYER_LUNARG_param_checker",
 				//"VK_LAYER_LUNARG_screenshot",
 				//"VK_LAYER_LUNARG_swapchain",
 				//"VK_LAYER_LUNARG_threading"
@@ -123,7 +122,6 @@ int main(int argc, const char **argv) {
 				//"VK_LAYER_LUNARG_image",
 				//"VK_LAYER_LUNARG_mem_tracker",
 				//"VK_LAYER_LUNARG_object_tracker",
-				"VK_LAYER_LUNARG_param_checker",
 				//"VK_LAYER_LUNARG_screenshot",
 				//"VK_LAYER_LUNARG_swapchain",
 				//"VK_LAYER_LUNARG_threading"

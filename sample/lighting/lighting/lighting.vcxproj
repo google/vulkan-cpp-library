@@ -58,15 +58,19 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\Paths.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\Paths.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\Paths.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\Paths.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -98,7 +102,8 @@
       <AdditionalDependencies>vulkan-1.lib;vcc.lib;types.lib;vcc-image.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
-      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)lighting-vert.spv" "$(ProjectDir)..\lighting.vert"</Command>
+      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)lighting-vert.spv" "$(ProjectDir)..\lighting.vert"
+$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)lighting-frag.spv" "$(ProjectDir)..\lighting.frag"</Command>
       <Outputs>$(SolutionDir)lighting-vert.spv;$(SolutionDir)lighting-frag.spv;%(Outputs)</Outputs>
       <Inputs>$(ProjectDir)..\lighting.vert;$(ProjectDir)..\lighting.frag;%(Inputs)</Inputs>
     </CustomBuildStep>
@@ -151,7 +156,8 @@ $(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)lighting-frag.spv" "$(
       <AdditionalDependencies>vulkan-1.lib;vcc.lib;types.lib;vcc-image.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
-      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)lighting-vert.spv" "$(ProjectDir)..\lighting.vert"</Command>
+      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)lighting-vert.spv" "$(ProjectDir)..\lighting.vert"
+$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)lighting-frag.spv" "$(ProjectDir)..\lighting.frag"</Command>
       <Outputs>$(SolutionDir)lighting-vert.spv;$(SolutionDir)lighting-frag.spv;%(Outputs)</Outputs>
       <Inputs>$(ProjectDir)..\lighting.vert;$(ProjectDir)..\lighting.frag;%(Inputs)</Inputs>
     </CustomBuildStep>
@@ -177,7 +183,8 @@ $(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)lighting-frag.spv" "$(
       <AdditionalDependencies>vulkan-1.lib;vcc.lib;types.lib;vcc-image.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
-      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)lighting-vert.spv" "$(ProjectDir)..\lighting.vert"</Command>
+      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)lighting-vert.spv" "$(ProjectDir)..\lighting.vert"
+$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)lighting-frag.spv" "$(ProjectDir)..\lighting.frag"</Command>
       <Outputs>$(SolutionDir)lighting-vert.spv;$(SolutionDir)lighting-frag.spv;%(Outputs)</Outputs>
       <Inputs>$(ProjectDir)..\lighting.vert;$(ProjectDir)..\lighting.frag;%(Inputs)</Inputs>
     </CustomBuildStep>

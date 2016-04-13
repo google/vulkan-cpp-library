@@ -17,7 +17,6 @@
 #define _VCC_DEBUG_H_
 
 #include <vcc/instance.h>
-#include <vulkan/vk_lunarg_debug_marker.h>
 
 namespace vcc {
 namespace debug {
