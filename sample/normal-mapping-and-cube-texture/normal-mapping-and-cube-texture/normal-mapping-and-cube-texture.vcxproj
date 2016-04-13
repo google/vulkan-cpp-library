@@ -120,10 +120,13 @@ $(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cub
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(GlmDir);$(VulkanSdk)Include;$(SolutionDir)types\include;$(SolutionDir)vcc\include;$(SolutionDir)vcc-image\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)\x64\$(Configuration);$(VulkanSdk)\Bin;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;vcc.lib;types.lib;vcc-image.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
       <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cube-texture-vert.spv" "$(ProjectDir)..\normal-mapping-and-cube-texture.vert"
@@ -142,12 +145,15 @@ $(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cub
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(GlmDir);$(VulkanSdk)Include;$(SolutionDir)types\include;$(SolutionDir)vcc\include;$(SolutionDir)vcc-image\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(SolutionDir)\$(Configuration);$(VulkanSdk)\Bin32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;vcc.lib;types.lib;vcc-image.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
       <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cube-texture-vert.spv" "$(ProjectDir)..\normal-mapping-and-cube-texture.vert"
@@ -166,12 +172,15 @@ $(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cub
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(GlmDir);$(VulkanSdk)Include;$(SolutionDir)types\include;$(SolutionDir)vcc\include;$(SolutionDir)vcc-image\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(SolutionDir)\x64\$(Configuration);$(VulkanSdk)\Bin;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;vcc.lib;types.lib;vcc-image.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
       <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)normal-mapping-and-cube-texture-vert.spv" "$(ProjectDir)..\normal-mapping-and-cube-texture.vert"
