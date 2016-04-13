@@ -20,43 +20,40 @@
 namespace vcc {
 namespace descriptor_set_layout {
 
-std::vector<VkDescriptorSetLayoutBinding> convert_bindings(const std::vector<descriptor_set_layout_binding> &bindings) {
+std::pair<std::vector<VkDescriptorSetLayoutBinding>, std::vector<std::vector<VkSampler>>> convert_bindings(const std::vector<descriptor_set_layout_binding> &bindings) {
 	std::vector<VkDescriptorSetLayoutBinding> converted_bindings;
+	std::vector<std::vector<VkSampler>> converted_samplers;
 	converted_bindings.reserve(bindings.size());
-	std::transform(bindings.begin(), bindings.end(), std::back_inserter(converted_bindings),
-			[](const descriptor_set_layout_binding &binding) {
+	for (const descriptor_set_layout_binding &binding : bindings) {
 		VkDescriptorSetLayoutBinding converted_binding;
 		converted_binding.binding = binding.binding;
 		converted_binding.descriptorType = binding.descriptorType;
 		converted_binding.descriptorCount = binding.descriptorCount;
 		converted_binding.stageFlags = binding.stageFlags;
 
-		// TODO(gardell): A bit of a C-style hack.
-		/*VkSampler *mutable_samplers = new VkSampler[binding.immutableSamplers.size()];
+		std::vector<VkSampler> samplers;
+		samplers.reserve(binding.immutableSamplers.size());
 		std::transform(binding.immutableSamplers.begin(), binding.immutableSamplers.end(),
-				mutable_samplers, [](const type::supplier<sampler::sampler_type> &sampler){
-			return sampler->instance;
+			std::back_inserter(samplers), [](const type::supplier<sampler::sampler_type> &sampler) {
+			return internal::get_instance(*sampler);
 		});
-		converted_binding.pImmutableSamplers = mutable_samplers;*/
-		converted_binding.pImmutableSamplers = NULL;
-		return converted_binding;
-	});
-	return std::move(converted_bindings);
+		converted_binding.pImmutableSamplers = samplers.data();
+		converted_bindings.emplace_back(converted_binding);
+		converted_samplers.push_back(std::move(samplers));
+	}
+	return std::make_pair(std::move(converted_bindings), std::move(converted_samplers));
 }
 
 descriptor_set_layout_type create(const type::supplier<device::device_type> &device, const std::vector<descriptor_set_layout_binding> &bindings) {
 	VkDescriptorSetLayoutCreateInfo create = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, NULL, 0};
 	create.bindingCount = (uint32_t) bindings.size();
-	const std::vector<VkDescriptorSetLayoutBinding> converted_bindings(convert_bindings(bindings));
+	std::vector<VkDescriptorSetLayoutBinding> converted_bindings;
+	std::vector<std::vector<VkSampler>> converted_samplers;
+	std::tie(converted_bindings, converted_samplers) = (convert_bindings(bindings));
 	create.pBindings = converted_bindings.data();
 	VkDescriptorSetLayout layout;
 	VKCHECK(vkCreateDescriptorSetLayout(internal::get_instance(*device),
 		&create, NULL, &layout));
-
-	// TODO(gardell): A bit of a C-style hack.
-	/*for (const VkDescriptorSetLayoutBinding &binding : converted_bindings) {
-		delete[] binding.pImmutableSamplers;
-	}*/
 	return descriptor_set_layout_type(layout, device);
 }
 
