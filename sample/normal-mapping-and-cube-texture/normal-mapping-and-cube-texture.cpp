@@ -155,11 +155,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	LPSTR lpCmdLine, int nCmdShow) {
 
 	vcc::instance::instance_type instance;
-	vcc::device::device_type device;
-	vcc::queue::queue_type queue;
-
-	std::vector<vcc::command_buffer::command_buffer_type> command_buffers;
-
 	vcc::debug::debug_type debug;
 
 	{
@@ -200,6 +195,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		instance = vcc::instance::create(instance_validation_layers, extensions);
 	}
 
+	vcc::device::device_type device;
 	{
 		const std::vector<VkPhysicalDevice> physical_devices(vcc::physical_device::enumerate(instance));
 
@@ -238,8 +234,9 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 			},
 			device_validation_layers, dev_extensions, {});
 	}
-	vcc::command_pool::command_pool_type cmd_pool = vcc::command_pool::create(std::ref(device), 0, vcc::queue::get_family_index(queue));
-	queue = vcc::queue::get_graphics_queue(std::ref(device));
+	vcc::queue::queue_type queue(vcc::queue::get_graphics_queue(std::ref(device)));
+	vcc::command_pool::command_pool_type cmd_pool(vcc::command_pool::create(
+		std::ref(device), 0, vcc::queue::get_family_index(queue)));
 
 	vcc::descriptor_set_layout::descriptor_set_layout_type desc_layout(vcc::descriptor_set_layout::create(std::ref(device),
 	{
@@ -409,21 +406,38 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		vcc::pipeline::dynamic_state{ { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR } },
 		std::ref(pipeline_layout), std::ref(render_pass), 0));
 
+	std::vector<vcc::command_buffer::command_buffer_type> command_buffers;
+
 	return vcc::window::run(window,
 		[&](VkExtent2D extent, VkFormat format, std::vector<vcc::window::swapchain_type> &swapchain_images) {
 		type::mutate(projection_matrix)[0] = glm::perspective(45.f, float(extent.width) / extent.height, 1.f, 100.f);
 		command_buffers.clear();
 
-		std::shared_ptr<vcc::image::image_type> depth_image = std::make_shared<vcc::image::image_type>(vcc::image::create(
-			std::ref(device), 0, VK_IMAGE_TYPE_2D, depth_format, { extent.width, extent.height, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE, {}, VK_IMAGE_LAYOUT_UNDEFINED));
-		vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *depth_image);
+		std::shared_ptr<vcc::image::image_type> depth_image(
+			std::make_shared<vcc::image::image_type>(vcc::image::create(
+				std::ref(device), 0, VK_IMAGE_TYPE_2D, depth_format,
+				{ extent.width, extent.height, 1 }, 1, 1,
+				VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_OPTIMAL,
+				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+				VK_SHARING_MODE_EXCLUSIVE, {}, VK_IMAGE_LAYOUT_UNDEFINED)));
+		vcc::memory::bind(std::ref(device),
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *depth_image);
 
-		vcc::command_buffer::command_buffer_type command_buffer(std::move(vcc::command_buffer::allocate(std::ref(device), std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
+		vcc::command_buffer::command_buffer_type command_buffer(std::move(
+			vcc::command_buffer::allocate(std::ref(device), std::ref(cmd_pool),
+				VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 		vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
-			vcc::command_buffer::pipeline_barrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
-			{ vcc::command_buffer::image_memory_barrier{ 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, depth_image,{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 } } }));
-		vcc::queue::submit(queue, {}, { std::reference_wrapper<vcc::command_buffer::command_buffer_type>(command_buffer) }, {});
+			vcc::command_buffer::pipeline_barrier(
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
+				{ vcc::command_buffer::image_memory_barrier{ 0,
+				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+				VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+				depth_image,
+				{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 } } }));
+		vcc::queue::submit(queue, {}, { std::ref(command_buffer) }, {});
 		vcc::queue::wait_idle(queue);
 
 		command_buffers = vcc::command_buffer::allocate(std::ref(device), std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, (uint32_t)swapchain_images.size());

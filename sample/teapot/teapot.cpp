@@ -65,10 +65,6 @@ const bool validate = true;
 int main(int argc, const char **argv) {
 
 	vcc::instance::instance_type instance;
-	vcc::device::device_type device;
-	vcc::queue::queue_type queue;
-
-	std::vector<vcc::command_buffer::command_buffer_type> command_buffers;
 
 	vcc::debug::debug_type debug;
 
@@ -108,6 +104,7 @@ int main(int argc, const char **argv) {
 		instance = vcc::instance::create(instance_validation_layers, extensions);
 	}
 
+	vcc::device::device_type device;
 	{
 		const std::vector<VkPhysicalDevice> physical_devices(
 			vcc::physical_device::enumerate(instance));
@@ -156,9 +153,8 @@ int main(int argc, const char **argv) {
 			},
 			device_validation_layers, dev_extensions, {});
 	}
-	vcc::command_pool::command_pool_type cmd_pool = vcc::command_pool::create(
-		std::ref(device), 0, vcc::queue::get_family_index(queue));
-	queue = vcc::queue::get_graphics_queue(std::ref(device));
+
+	vcc::queue::queue_type queue(vcc::queue::get_graphics_queue(std::ref(device)));
 
 	vcc::descriptor_set_layout::descriptor_set_layout_type desc_layout(
 		vcc::descriptor_set_layout::create(std::ref(device),
@@ -411,6 +407,10 @@ int main(int argc, const char **argv) {
 		vcc::pipeline::dynamic_state{ { VK_DYNAMIC_STATE_VIEWPORT,
 			VK_DYNAMIC_STATE_SCISSOR } },
 		std::ref(pipeline_layout), std::ref(render_pass), 0));
+
+	vcc::command_pool::command_pool_type cmd_pool = vcc::command_pool::create(
+		std::ref(device), 0, vcc::queue::get_family_index(queue));
+	std::vector<vcc::command_buffer::command_buffer_type> command_buffers;
 
 	return vcc::window::run(window,
 		[&](VkExtent2D extent, VkFormat format,

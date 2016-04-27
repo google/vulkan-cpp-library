@@ -150,14 +150,14 @@ int main(int argc, const char **argv) {
 		vcc::descriptor_set_layout::create(std::ref(device),
 		{
 			vcc::descriptor_set_layout::descriptor_set_layout_binding{ 0,
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
-			VK_SHADER_STAGE_VERTEX_BIT,{} },
+				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+				VK_SHADER_STAGE_VERTEX_BIT,{} },
 			vcc::descriptor_set_layout::descriptor_set_layout_binding{ 1,
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
-			VK_SHADER_STAGE_FRAGMENT_BIT,{} },
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+				VK_SHADER_STAGE_FRAGMENT_BIT,{} },
 			vcc::descriptor_set_layout::descriptor_set_layout_binding{ 2,
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
-			VK_SHADER_STAGE_FRAGMENT_BIT,{} }
+				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+				VK_SHADER_STAGE_FRAGMENT_BIT,{} }
 		}));
 
 	vcc::pipeline_layout::pipeline_layout_type pipeline_layout(vcc::pipeline_layout::create(
