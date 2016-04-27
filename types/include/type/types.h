@@ -25,10 +25,6 @@ namespace type {
 
 namespace internal {
 
-	// TODO(gardell): 9 element types (mat3) need to be expanded to 3*vec4, this however should not be hardcoded like this.
-	// The type could be a struct once we support that, in that case we don't want this specific layout.
-	// TODO(gardell): Make it possible to inject a layout to use in the view_adapter and have glm::mat3 use a custom one.
-	// Not sure of declaration order, glm::mat3 doesn't exist in this library.
 	template<>
 	struct copy_type<glm::mat3> {
 		typedef glm::mat3 value_type;
@@ -43,6 +39,7 @@ namespace internal {
 			}
 		}
 	};
+
 }  // namespace internal
 
 typedef t_array<float> float_array;
@@ -126,6 +123,215 @@ typedef mutable_t_array<glm::mat4> mutable_mat4_array;
 
 typedef mutable_t_array<uint8_t> mutable_ubyte_array;
 typedef mutable_t_array<uint16_t> mutable_ushort_array;
+
+enum element_enum {
+	type_unknown = 0,
+	type_float,
+	type_int,
+	type_uint,
+	type_ubyte,
+	type_ushort
+};
+
+namespace internal {
+
+	template<element_enum Element, std::size_t Cols, std::size_t Rows, bool IsArray>
+	struct type_information_traits {
+		const element_enum element = Element;
+		const static std::size_t cols = Cols, rows = Rows;
+		const static bool is_array = IsArray;
+	};
+
+}  // namespace internal
+
+template<typename T>
+struct type_information {};
+
+template<>
+struct type_information<float_array>
+	: public internal::type_information_traits<type_float, 1, 1, true> {};
+template<>
+struct type_information<vec2_array>
+	: public internal::type_information_traits<type_float, 2, 1, true> {};
+template<>
+struct type_information<vec3_array>
+	: public internal::type_information_traits<type_float, 3, 1, true> {};
+template<>
+struct type_information<vec4_array>
+	: public internal::type_information_traits<type_float, 4, 1, true> {};
+template<>
+struct type_information<int_array>
+	: public internal::type_information_traits<type_int, 1, 1, true> {};
+template<>
+struct type_information<ivec2_array>
+	: public internal::type_information_traits<type_int, 2, 1, true> {};
+template<>
+struct type_information<ivec3_array>
+	: public internal::type_information_traits<type_int, 3, 1, true> {};
+template<>
+struct type_information<ivec4_array>
+	: public internal::type_information_traits<type_int, 4, 1, true> {};
+template<>
+struct type_information<mat2_array>
+	: public internal::type_information_traits<type_float, 2, 2, true> {};
+template<>
+struct type_information<mat3_array>
+	: public internal::type_information_traits<type_float, 3, 3, true> {};
+template<>
+struct type_information<mat4_array>
+	: public internal::type_information_traits<type_float, 4, 4, true> {};
+template<>
+struct type_information<ubyte_array>
+	: public internal::type_information_traits<type_ubyte, 1, 1, true> {};
+template<>
+struct type_information<ushort_array>
+	: public internal::type_information_traits<type_ushort, 1, 1, true> {};
+template<>
+struct type_information<uint_array>
+	: public internal::type_information_traits<type_uint, 1, 1, true> {};
+
+template<>
+struct type_information<float_type>
+	: public internal::type_information_traits<type_float, 1, 1, false> {};
+template<>
+struct type_information<vec2>
+	: public internal::type_information_traits<type_float, 2, 1, false> {};
+template<>
+struct type_information<vec3>
+	: public internal::type_information_traits<type_float, 3, 1, false> {};
+template<>
+struct type_information<vec4>
+	: public internal::type_information_traits<type_float, 4, 1, false> {};
+template<>
+struct type_information<int>
+	: public internal::type_information_traits<type_int, 1, 1, false> {};
+template<>
+struct type_information<ivec2>
+	: public internal::type_information_traits<type_int, 2, 1, false> {};
+template<>
+struct type_information<ivec3>
+	: public internal::type_information_traits<type_int, 3, 1, false> {};
+template<>
+struct type_information<ivec4>
+	: public internal::type_information_traits<type_int, 4, 1, false> {};
+template<>
+struct type_information<mat2>
+	: public internal::type_information_traits<type_float, 2, 2, false> {};
+template<>
+struct type_information<mat3>
+	: public internal::type_information_traits<type_float, 3, 3, false> {};
+template<>
+struct type_information<mat4>
+	: public internal::type_information_traits<type_float, 4, 4, false> {};
+
+template<>
+struct type_information<const_float_array>
+	: public type_information<float_array> {};
+template<>
+struct type_information<const_vec2_array>
+	: public type_information<vec2_array> {};
+template<>
+struct type_information<const_vec3_array>
+	: public type_information<vec3_array> {};
+template<>
+struct type_information<const_vec4_array>
+	: public type_information<vec4_array> {};
+template<>
+struct type_information<const_int_array>
+	: public type_information<int_array> {};
+template<>
+struct type_information<const_ivec2_array>
+	: public type_information<ivec2_array> {};
+template<>
+struct type_information<const_ivec3_array>
+	: public type_information<ivec3_array> {};
+template<>
+struct type_information<const_ivec4_array>
+	: public type_information<ivec4_array> {};
+template<>
+struct type_information<const_mat2_array>
+	: public type_information<mat2_array> {};
+template<>
+struct type_information<const_mat3_array>
+	: public type_information<mat3_array> {};
+template<>
+struct type_information<const_mat4_array>
+	: public type_information<mat4_array> {};
+template<>
+struct type_information<const_ubyte_array>
+	: public type_information<ubyte_array> {};
+template<>
+struct type_information<const_ushort_array>
+	: public type_information<ushort_array> {};
+template<>
+struct type_information<const_float_type>
+	: public type_information<float_type> {};
+template<>
+struct type_information<const_vec2>
+	: public type_information<vec2> {};
+template<>
+struct type_information<const_vec3>
+	: public type_information<vec3> {};
+template<>
+struct type_information<const_vec4>
+	: public type_information<vec4> {};
+template<>
+struct type_information<const_ivec2>
+	: public type_information<ivec2> {};
+template<>
+struct type_information<const_ivec3>
+	: public type_information<ivec3> {};
+template<>
+struct type_information<const_ivec4>
+	: public type_information<ivec4> {};
+template<>
+struct type_information<const_mat2>
+	: public type_information<mat2> {};
+template<>
+struct type_information<const_mat3>
+	: public type_information<mat3> {};
+template<>
+struct type_information<const_mat4>
+	: public type_information<mat4> {};
+template<>
+struct type_information<mutable_float_array>
+	: public type_information<float_array> {};
+template<>
+struct type_information<mutable_vec2_array>
+	: public type_information<vec2_array> {};
+template<>
+struct type_information<mutable_vec3_array>
+	: public type_information<vec3_array> {};
+template<>
+struct type_information<mutable_vec4_array>
+	: public type_information<vec4_array> {};
+template<>
+struct type_information<mutable_int_array>
+	: public type_information<int_array> {};
+template<>
+struct type_information<mutable_ivec2_array>
+	: public type_information<ivec2_array> {};
+template<>
+struct type_information<mutable_ivec3_array>
+	: public type_information<ivec3_array> {};
+template<>
+struct type_information<mutable_ivec4_array>
+	: public type_information<ivec4_array> {};
+template<>
+struct type_information<mutable_mat2_array>
+	: public type_information<mat2_array> {};
+template<>
+struct type_information<mutable_mat3_array>
+	: public type_information<mat3_array> {};
+template<>
+struct type_information<mutable_mat4_array>
+	: public type_information<mat4_array> {};
+template<>
+struct type_information<mutable_ubyte_array>
+	: public type_information<ubyte_array> {};
+template<>
+struct type_information<mutable_ushort_array>
+	: public type_information<ushort_array> {};
 
 }  // namespace type
 
