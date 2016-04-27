@@ -107,8 +107,9 @@ struct buffer_info_type {
 	VkDeviceSize offset, range;
 };
 
-inline buffer_info_type buffer_info(type::supplier<buffer::buffer_type> &&buffer, VkDeviceSize offset, VkDeviceSize range) {
-	return buffer_info_type{std::forward<type::supplier<buffer::buffer_type>>(buffer), offset, range};
+inline buffer_info_type buffer_info(const type::supplier<buffer::buffer_type> &buffer,
+		VkDeviceSize offset, VkDeviceSize range) {
+	return buffer_info_type{buffer, offset, range};
 }
 
 struct write_image {

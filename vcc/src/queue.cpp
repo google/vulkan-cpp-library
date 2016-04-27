@@ -29,15 +29,15 @@ queue_type get_device_queue(const type::supplier<device::device_type> &device,
 	return queue_type(queue, device, queue_family_index);
 }
 
-queue_type get_graphics_queue(const type::supplier<device::device_type> &device) {
+queue_type get_queue(const type::supplier<device::device_type> &device, VkQueueFlags flags) {
 	const std::vector<VkQueueFamilyProperties> queue_props(
 		physical_device::queue_famility_properties(device::get_physical_device(*device)));
 	for (std::size_t i = 0; i < queue_props.size(); ++i) {
-		if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-			return get_device_queue(device, (uint32_t)i, 0);
+		if ((queue_props[i].queueFlags & flags) == flags) {
+			return get_device_queue(device, (uint32_t) i, 0);
 		}
 	}
-	throw vcc_exception("Failed to find a graphics queue");
+	throw vcc_exception("Failed to find queue");
 }
 
 queue_type get_present_queue(const type::supplier<device::device_type> &device,

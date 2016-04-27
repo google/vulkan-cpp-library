@@ -229,7 +229,7 @@ pipeline_type create_graphics(const type::supplier<device::device_type> &device,
 		basePipelineHandle);
 }
 
-VCC_LIBRARY pipeline_type create_compute(const type::supplier<device::device_type> &device,
+pipeline_type create_compute(const type::supplier<device::device_type> &device,
 		pipeline_cache::pipeline_cache_type &pipeline_cache,
 		VkPipelineCreateFlags flags,
 		shader_stage_type &stage,
@@ -248,5 +248,5 @@ VCC_LIBRARY pipeline_type create_compute(const type::supplier<device::device_typ
 	return pipeline_type(instance, device, layout);
 }
 
-}  // namespace pipeline_cache
+}  // namespace pipeline
 }  // namespace vcc

@@ -13,6 +13,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+#include <algorithm>
 #include <cassert>
 #include <type/memory.h>
 
@@ -26,9 +27,11 @@ std::size_t calculate_element_size(memory_layout layout, std::size_t type_size, 
 	case linear:
 		return type_size;
 	case interleaved_std140:
+		return std::max(base_alignment, type_size);
 	case interleaved_std430:
 		return type_size == 12 ? base_alignment : type_size;
 	case linear_std140:
+		return array && type_size < base_alignment ? base_alignment : type_size;
 	case linear_std430:
 		return array && type_size == 12 ? base_alignment : type_size;
 	default:

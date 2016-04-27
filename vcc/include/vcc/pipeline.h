@@ -167,11 +167,10 @@ struct pipeline_type
 	friend VCC_LIBRARY pipeline_type create_compute(
 		const type::supplier<device::device_type> &device,
 		pipeline_cache::pipeline_cache_type &pipeline_cache,
-		VkPipelineCreateFlags flags, shader_stage_type &stage,
+		VkPipelineCreateFlags flags,
+		shader_stage_type &stage,
 		const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
 		const type::supplier<pipeline::pipeline_type> &basePipelineHandle);
-
-	friend VCC_LIBRARY pipeline_type create_compute(const type::supplier<device::device_type> &device);
 
 	pipeline_type() = default;
 	pipeline_type(pipeline_type &&) = default;

@@ -50,8 +50,12 @@ VCC_LIBRARY queue_type get_device_queue(
 	const type::supplier<device::device_type> &device,
 	uint32_t queue_family_index, uint32_t queue_index);
 
-VCC_LIBRARY queue_type get_graphics_queue(
-	const type::supplier<device::device_type> &device);
+VCC_LIBRARY queue_type get_queue(
+		const type::supplier<device::device_type> &device, VkQueueFlags flags);
+inline queue_type get_graphics_queue(
+		const type::supplier<device::device_type> &device) {
+	return get_queue(device, VK_QUEUE_GRAPHICS_BIT);
+}
 VCC_LIBRARY queue_type get_present_queue(
 	const type::supplier<device::device_type> &device,
 	surface::surface_type &surface);

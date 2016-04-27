@@ -181,12 +181,6 @@ public:
 	storage_type(const storage_type<T, Mutable, true> &c)
 		: internal::storage_type<T, Mutable, true>(c.internal_copy()) {}
 	storage_type(storage_type<T, Mutable, true> &&) = default;
-
-private:
-
-	container_type array;
-	mutable std::mutex lock;
-	revision_type revision;
 };
 
 template<typename T, bool Mutable>
@@ -256,11 +250,11 @@ public:
 		}
 	}
 
-	iterator begin() {
+	iterator begin() const {
 		return internal::get_container(*array).begin();
 	}
 
-	iterator end() {
+	iterator end() const {
 		return internal::get_container(*array).end();
 	}
 
