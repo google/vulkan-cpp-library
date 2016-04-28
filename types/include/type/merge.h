@@ -246,7 +246,7 @@ public:
 		return iterator(this, instance->size());
 	}
 
-	const_reference operator[] (int index) const {
+	const_reference operator[] (std::size_t index) const {
 		return instance->get(index);
 	}
 

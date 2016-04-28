@@ -108,7 +108,7 @@ public:
 		return array.cend();
 	}
 
-	const_reference operator[] (int index) const {
+	const_reference operator[] (std::size_t index) const {
 		return array[index];
 	}
 
@@ -258,7 +258,7 @@ public:
 		return internal::get_container(*array).end();
 	}
 
-	reference operator[] (int index) const {
+	reference operator[] (std::size_t index) const {
 		return internal::get_container(*array)[index];
 	}
 

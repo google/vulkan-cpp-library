@@ -66,7 +66,7 @@ public:
 		return storage.cend();
 	}
 
-	const_reference operator[] (int index) const {
+	const_reference operator[] (std::size_t index) const {
 		flush();
 		return storage[index];
 	}
