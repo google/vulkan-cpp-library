@@ -88,12 +88,38 @@ TEST(SerializeTypeTest, LinearStd140ArrayLayout1) {
 			type::make_supplier(std::ref(view1)),
 			type::make_supplier(std::ref(view2)),
 			type::make_supplier(std::ref(view3)));
+	const std::size_t size(9 * 4);
+	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
+	float output[size];
+	type::flush(serialized, output);
+	for (std::size_t i = 0; i < array1.size(); ++i) {
+		ASSERT_EQ(array1[i], output[i * 4]);
+	}
+	for (std::size_t i = 0; i < array2.size(); ++i) {
+		ASSERT_EQ(array2[i], *reinterpret_cast<float2 *>(&output[12 + i * 4]));
+	}
+	for (std::size_t i = 0; i < array3.size(); ++i) {
+		ASSERT_EQ(array3[i], *reinterpret_cast<float3 *>(&output[24 + i * 4]));
+	}
+}
+
+TEST(SerializeTypeTest, LinearStd430ArrayLayout1) {
+	type::t_array<float> array1({ 1, 2, 3 });
+	type::t_array<float2> array2{ { { 1, 2 },{ 2, 3 },{ 3, 4 } } };
+	type::t_array<float3> array3{ { { 1, 2, 3 },{ 4, 5, 6 },{ 7, 8, 9 } } };
+	auto view1(type::make_view(std::ref(array1)));
+	auto view2(type::make_view(std::ref(array2)));
+	auto view3(type::make_view(std::ref(array3)));
+	type::serialize_type serialized(type::linear_std430,
+		type::make_supplier(std::ref(view1)),
+		type::make_supplier(std::ref(view2)),
+		type::make_supplier(std::ref(view3)));
 	const std::size_t size(4 + 2 * 4 + 4 * 3);
 	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
 	float output[size];
 	type::flush(serialized, output);
 	ASSERT_TRUE(std::equal(array1.begin(), array1.end(), output));
-	ASSERT_TRUE(std::equal(array2.begin(), array2.end(), (float2 *) (&output[0] + 4)));
+	ASSERT_TRUE(std::equal(array2.begin(), array2.end(), (float2 *)(&output[0] + 4)));
 	ASSERT_EQ(array3[0], *((float3 *)(&output[0] + 4 + 8)));
 	ASSERT_EQ(array3[1], *((float3 *)(&output[0] + 4 + 8 + 4)));
 	ASSERT_EQ(array3[2], *((float3 *)(&output[0] + 4 + 8 + 8)));
@@ -109,7 +135,34 @@ TEST(SerializeTypeTest, LinearStd140ArrayLayout2) {
 	type::t_array<float4> array7{ {.2f, .2f, .2f, 1} };
 	type::t_array<float> array8{ { 128 } };
 	type::serialize_type serialized(type::make_serialize(type::linear_std140,
-		std::ref(array1), std::ref(array2), std::ref(array3), std::ref(array4), std::ref(array5), std::ref(array6), std::ref(array7), std::ref(array8)));
+		std::ref(array1), std::ref(array2), std::ref(array3), std::ref(array4),
+		std::ref(array5), std::ref(array6), std::ref(array7), std::ref(array8)));
+	const std::size_t size(8 * 4);
+	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
+	float output[size];
+	type::flush(serialized, output);
+	ASSERT_TRUE(std::equal(array1.begin(), array1.end(), (float4 *)(&output[0] + 0)));
+	ASSERT_TRUE(std::equal(array2.begin(), array2.end(), (float3 *)(&output[0] + 4)));
+	ASSERT_TRUE(std::equal(array3.begin(), array3.end(), (float3 *)(&output[0] + 8)));
+	ASSERT_EQ(array4[0], output[12]);
+	ASSERT_TRUE(std::equal(array5.begin(), array5.end(), (float4 *)(&output[0] + 16)));
+	ASSERT_TRUE(std::equal(array6.begin(), array6.end(), (float4 *)(&output[0] + 20)));
+	ASSERT_TRUE(std::equal(array7.begin(), array7.end(), (float4 *)(&output[0] + 24)));
+	ASSERT_EQ(array8[0], output[28]);
+}
+
+TEST(SerializeTypeTest, LinearStd430ArrayLayout2) {
+	type::t_array<float4> array1({ { 0, 10, 0, 1 } });
+	type::t_array<float3> array2{ { 1, 0, 0 } };
+	type::t_array<float3> array3{ { 0, 0, -1 } };
+	type::t_array<float> array4{ -1 };
+	type::t_array<float4> array5{ { .2f, .2f, .2f, 1 } };
+	type::t_array<float4> array6{ { .2f, .2f, .2f, 1 } };
+	type::t_array<float4> array7{ { .2f, .2f, .2f, 1 } };
+	type::t_array<float> array8{ { 128 } };
+	type::serialize_type serialized(type::make_serialize(type::linear_std430,
+		std::ref(array1), std::ref(array2), std::ref(array3), std::ref(array4),
+		std::ref(array5), std::ref(array6), std::ref(array7), std::ref(array8)));
 	const std::size_t size(4 * 7 + 1);
 	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
 	float output[size];
@@ -123,6 +176,8 @@ TEST(SerializeTypeTest, LinearStd140ArrayLayout2) {
 	ASSERT_TRUE(std::equal(array7.begin(), array7.end(), (float4 *)(&output[0] + 24)));
 	ASSERT_EQ(array8[0], output[28]);
 }
+
+
 TEST(SerializeTypeTest, LinearPrimitiveLayout1) {
 	type::t_primitive<float> primitive1(1);
 	type::t_primitive<float2> primitive2({3, 4});
@@ -154,22 +209,19 @@ TEST(SerializeTypeTest, InterleavedStd140ArrayLayout1) {
 			type::make_supplier(std::ref(view1)),
 			type::make_supplier(std::ref(view2)),
 			type::make_supplier(std::ref(view3)));
-	const std::size_t size(8 * 3);
+	const std::size_t size(12 * 3);
 	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
 	float output[size];
 	type::flush(serialized, output);
-	const float compare1[] = { 1, 1, 2 };
-	const float compare2[] = { 1, 2, 3 };
-	const float compare3[] = { 2, 2, 3 };
-	const float compare4[] = { 4, 5, 6 };
-	const float compare5[] = { 3, 3, 4 };
-	const float compare6[] = { 7, 8, 9 };
-	ASSERT_TRUE(std::equal(&output[0], &output[0] + 3, compare1));
-	ASSERT_TRUE(std::equal(&output[0] + 4, &output[0] + 7, compare2));
-	ASSERT_TRUE(std::equal(&output[0] + 8, &output[0] + 11, compare3));
-	ASSERT_TRUE(std::equal(&output[0] + 12, &output[0] + 15, compare4));
-	ASSERT_TRUE(std::equal(&output[0] + 16, &output[0] + 19, compare5));
-	ASSERT_TRUE(std::equal(&output[0] + 20, &output[0] + 23, compare6));
+	for (std::size_t i = 0; i < array1.size(); ++i) {
+		ASSERT_EQ(array1[i], output[i * 12]);
+	}
+	for (std::size_t i = 0; i < array2.size(); ++i) {
+		ASSERT_EQ(array2[i], *reinterpret_cast<float2 *>(&output[4 + i * 12]));
+	}
+	for (std::size_t i = 0; i < array3.size(); ++i) {
+		ASSERT_EQ(array3[i], *reinterpret_cast<float3 *>(&output[8 + i * 12]));
+	}
 }
 
 TEST(SerializeTypeTest, GroupedInterleavedStd140ArrayLayout1) {

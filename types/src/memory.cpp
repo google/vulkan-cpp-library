@@ -46,7 +46,7 @@ std::size_t calculate_base_alignment(memory_layout layout, std::size_t type_size
 		return 1;
 	case interleaved_std430:
 	case linear_std430:
-		return 4;
+		return type_size == 12 ? base_alignment : type_size;
 	case interleaved_std140:
 		return base_alignment;
 	case linear_std140:
