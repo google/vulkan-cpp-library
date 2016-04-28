@@ -90,14 +90,15 @@ int main(int argc, const char **argv) {
 		}
 
 		const std::set<std::string> required_extensions = {
-			VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+			VK_KHR_SURFACE_EXTENSION_NAME,
+			VK_KHR_WIN32_SURFACE_EXTENSION_NAME
 		};
 		const std::vector<VkExtensionProperties> instance_extensions(
 			vcc::enumerate::instance_extension_properties(""));
 		assert(vcc::enumerate::contains_all(instance_extensions,
 			required_extensions));
 		const std::vector<std::string> optional(vcc::enumerate::filter(
-			instance_extensions, { VK_KHR_SURFACE_EXTENSION_NAME }));
+			instance_extensions, { VK_EXT_DEBUG_REPORT_EXTENSION_NAME }));
 		std::set<std::string> extensions(required_extensions.begin(), required_extensions.end());
 		extensions.insert(optional.begin(), optional.end());
 
@@ -136,12 +137,16 @@ int main(int argc, const char **argv) {
 			vcc::enumerate::device_extension_properties(physical_device, ""));
 		assert(vcc::enumerate::contains_all(device_extensions, dev_extensions));
 
-		if (false && validate) {
-			debug = vcc::debug::create(std::ref(instance),
-				VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT
-				| VK_DEBUG_REPORT_INFORMATION_BIT_EXT
-				| VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT
-				| VK_DEBUG_REPORT_DEBUG_BIT_EXT);
+		if (validate) {
+			try {
+				debug = vcc::debug::create(std::ref(instance),
+					VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT
+					| VK_DEBUG_REPORT_INFORMATION_BIT_EXT
+					| VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT
+					| VK_DEBUG_REPORT_DEBUG_BIT_EXT);
+			} catch (const vcc::vcc_exception &) {
+				VCC_PRINT("Failed to load debug extension.");
+			}
 		}
 
 		device = vcc::device::create(physical_device,

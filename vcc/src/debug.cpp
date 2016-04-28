@@ -63,11 +63,16 @@ debug_type create(const type::supplier<instance::instance_type> &instance,
 	const PFN_vkCreateDebugReportCallbackEXT dbgCreateMsgCallback =
 		(PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(
 			internal::get_instance(*instance), "vkCreateDebugReportCallbackEXT");
+	if (!dbgCreateMsgCallback) {
+		throw vcc_exception("vkCreateDebugReportCallbackEXT");
+	}
 	assert(dbgCreateMsgCallback);
 	const PFN_vkDestroyDebugReportCallbackEXT dbgDestroyMsgCallback =
 		(PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(
 			internal::get_instance(*instance), "vkDestroyDebugReportCallbackEXT");
-	assert(dbgDestroyMsgCallback);
+	if (!dbgDestroyMsgCallback) {
+		throw vcc_exception("vkDestroyDebugReportCallbackEXT");
+	}
 	VkDebugReportCallbackEXT msg_callback;
 	VkDebugReportCallbackCreateInfoEXT create = {VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT, NULL };
 	create.flags = flags;
