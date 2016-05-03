@@ -93,10 +93,13 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(GlmDir);$(GliDir);$(PngDir)..\..;$(SolutionDir)include;$(SolutionDir)\types\include;$(SolutionDir)vcc\include;$(GoogleTestDir)include;$(VulkanSdk)Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)$(Configuration);$(GoogleTestDir)msvc\gtest\$(Configuration);$(VulkanSdk)Bin32;$(PngDir)$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libpng16.lib;vulkan-1.lib;vcc.lib;gtestd.lib;gtest_maind.lib;types.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

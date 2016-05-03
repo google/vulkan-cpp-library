@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{DDC6823A-ED64-4E97-A6BF-0BF245C4D9E5}</ProjectGuid>
+    <ProjectGuid>{442F1420-9484-42AC-9505-1CACE1925D40}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>typestest</RootNamespace>
+    <RootNamespace>spirvreflectiontest</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -36,7 +36,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -49,7 +49,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -78,6 +78,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -91,15 +92,15 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\types\include;$(GoogleTestDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(GoogleTestDir)include;$(SolutionDir)spirv-reflection\include;$(VulkanSdk)spirv-tools\include\spirv-tools;$(VulkanSdk)spirv-tools\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>gtestd.lib;gtest_maind.lib;types.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(Configuration);$(GoogleTestDir)msvc\gtest\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)$(Configuration);$(GoogleTestDir)msvc\gtest\$(Configuration);$(VulkanSdk)spirv-tools\buildPS\source\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>gtestd.lib;gtest_maind.lib;types.lib;SPIRV-Tools.lib;spirv-reflection.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -108,17 +109,25 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\types\include;$(GoogleTestDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(GoogleTestDir)include;$(SolutionDir)spirv-reflection\include;$(VulkanSdk)spirv-tools\include\spirv-tools;$(VulkanSdk)spirv-tools\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)\x64\Debug;$(GoogleTestDir)msvc\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>gtestd.lib;gtest_maind.lib;types.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)x64\$(Configuration);$(GoogleTestDir)msvc\x64\$(Configuration);$(SolutionDir)\x64\$(Configuration);$(VulkanSdk)spirv-tools\buildPS\source\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>gtestd.lib;gtest_maind.lib;types.lib;SPIRV-Tools.lib;spirv-reflection.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)input_test1.spv" "$(ProjectDir)..\src\input_test1.vert"
+$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)push_constant_test1.spv" "$(ProjectDir)..\src\push_constant_test1.comp"
+$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)subpass_test1.spv" "$(ProjectDir)..\src\subpass_test1.frag"
+$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)uniform_buffer_test1.spv" "$(ProjectDir)..\src\uniform_buffer_test1.comp"
+$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)specialization_constant_test1.spv" "$(ProjectDir)..\src\specialization_constant_test1.comp"</Command>
+      <Outputs>$(SolutionDir)input_test1.spv;$(SolutionDir)push_constant_test1.spv;$(SolutionDir)subpass_test1.spv;$(SolutionDir)uniform_buffer_test1.spv;%(Outputs)</Outputs>
+      <Inputs>$(ProjectDir)..\src\input_test1.vert;$(ProjectDir)..\src\push_constant_test1.comp;$(ProjectDir)..\src\subpass_test1.comp;$(ProjectDir)..\src\uniform_buffer_test1.comp;%(Inputs)</Inputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -128,17 +137,14 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\types\include;$(GoogleTestDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(GoogleTestDir)msvc\gtest\Release;$(SolutionDir)\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>gtest.lib;gtest_main.lib;types.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -149,25 +155,29 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\types\include;$(GoogleTestDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>gtest.lib;gtest_main.lib;types.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(GoogleTestDir)msvc\x64\Release;$(SolutionDir)\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\merge_type_test.cpp" />
-    <ClCompile Include="..\src\serialize_type_test.cpp" />
-    <ClCompile Include="..\src\storage_type_test.cpp" />
-    <ClCompile Include="..\src\transform_type_test.cpp" />
-    <ClCompile Include="..\src\view_type_test.cpp" />
+    <ClCompile Include="..\src\input_test.cpp" />
+    <ClCompile Include="..\src\push_constant_test.cpp" />
+    <ClCompile Include="..\src\specialization_constant_test.cpp" />
+    <ClCompile Include="..\src\subpass_test.cpp" />
+    <ClCompile Include="..\src\uniform_buffer_test.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\input_test1.vert" />
+    <None Include="..\src\push_constant_test1.comp" />
+    <None Include="..\src\specialization_constant_test1.comp" />
+    <None Include="..\src\subpass_test1.frag" />
+    <None Include="..\src\uniform_buffer_test1.comp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
