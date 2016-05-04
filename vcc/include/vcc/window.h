@@ -40,32 +40,41 @@ namespace internal {
 struct window_data_type;
 
 /*
-* Simple thread that executes given tasks on a queue
-* as well as a default render function.
-*/
+ * Simple thread that executes given tasks on a queue
+ * as well as a default render function.
+ *
+ * TODO(gardell): Create generic task runners, thread pools etc.
+ */
 struct render_thread {
 	typedef std::function<void()> callback_type;
 
 	render_thread() = default;
 
 	explicit render_thread(callback_type &&draw_callback)
-		: running(true), drawing(false),
-		  thread([draw_callback, this]() {
-		while (running) {
-			std::vector<callback_type> tasks;
-			{
-				std::unique_lock<std::mutex> lock(tasks_mutex);
-				cv.wait(lock, [this]() { return !this->tasks.empty() || drawing; });
-				tasks = std::move(this->tasks);
+		: running(false), drawing(false),
+		  draw_callback(std::forward<callback_type>(draw_callback)) {}
+
+	void start() {
+		running = true;
+		thread = std::thread([this]() {
+			while (running) {
+				std::vector<callback_type> tasks;
+				{
+					std::unique_lock<std::mutex> lock(tasks_mutex);
+					cv.wait(lock, [this]() {
+						return !this->tasks.empty() || drawing;
+					});
+					tasks = std::move(this->tasks);
+				}
+				for (const callback_type &callback : tasks) {
+					callback();
+				}
+				if (drawing) {
+					draw_callback();
+				}
 			}
-			for (const callback_type &callback : tasks) {
-				callback();
-			}
-			if (drawing) {
-				draw_callback();
-			}
-		}
-	}) {}
+		});
+	}
 
 	void set_drawing(bool drawing) {
 		this->drawing = drawing;
@@ -90,6 +99,7 @@ struct render_thread {
 	volatile bool running, drawing;
 	std::condition_variable cv;
 	std::thread thread;
+	callback_type draw_callback;
 };
 
 } // namespace internal

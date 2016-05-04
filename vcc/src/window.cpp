@@ -117,10 +117,20 @@ void resize(internal::window_data_type &data, VkExtent2D extent) {
 			// Render loop will expect image to have been used before and in VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 			// layout and will change to COLOR_ATTACHMENT_OPTIMAL, so init the image to that state
 			vcc::command_buffer::command_buffer_type command_buffer(std::move(vcc::command_buffer::allocate(type::supplier<device::device_type>(data.device), std::ref(data.cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-			vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0, vcc::command_buffer::pipeline_barrier{ VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
-				{ vcc::command_buffer::image_memory_barrier{ 0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				VK_QUEUE_FAMILY_IGNORED, queue::get_family_index(data.present_queue),
-				std::ref(swapchain_image), { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } } } });
+			vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
+				vcc::command_buffer::pipeline_barrier(
+					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
+					{
+						vcc::command_buffer::image_memory_barrier{ 0, 0,
+							VK_IMAGE_LAYOUT_UNDEFINED,
+							VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+							VK_QUEUE_FAMILY_IGNORED,
+							queue::get_family_index(data.present_queue),
+							std::ref(swapchain_image),
+							{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+						}
+					}));
 			vcc::queue::submit(data.present_queue, {}, { std::reference_wrapper<vcc::command_buffer::command_buffer_type>(command_buffer) }, {});
 
 			vcc::image_view::image_view_type view(vcc::image_view::create(std::ref(swapchain_image), VK_IMAGE_VIEW_TYPE_2D, data.format,
@@ -137,10 +147,11 @@ namespace internal {
 void window_data_type::draw() {
 	VkResult err;
 	uint32_t current_buffer;
-	vcc::semaphore::semaphore_type presentCompleteSemaphore;
+	vcc::semaphore::semaphore_type present_complete_semaphore;
 	do {
-		presentCompleteSemaphore = vcc::semaphore::create(type::supplier<device::device_type>(device));
-		std::tie(err, current_buffer) = vcc::swapchain::acquire_next_image(swapchain, presentCompleteSemaphore);
+		present_complete_semaphore = vcc::semaphore::create(device);
+		std::tie(err, current_buffer) = vcc::swapchain::acquire_next_image(
+			swapchain, present_complete_semaphore);
 		switch (err) {
 		case VK_ERROR_OUT_OF_DATE_KHR:
 			// swapchain is out of date (e.g. the window was resized) and
@@ -159,20 +170,47 @@ void window_data_type::draw() {
 	} while (err == VK_ERROR_OUT_OF_DATE_KHR);
 	// Assume the command buffer has been run on current_buffer before so
 	// we need to set the image layout back to COLOR_ATTACHMENT_OPTIMAL
-	vcc::command_buffer::command_buffer_type command_buffer(std::move(vcc::command_buffer::allocate(device, std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-	vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0, vcc::command_buffer::pipeline_barrier{ VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
-		{ vcc::command_buffer::image_memory_barrier{ 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		queue::get_family_index(present_queue), queue::get_family_index(*graphics_queue),
-		std::ref(get_image(swapchain_images[current_buffer])), { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } } } });
+	vcc::command_buffer::command_buffer_type command_buffer(std::move(
+		vcc::command_buffer::allocate(device, std::ref(cmd_pool),
+			VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
+	vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
+		vcc::command_buffer::pipeline_barrier(
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, {}, {},
+			{
+				vcc::command_buffer::image_memory_barrier{ 0,
+					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
+					| VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+					VK_IMAGE_LAYOUT_UNDEFINED,
+					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					queue::get_family_index(present_queue),
+					queue::get_family_index(*graphics_queue),
+					std::ref(get_image(swapchain_images[current_buffer])),
+					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+				}
+			}));
 	vcc::queue::submit(*graphics_queue, {}, { std::ref(command_buffer) }, {});
 
 	draw_callback(current_buffer);
 
-	vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0, vcc::command_buffer::pipeline_barrier{ VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
-		{ vcc::command_buffer::image_memory_barrier{ 0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		queue::get_family_index(*graphics_queue), queue::get_family_index(present_queue),
-		std::ref(get_image(swapchain_images[current_buffer])), { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } } } });
-	vcc::queue::submit(present_queue, { vcc::queue::wait_semaphore{ std::ref(presentCompleteSemaphore) } }, { std::ref(command_buffer) }, {});
+	vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
+		vcc::command_buffer::pipeline_barrier(
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, {}, {},
+			{
+				vcc::command_buffer::image_memory_barrier{
+					VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+					0,
+					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+					queue::get_family_index(*graphics_queue),
+					queue::get_family_index(present_queue),
+					std::ref(get_image(swapchain_images[current_buffer])),
+					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } }
+			}));
+	vcc::queue::submit(present_queue,
+		{ vcc::queue::wait_semaphore{ std::ref(present_complete_semaphore) } },
+		{ std::ref(command_buffer) }, {});
 
 	err = vcc::queue::present(present_queue, {}, { std::ref(swapchain) }, { current_buffer });
 	switch (err) {
@@ -421,6 +459,7 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 	window.data->resize_callback = resize_callback;
 	window.data->draw_callback = draw_callback;
 	window.data->input_callbacks = input_callbacks;
+	window.data->render_thread.start();
 #ifdef _WIN32
 	MSG msg;
 	for (;;) {
