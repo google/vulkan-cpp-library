@@ -132,11 +132,12 @@ TEST(ComputeShaderIntegrationTest, ComputeShaderIntegrationTest1) {
 			{ std::ref(desc_set) },{} },
 		vcc::command_buffer::dispatch{1, 1, 1},
 		vcc::command_buffer::pipeline_barrier(
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {
-				vcc::command_buffer::buffer_memory_barrier(0,
-					VK_ACCESS_HOST_READ_BIT, VK_QUEUE_FAMILY_IGNORED,
-					VK_QUEUE_FAMILY_IGNORED, std::ref(output_buffer))
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			VK_PIPELINE_STAGE_HOST_BIT, 0, {}, {
+				vcc::command_buffer::buffer_memory_barrier(
+					VK_ACCESS_UNIFORM_READ_BIT, VK_ACCESS_HOST_READ_BIT,
+					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+					std::ref(output_buffer))
 			},
 			{}));
 	vcc::fence::fence_type fence(vcc::fence::create(std::ref(device)));

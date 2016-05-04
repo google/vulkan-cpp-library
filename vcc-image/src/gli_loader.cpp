@@ -105,25 +105,20 @@ image::image_type gli_loader_type::load(
 
 					command_buffer::compile(command_buffer,
 						VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, VK_FALSE, 0, 0,
-						command_buffer::pipeline_barrier{
-							VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-							VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0,
+						command_buffer::pipeline_barrier(
+							VK_PIPELINE_STAGE_HOST_BIT,
+							VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
 							{},{},
 							{
-								command_buffer::image_memory_barrier{ 0,
-									VK_ACCESS_TRANSFER_WRITE_BIT,
+								command_buffer::image_memory_barrier{
+									VK_ACCESS_HOST_WRITE_BIT,
+									VK_ACCESS_TRANSFER_READ_BIT,
 									VK_IMAGE_LAYOUT_UNDEFINED,
 									VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 									VK_QUEUE_FAMILY_IGNORED,
 									VK_QUEUE_FAMILY_IGNORED,
 									std::ref(staging_image),
-									{ aspect_mask, 0, 1, 0, 1 } }
-							} },
-						command_buffer::pipeline_barrier{
-							VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-							VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0,
-							{},{},
-							{
+									{ aspect_mask, 0, 1, 0, 1 } },
 								command_buffer::image_memory_barrier{
 									0, VK_ACCESS_TRANSFER_READ_BIT,
 									VK_IMAGE_LAYOUT_GENERAL,
@@ -132,8 +127,8 @@ image::image_type gli_loader_type::load(
 									VK_QUEUE_FAMILY_IGNORED,
 									std::ref(image),
 									{ aspect_mask, uint32_t(level), 1,
-										uint32_t(layer_index), 1 } }
-							} },
+									uint32_t(layer_index), 1 } }
+							}),
 						command_buffer::copy_image{ std::ref(staging_image),
 						VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 						std::ref(image), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
