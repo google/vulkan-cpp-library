@@ -252,11 +252,11 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	vcc::shader_module::shader_module_type vert_shader_module(vcc::shader_module::create(
 		std::ref(device),
-		std::ifstream("normal-mapping-and-cube-texture-vert.spv", std::ios_base::binary | std::ios_base::in)
+		std::ifstream("../../../normal-mapping-and-cube-texture-vert.spv", std::ios_base::binary | std::ios_base::in)
 	));
 	vcc::shader_module::shader_module_type frag_shader_module(vcc::shader_module::create(
 		std::ref(device),
-		std::ifstream("normal-mapping-and-cube-texture-frag.spv", std::ios_base::binary | std::ios_base::in)
+		std::ifstream("../../../normal-mapping-and-cube-texture-frag.spv", std::ios_base::binary | std::ios_base::in)
 	));
 
 	vcc::descriptor_pool::descriptor_pool_type desc_pool(vcc::descriptor_pool::create(std::ref(device), 0, 1, {
@@ -300,7 +300,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
 		VK_SHARING_MODE_EXCLUSIVE,
 		{},
-		std::ifstream("textures/storforsen4/storforsen4.ktx", std::ios_base::binary | std::ios_base::in)));
+		std::ifstream("../../../textures/storforsen4/storforsen4.ktx", std::ios_base::binary | std::ios_base::in)));
 	const VkFormat image_format(vcc::image::get_format(image));
 
 	vcc::image::image_type normal_image(vcc::image::create(std::ref(queue),
@@ -308,7 +308,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
 		VK_SHARING_MODE_EXCLUSIVE,
 		{},
-		std::ifstream("textures/normal-mapping/Normal_map_example_-_Map.png", std::ios_base::binary | std::ios_base::in)));
+		std::ifstream("../../../textures/normal-mapping/Normal_map_example_-_Map.png", std::ios_base::binary | std::ios_base::in)));
 	const VkFormat normal_image_format(vcc::image::get_format(normal_image));
 
 	vcc::descriptor_set::update(device,

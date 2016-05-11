@@ -19,7 +19,7 @@
 
 TEST(SpirvAnalyzer, SpecializationConstant1) {
 	const spirv::module_type module(spirv::parse(
-		std::ifstream("specialization_constant_test1.spv", std::ios_base::binary)));
+		std::ifstream("../../specialization_constant_test1.spv", std::ios_base::binary)));
 	ASSERT_TRUE(module.variables.empty());
 	ASSERT_EQ(module.constant_types.size(), 1);
 	const spirv::constant_type &constant(module.constant_types.begin()->second);

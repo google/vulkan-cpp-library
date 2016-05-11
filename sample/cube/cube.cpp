@@ -200,7 +200,7 @@ int main(int argc, const char **argv) {
 		auto image(vcc::image::create(std::ref(queue),
 			0, VK_IMAGE_USAGE_SAMPLED_BIT, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
 			VK_SHARING_MODE_EXCLUSIVE, {},
-			std::ifstream("textures/png/PNG_transparency_demonstration_1.png",
+			std::ifstream("../../../textures/png/PNG_transparency_demonstration_1.png",
 				std::ios_base::binary | std::ios_base::in)));
 
 		auto image_view(vcc::image_view::create(std::move(image),
@@ -264,10 +264,10 @@ int main(int argc, const char **argv) {
 
 	vcc::shader_module::shader_module_type vert_shader_module(
 		vcc::shader_module::create(std::ref(device),
-			std::ifstream("cube-vert.spv", std::ios_base::binary | std::ios_base::in)));
+			std::ifstream("../../../cube-vert.spv", std::ios_base::binary | std::ios_base::in)));
 	vcc::shader_module::shader_module_type frag_shader_module(
 		vcc::shader_module::create(std::ref(device),
-			std::ifstream("cube-frag.spv", std::ios_base::binary | std::ios_base::in)));
+			std::ifstream("../../../cube-frag.spv", std::ios_base::binary | std::ios_base::in)));
 
 	vcc::pipeline_cache::pipeline_cache_type pipeline_cache(
 		vcc::pipeline_cache::create(std::ref(device)));

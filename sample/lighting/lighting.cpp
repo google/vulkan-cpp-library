@@ -207,10 +207,10 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		vcc::pipeline_cache::create(std::ref(device)));
 	vcc::shader_module::shader_module_type vert_shader_module(vcc::shader_module::create(
 		std::ref(device),
-		std::ifstream("lighting-vert.spv", std::ios_base::binary | std::ios_base::in)));
+		std::ifstream("../../../lighting-vert.spv", std::ios_base::binary | std::ios_base::in)));
 	vcc::shader_module::shader_module_type frag_shader_module(vcc::shader_module::create(
 		std::ref(device),
-		std::ifstream("lighting-frag.spv", std::ios_base::binary | std::ios_base::in)));
+		std::ifstream("../../../lighting-frag.spv", std::ios_base::binary | std::ios_base::in)));
 	vcc::pipeline_layout::pipeline_layout_type pipeline_layout(
 		vcc::pipeline_layout::create(std::ref(device), { std::ref(desc_layout) }));
 	vcc::pipeline::pipeline_type pipeline(vcc::pipeline::create_graphics(

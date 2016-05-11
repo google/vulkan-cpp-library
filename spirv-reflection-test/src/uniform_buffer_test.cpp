@@ -19,7 +19,7 @@
 
 TEST(SpirvAnalyzer, UniformBuffer1) {
 	const spirv::module_type module(spirv::parse(
-		std::ifstream("uniform_buffer_test1.spv", std::ios_base::binary)));
+		std::ifstream("../../uniform_buffer_test1.spv", std::ios_base::binary)));
 	ASSERT_EQ(module.variables.size(), 1);
 	const spirv::variable_type &variable(module.variables.begin()->second);
 	ASSERT_EQ(variable.storage_class, SpvStorageClassUniform);

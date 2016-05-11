@@ -29,7 +29,7 @@ const spirv::variable_type &find_variable_by_location(const spirv::module_type &
 
 TEST(SpirvAnalyzer, Input1) {
 	const spirv::module_type module(spirv::parse(
-		std::ifstream("input_test1.spv", std::ios_base::binary)));
+		std::ifstream("../../input_test1.spv", std::ios_base::binary)));
 	ASSERT_EQ(module.variables.size(), 3);
 	const spirv::variable_type &variable1(find_variable_by_location(module, 1));
 	ASSERT_EQ(variable1.storage_class, SpvStorageClassInput);

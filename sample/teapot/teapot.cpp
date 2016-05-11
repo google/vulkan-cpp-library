@@ -189,11 +189,11 @@ int main(int argc, const char **argv) {
 
 	vcc::shader_module::shader_module_type vert_shader_module(vcc::shader_module::create(
 		std::ref(device),
-		std::ifstream("teapot-vert.spv", std::ios_base::binary | std::ios_base::in)
+		std::ifstream("../../../teapot-vert.spv", std::ios_base::binary | std::ios_base::in)
 	));
 	vcc::shader_module::shader_module_type frag_shader_module(vcc::shader_module::create(
 		std::ref(device),
-		std::ifstream("teapot-frag.spv", std::ios_base::binary | std::ios_base::in)
+		std::ifstream("../../../teapot-frag.spv", std::ios_base::binary | std::ios_base::in)
 	));
 
 	vcc::descriptor_pool::descriptor_pool_type desc_pool(
@@ -281,7 +281,7 @@ int main(int argc, const char **argv) {
 		VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
 		VK_SHARING_MODE_EXCLUSIVE,
 		{},
-		std::ifstream("textures/storforsen4/storforsen4.ktx", std::ios_base::binary | std::ios_base::in)));
+		std::ifstream("../../../textures/storforsen4/storforsen4.ktx", std::ios_base::binary | std::ios_base::in)));
 	const VkFormat image_format(vcc::image::get_format(image));
 
 	vcc::descriptor_set::update(device,
