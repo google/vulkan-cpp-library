@@ -29,7 +29,6 @@
 #include <vcc/debug.h>
 #include <vcc/descriptor_pool.h>
 #include <vcc/descriptor_set.h>
-#include <vcc/descriptor_set_update.h>
 #include <vcc/descriptor_set_layout.h>
 #include <vcc/device.h>
 #include <vcc/enumerate.h>

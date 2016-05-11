@@ -31,29 +31,6 @@ namespace queue {
 struct queue_type;
 }  // namespace queue
 
-namespace internal {
-
-	struct bind_point_type {
-		uint32_t bind, index;
-
-		bool operator==(const bind_point_type&copy) const {
-			return bind == copy.bind && index == copy.index;
-		}
-	};
-
-	struct hash_bind_point {
-		std::size_t operator()(const bind_point_type & bind_point) const {
-			if (sizeof(std::size_t) == 8) {
-				return bind_point.bind << 4 | bind_point.index;
-			}
-			else {
-				return bind_point.bind + bind_point.index;
-			}
-		}
-	};
-
-}  // namespace internal
-
 namespace descriptor_set {
 
 struct descriptor_set_type
@@ -75,10 +52,10 @@ struct descriptor_set_type
 			device::device_type, descriptor_pool::descriptor_pool_type,
 			vkFreeDescriptorSets>(instance, pool, parent) {}
 
-	internal::hook_map_type<internal::bind_point_type,
-		internal::hash_bind_point, queue::queue_type &> pre_execute_callbacks;
-	internal::reference_map_type<internal::bind_point_type,
-		internal::hash_bind_point> references;
+	internal::hook_map_type<std::pair<uint32_t, uint32_t>,
+		util::hash_pair<uint32_t, uint32_t>, queue::queue_type &> pre_execute_callbacks;
+	internal::reference_map_type<std::pair<uint32_t, uint32_t>,
+		util::hash_pair<uint32_t, uint32_t>> references;
 
 };
 
@@ -107,7 +84,8 @@ struct buffer_info_type {
 	VkDeviceSize offset, range;
 };
 
-inline buffer_info_type buffer_info(const type::supplier<buffer::buffer_type> &buffer,
+inline buffer_info_type buffer_info(
+		const type::supplier<buffer::buffer_type> &buffer,
 		VkDeviceSize offset, VkDeviceSize range) {
 	return buffer_info_type{buffer, offset, range};
 }
@@ -134,12 +112,15 @@ struct write_buffer_type {
 	std::vector<buffer_info_type> buffers;
 };
 
-inline write_buffer_type write_buffer(type::supplier<descriptor_set_type> &&dst_set, uint32_t dst_binding, uint32_t dst_array_element, VkDescriptorType descriptor_type, const std::vector<buffer_info_type> &buffers) {
-	return write_buffer_type{std::forward<type::supplier<descriptor_set_type>>(dst_set),
+inline write_buffer_type write_buffer(
+		const type::supplier<descriptor_set_type> &dst_set,
+		uint32_t dst_binding, uint32_t dst_array_element,
+		VkDescriptorType descriptor_type,
+		const std::vector<buffer_info_type> &buffers) {
+	return write_buffer_type{dst_set,
 		dst_binding, dst_array_element, descriptor_type, buffers};
 }
 
-// TODO(gardell): Implement VkBufferView.
 struct write_buffer_view_type {
 	type::supplier<descriptor_set_type> dst_set;
 	uint32_t dst_binding, dst_array_element;
@@ -150,10 +131,37 @@ struct write_buffer_view_type {
 	std::vector<type::supplier<buffer_view::buffer_view_type>> buffers;
 };
 
-inline write_buffer_view_type write_buffer_view(type::supplier<descriptor_set_type> &&dst_set, uint32_t dst_binding, uint32_t dst_array_element, VkDescriptorType descriptor_type, const std::vector<type::supplier<buffer_view::buffer_view_type>> &buffers) {
+inline write_buffer_view_type write_buffer_view(
+		type::supplier<descriptor_set_type> &&dst_set,
+		uint32_t dst_binding, uint32_t dst_array_element,
+		VkDescriptorType descriptor_type,
+		const std::vector<type::supplier<buffer_view::buffer_view_type>> &buffers) {
 	return write_buffer_view_type{
 		std::forward<type::supplier<descriptor_set_type>>(dst_set),
 		dst_binding, dst_array_element, descriptor_type, buffers };
+}
+
+// takes device plus a list of copy and write_* items.
+template <typename... ArgsT>
+void update(device::device_type &device, const ArgsT &... args) {
+	internal::update_storage storage;
+	util::internal::pass((internal::count(storage, args), 1)...);
+	storage.reserve();
+	util::internal::pass((internal::add(storage, args), 1)...);
+	const std::set<std::mutex *> mutexes(
+		util::set_from_variadic_movables<std::mutex *>(
+			&vcc::internal::get_mutex(*args.dst_set)...));
+	std::vector<std::unique_lock<std::mutex>> deferred_locks;
+	deferred_locks.reserve(mutexes.size());
+	std::transform(mutexes.begin(), mutexes.end(),
+		std::back_inserter<decltype(deferred_locks)>(deferred_locks),
+		[](std::mutex *mutex) {
+		return std::unique_lock<std::mutex>(*mutex, std::defer_lock);
+	});
+	vcc::util::lock(deferred_locks);
+	VKTRACE(vkUpdateDescriptorSets(vcc::internal::get_instance(device),
+		(uint32_t)storage.write_sets.size(), storage.write_sets.data(),
+		(uint32_t)storage.copy_sets.size(), storage.copy_sets.data()));
 }
 
 namespace internal {
@@ -167,7 +175,8 @@ struct update_storage {
 
 	VCC_LIBRARY void reserve();
 
-	std::size_t copy_sets_size = 0, write_sets_size = 0, image_info_size = 0, buffer_info_size = 0, buffer_view_size = 0;
+	std::size_t copy_sets_size = 0, write_sets_size = 0, image_info_size = 0,
+		buffer_info_size = 0, buffer_view_size = 0;
 };
 
 VCC_LIBRARY void add(update_storage &storage, const copy &);

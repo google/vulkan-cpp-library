@@ -21,7 +21,6 @@
 #include <vcc/data/buffer.h>
 #include <vcc/descriptor_pool.h>
 #include <vcc/descriptor_set.h>
-#include <vcc/descriptor_set_update.h>
 #include <vcc/device.h>
 #include <vcc/enumerate.h>
 #include <vcc/instance.h>

@@ -68,7 +68,7 @@ void add(update_storage &storage, const copy &c) {
 	set.descriptorCount = c.descriptor_count;
 	storage.copy_sets.push_back(set);
 	for (uint32_t i = 0; i < c.descriptor_count; ++i) {
-		c.dst_set->references.clone(vcc::internal::bind_point_type{ c.dst_binding, uint32_t(c.dst_array_element + i) }, c.src_set->references);
+		c.dst_set->references.clone(std::pair<uint32_t, uint32_t>{ c.dst_binding, uint32_t(c.dst_array_element + i) }, c.src_set->references);
 	}
 }
 
@@ -90,7 +90,7 @@ void add(update_storage &storage, const write_image &write) {
 	storage.image_infos.push_back(std::move(image_infos));
 	storage.write_sets.push_back(set);
 	for (uint32_t i = 0; i < write.images.size(); ++i) {
-		write.dst_set->references.put(vcc::internal::bind_point_type{
+		write.dst_set->references.put(std::pair<uint32_t, uint32_t>{
 			write.dst_binding, uint32_t(write.dst_array_element + i) },
 			write.images[i].sampler, write.images[i].image_view);
 	}
@@ -112,8 +112,9 @@ void add(update_storage &storage, const write_buffer_type &write) {
 	storage.buffer_infos.push_back(std::move(buffer_infos));
 	storage.write_sets.push_back(set);
 	for (uint32_t i = 0; i < write.buffers.size(); ++i) {
-		const vcc::internal::bind_point_type bind_point{ write.dst_binding, uint32_t(write.dst_array_element + i) };
-		write.dst_set->references.put(bind_point, write.buffers[i].buffer);
+		write.dst_set->references.put(
+			std::make_pair(write.dst_binding, uint32_t(write.dst_array_element + i)),
+			write.buffers[i].buffer);
 	}
 }
 
@@ -133,7 +134,7 @@ void add(update_storage &storage, const write_buffer_view_type &write) {
 	storage.buffer_view.push_back(std::move(buffer_views));
 	storage.write_sets.push_back(set);
 	for (uint32_t i = 0; i < write.buffers.size(); ++i) {
-		write.dst_set->references.put(vcc::internal::bind_point_type{ write.dst_binding, uint32_t(write.dst_array_element + i) },
+		write.dst_set->references.put(std::make_pair(write.dst_binding, uint32_t(write.dst_array_element + i)),
 			write.buffers[i]);
 	}
 }

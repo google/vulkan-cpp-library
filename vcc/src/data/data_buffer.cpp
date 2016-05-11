@@ -123,7 +123,9 @@ void cmd(cmd_args &args, const copy_data_buffer_to_image_type&cdbti) {
 
 namespace descriptor_set {
 
-buffer_info_data_type buffer_info(const type::supplier<data::buffer_type> &buffer, VkDeviceSize offset, VkDeviceSize range) {
+buffer_info_data_type buffer_info(
+		const type::supplier<data::buffer_type> &buffer, VkDeviceSize offset,
+		VkDeviceSize range) {
 	return buffer_info_data_type{ buffer, offset, range };
 }
 
@@ -143,10 +145,13 @@ void add(update_storage &storage, const write_buffer_data_type &wbdt) {
 			std::ref(data::internal::get_buffer(*buffer.buffer)),
 			buffer.offset, buffer.range});
 		const type::supplier<data::buffer_type> &buf(buffer.buffer);
-		wbdt.dst_set->pre_execute_callbacks.put(vcc::internal::bind_point_type{wbdt.dst_binding, uint32_t(wbdt.dst_array_element + i)},
+		wbdt.dst_set->pre_execute_callbacks.put(
+			std::make_pair(wbdt.dst_binding, uint32_t(wbdt.dst_array_element + i)),
 			[buf](queue::queue_type &queue) {data::flush(queue, *buf); });
 	}
-	add(storage, write_buffer_type{ wbdt.dst_set, wbdt.dst_binding, wbdt.dst_array_element, wbdt.descriptor_type, std::move(buffer_infos) });
+	add(storage, write_buffer_type{ wbdt.dst_set, wbdt.dst_binding,
+		wbdt.dst_array_element, wbdt.descriptor_type,
+		std::move(buffer_infos) });
 }
 
 void count(update_storage &storage, const write_buffer_data_type &wbdt) {

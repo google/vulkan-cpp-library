@@ -48,9 +48,6 @@
     <ClInclude Include="..\include\vcc\descriptor_set_layout.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\vcc\descriptor_set_update.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\vcc\device.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -16,6 +16,7 @@
 #ifndef UTIL_H_
 #define UTIL_H_
 
+#include <functional>
 #include <memory>
 #include <set>
 #include <stdexcept>
@@ -50,6 +51,17 @@ public:
 };
 
 namespace util {
+
+template<typename U, typename V>
+struct hash_pair {
+
+	std::size_t operator()(const std::pair<U, V> &pair) const {
+		return hash1(pair.first) * 31 + hash2(pair.second);
+	}
+
+	std::hash<U> hash1;
+	std::hash<V> hash2;
+};
 
 template<std::size_t N>
 struct tuple_foreach_type {

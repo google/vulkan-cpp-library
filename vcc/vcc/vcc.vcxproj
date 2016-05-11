@@ -172,7 +172,6 @@
     <ClInclude Include="..\include\vcc\descriptor_pool.h" />
     <ClInclude Include="..\include\vcc\descriptor_set.h" />
     <ClInclude Include="..\include\vcc\descriptor_set_layout.h" />
-    <ClInclude Include="..\include\vcc\descriptor_set_update.h" />
     <ClInclude Include="..\include\vcc\device.h" />
     <ClInclude Include="..\include\vcc\enumerate.h" />
     <ClInclude Include="..\include\vcc\event.h" />
