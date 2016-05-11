@@ -282,10 +282,10 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 				vcc::command_buffer::allocate(std::ref(device), std::ref(cmd_pool),
 					VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 			vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
-				vcc::command_buffer::pipeline_barrier(
+				vcc::command::pipeline_barrier(
 					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
-					{ vcc::command_buffer::image_memory_barrier{ 0,
+					{ vcc::command::image_memory_barrier{ 0,
 						VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 						VK_IMAGE_LAYOUT_UNDEFINED,
 						VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -300,7 +300,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 				(uint32_t) swapchain_images.size());
 			for (std::size_t i = 0; i < swapchain_images.size(); ++i) {
 				vcc::command_buffer::compile(command_buffers[i], 0, VK_FALSE, 0, 0,
-					vcc::command_buffer::render_pass(
+					vcc::command::render_pass(
 						std::ref(render_pass),
 						vcc::framebuffer::create(std::ref(device),
 							std::ref(render_pass),
@@ -312,28 +312,28 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 							}, extent, 1),
 						VkRect2D{ 0, 0, extent.width, extent.height },
 						{
-							vcc::command_buffer::clear_color(
+							vcc::command::clear_color(
 								VkClearColorValue{ { .2f, .2f, .2f, .2f } }),
-							vcc::command_buffer::clear_depth_stencil(
+							vcc::command::clear_depth_stencil(
 								VkClearDepthStencilValue{ 1, 0 })
 						},
 						VK_SUBPASS_CONTENTS_INLINE,
-						vcc::command_buffer::bind_pipeline{
+						vcc::command::bind_pipeline{
 							VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
-						vcc::command_buffer::bind_vertex_data_buffers(
+						vcc::command::bind_vertex_data_buffers(
 							{ std::ref(vertex_buffer) }, { 0, 0 }),
-						vcc::command_buffer::bind_index_data_buffer(
+						vcc::command::bind_index_data_buffer(
 							std::ref(index_buffer), 0, VK_INDEX_TYPE_UINT16),
-						vcc::command_buffer::bind_descriptor_sets{
+						vcc::command::bind_descriptor_sets{
 							VK_PIPELINE_BIND_POINT_GRAPHICS,
 							std::ref(pipeline_layout), 0,
 							{ std::ref(desc_set) }, {} },
-						vcc::command_buffer::set_viewport{ 0, {
+						vcc::command::set_viewport{ 0, {
 							VkViewport{ 0.f, 0.f, float(extent.width),
 								float(extent.height), 0.f, 1.f } } },
-						vcc::command_buffer::set_scissor{ 0,{ VkRect2D{
+						vcc::command::set_scissor{ 0,{ VkRect2D{
 							VkOffset2D{ 0, 0 }, extent } } },
-						vcc::command_buffer::draw_indexed{
+						vcc::command::draw_indexed{
 							(uint32_t)teapot::indices.size(), 1, 0, 0, 0 }));
 			}
 		},

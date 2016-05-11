@@ -164,6 +164,7 @@
   <ItemGroup>
     <ClInclude Include="..\include\vcc\buffer.h" />
     <ClInclude Include="..\include\vcc\buffer_view.h" />
+    <ClInclude Include="..\include\vcc\command.h" />
     <ClInclude Include="..\include\vcc\command_buffer.h" />
     <ClInclude Include="..\include\vcc\command_pool.h" />
     <ClInclude Include="..\include\vcc\data\buffer.h" />
@@ -203,6 +204,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\buffer.cpp" />
     <ClCompile Include="..\src\buffer_view.cpp" />
+    <ClCompile Include="..\src\command.cpp" />
     <ClCompile Include="..\src\command_buffer.cpp" />
     <ClCompile Include="..\src\command_pool.cpp" />
     <ClCompile Include="..\src\data\data_buffer.cpp" />

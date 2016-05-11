@@ -135,6 +135,9 @@
     <ClInclude Include="..\include\vcc\internal\hook.h">
       <Filter>Header Files\internal</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\vcc\command.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\buffer.cpp">
@@ -235,6 +238,9 @@
     </ClCompile>
     <ClCompile Include="..\src\data\data_buffer.cpp">
       <Filter>Source Files\data</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\command.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

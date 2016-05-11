@@ -84,7 +84,7 @@ std::pair<queue_type, queue_type> get_graphics_and_present_queues(
 		get_device_queue(device, (uint32_t) present_index, 0));
 }
 
-inline void submit(queue_type &queue,
+void submit(queue_type &queue,
 		const std::vector<wait_semaphore> &wait_semaphores,
 		const std::vector<type::supplier<command_buffer::command_buffer_type>> &command_buffers,
 		const std::vector<type::supplier<semaphore::semaphore_type>> &signal_semaphores,

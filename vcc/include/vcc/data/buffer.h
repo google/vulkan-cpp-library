@@ -18,6 +18,7 @@
 
 #include <type/serialize.h>
 #include <vcc/buffer.h>
+#include <vcc/command.h>
 #include <vcc/command_buffer.h>
 
 namespace vcc {
@@ -155,7 +156,7 @@ VCC_LIBRARY void flush(queue::queue_type &queue, buffer_type &buffer);
 /*
  * Interface to comply with command_buffer interface for data::buffer_type.
  */
-namespace command_buffer {
+namespace command {
 
 struct bind_index_data_buffer_type {
 	type::supplier<data::buffer_type> buffer;
@@ -269,7 +270,7 @@ inline buffer_memory_barrier_type buffer_memory_barrier(
 	};
 }
 
-}  // namespace command_buffer
+}  // namespace command
 
 namespace descriptor_set {
 

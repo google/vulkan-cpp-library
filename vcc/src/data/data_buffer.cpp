@@ -47,11 +47,11 @@ void flush(queue::queue_type &queue, buffer_type &buffer) {
 
 	command_buffer::compile(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 		VK_FALSE, 0, 0,
-		command_buffer::pipeline_barrier{ VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		command::pipeline_barrier{ VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
 			{},
 			{
-				command_buffer::buffer_memory_barrier_type{
+				command::buffer_memory_barrier_type{
 					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
 					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
 					std::ref(buffer.buffer)}
@@ -67,7 +67,7 @@ void flush(queue::queue_type &queue, buffer_type &buffer) {
 
 }  // namespace data
 
-namespace command_buffer {
+namespace command {
 
 namespace internal {
 
@@ -119,7 +119,7 @@ void cmd(cmd_args &args, const copy_data_buffer_to_image_type&cdbti) {
 
 }  // namespace internal
 
-}  // namespace command_buffer
+}  // namespace command
 
 namespace descriptor_set {
 

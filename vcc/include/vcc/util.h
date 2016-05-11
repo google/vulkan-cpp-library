@@ -51,6 +51,26 @@ public:
 
 namespace util {
 
+template<std::size_t N>
+struct tuple_foreach_type {
+	template<typename FunctorT, typename... Args>
+	static void call(FunctorT &functor, std::tuple<Args...> &args) {
+		tuple_foreach_type<N - 1>::call(functor, args);
+		functor(std::get<N - 1>(args));
+	}
+};
+
+template<>
+struct tuple_foreach_type<0> {
+	template<typename FunctorT, typename... Args>
+	static void call(FunctorT &, std::tuple<Args...> &) {}
+};
+
+template<typename FunctorT, typename... Args>
+void tuple_foreach(FunctorT functor, std::tuple<Args...> &commands) {
+	tuple_foreach_type<sizeof...(Args)>::call(functor, commands);
+}
+
 VCC_LIBRARY std::vector<const char *> to_pointers(const std::vector<std::string> &vector);
 VCC_LIBRARY std::vector<const char *> to_pointers(const std::set<std::string> &set);
 

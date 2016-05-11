@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <vcc/command.h>
 #include <vcc/physical_device.h>
 #include <vcc/surface.h>
 #include <vcc/window.h>
@@ -118,11 +119,11 @@ void resize(internal::window_data_type &data, VkExtent2D extent) {
 			// layout and will change to COLOR_ATTACHMENT_OPTIMAL, so init the image to that state
 			vcc::command_buffer::command_buffer_type command_buffer(std::move(vcc::command_buffer::allocate(type::supplier<device::device_type>(data.device), std::ref(data.cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 			vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
-				vcc::command_buffer::pipeline_barrier(
+				vcc::command::pipeline_barrier(
 					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
 					{
-						vcc::command_buffer::image_memory_barrier{ 0, 0,
+						vcc::command::image_memory_barrier{ 0, 0,
 							VK_IMAGE_LAYOUT_UNDEFINED,
 							VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 							VK_QUEUE_FAMILY_IGNORED,
@@ -174,11 +175,11 @@ void window_data_type::draw() {
 		vcc::command_buffer::allocate(device, std::ref(cmd_pool),
 			VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 	vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
-		vcc::command_buffer::pipeline_barrier(
+		vcc::command::pipeline_barrier(
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, {}, {},
 			{
-				vcc::command_buffer::image_memory_barrier{ 0,
+				vcc::command::image_memory_barrier{ 0,
 					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
 					| VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 					VK_IMAGE_LAYOUT_UNDEFINED,
@@ -194,11 +195,11 @@ void window_data_type::draw() {
 	draw_callback(current_buffer);
 
 	vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
-		vcc::command_buffer::pipeline_barrier(
+		vcc::command::pipeline_barrier(
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, {}, {},
 			{
-				vcc::command_buffer::image_memory_barrier{
+				vcc::command::image_memory_barrier{
 					VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 					0,
 					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
