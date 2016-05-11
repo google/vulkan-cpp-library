@@ -188,7 +188,6 @@
     <ClInclude Include="..\include\vcc\pipeline.h" />
     <ClInclude Include="..\include\vcc\pipeline_cache.h" />
     <ClInclude Include="..\include\vcc\pipeline_layout.h" />
-    <ClInclude Include="..\include\vcc\push_constant.h" />
     <ClInclude Include="..\include\vcc\query_pool.h" />
     <ClInclude Include="..\include\vcc\queue.h" />
     <ClInclude Include="..\include\vcc\render_pass.h" />
@@ -225,7 +224,6 @@
     <ClCompile Include="..\src\pipeline.cpp" />
     <ClCompile Include="..\src\pipeline_cache.cpp" />
     <ClCompile Include="..\src\pipeline_layout.cpp" />
-    <ClCompile Include="..\src\push_constants.cpp" />
     <ClCompile Include="..\src\queue.cpp" />
     <ClCompile Include="..\src\render_pass.cpp" />
     <ClCompile Include="..\src\sampler.cpp" />

@@ -16,6 +16,7 @@
 #ifndef PIPELINE_LAYOUT_H_
 #define PIPELINE_LAYOUT_H_
 
+#include <type/serialize.h>
 #include <vcc/device.h>
 #include <vcc/descriptor_set_layout.h>
 #include <vcc/internal/hook.h>
@@ -63,6 +64,26 @@ private:
 VCC_LIBRARY pipeline_layout_type create(const type::supplier<device::device_type> &device,
 	const std::vector<type::supplier<vcc::descriptor_set_layout::descriptor_set_layout_type>> &set_layouts,
 	const std::vector<VkPushConstantRange> &push_constant_ranges = {});
+
+namespace internal {
+
+	VCC_LIBRARY void flush(const type::supplier<type::serialize_type> &constants,
+		VkPipelineLayout pipeline_layout,
+		const std::vector<VkPushConstantRange> &push_constant_ranges,
+		queue::queue_type &queue);
+
+}  // namespace internal
+
+template<typename... StorageType>
+pipeline_layout_type create(const type::supplier<device::device_type> &device,
+	const std::vector<type::supplier<descriptor_set_layout::descriptor_set_layout_type>> &set_layouts,
+	const std::vector<VkPushConstantRange> &push_constant_ranges, type::memory_layout layout, StorageType... storages) {
+	pipeline_layout_type pipeline_layout(create(type::supplier<device::device_type>(device), set_layouts, push_constant_ranges));
+	pipeline_layout::internal::get_pre_execute_callbacks(pipeline_layout).add(std::bind(&internal::flush,
+		type::supplier<type::serialize_type>(type::make_serialize(layout, std::forward<StorageType>(storages)...)),
+		vcc::internal::get_instance(pipeline_layout), push_constant_ranges, std::placeholders::_1));
+	return std::move(pipeline_layout);
+}
 
 }  // namespace pipeline_layout
 }  // namespace vcc

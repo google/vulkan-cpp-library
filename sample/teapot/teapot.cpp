@@ -42,7 +42,6 @@
 #include <vcc/pipeline.h>
 #include <vcc/pipeline_cache.h>
 #include <vcc/pipeline_layout.h>
-#include <vcc/push_constant.h>
 #include <vcc/queue.h>
 #include <vcc/render_pass.h>
 #include <vcc/sampler.h>
