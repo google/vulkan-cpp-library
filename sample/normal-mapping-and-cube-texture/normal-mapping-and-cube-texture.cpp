@@ -507,11 +507,15 @@ int main(int argc, const char **argv) {
 			}
 		},
 		[&](uint32_t index) {
-			glm::mat4 view_matrix(glm::lookAt(glm::vec3(0, 0, camera_distance),
+			const glm::mat4 view_matrix(
+				glm::lookAt(glm::vec3(0, 0, camera_distance),
 				glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
-			type::mutate(modelview_matrix_array)[0] = view_matrix
+			const glm::mat4 modelview_matrix(view_matrix
 				* glm::rotate(angle.y, glm::vec3(1, 0, 0))
-				* glm::rotate(angle.x, glm::vec3(0, 1, 0));
+				* glm::rotate(angle.x, glm::vec3(0, 1, 0)));
+			type::mutate(modelview_matrix_array)[0] = modelview_matrix;
+			type::mutate(normal_matrix_array)[0] =
+				glm::mat3(glm::transpose(glm::inverse(modelview_matrix)));
 			vcc::queue::submit(queue, {},
 			{ std::ref(command_buffers[index]) }, {});
 		},
@@ -531,7 +535,7 @@ int main(int argc, const char **argv) {
 			return true;
 		}).set_mouse_move_callback([&](int x, int y) {
 			if (is_down[0]) {
-				angle = (glm::vec2(x, y) - glm::vec2(mouse)) / scale;
+				angle += (glm::vec2(x, y) - glm::vec2(mouse)) / scale;
 				mouse = glm::ivec2(x, y);
 			}
 			return true;

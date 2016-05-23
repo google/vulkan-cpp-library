@@ -286,9 +286,9 @@ int main(int argc, const char **argv) {
 		std::ref(device), 0, vcc::queue::get_family_index(queue)));
 	std::vector<vcc::command_buffer::command_buffer_type> command_buffers;
 
-	float start_camera_distance = 6.f;
+	float start_camera_distance = 12.f;
 	float camera_distance = start_camera_distance;
-	glm::vec2 angle(0, 0);
+	glm::vec2 angle(1, 0);
 	glm::ivec2 start[2], current[2], mouse;
 	bool is_down[2] = {false, false};
 	const float scale(128);
@@ -397,7 +397,7 @@ int main(int argc, const char **argv) {
 			return true;
 		}).set_mouse_move_callback([&](int x, int y) {
 			if (is_down[0]) {
-				angle = (glm::vec2(x, y) - glm::vec2(mouse)) / scale;
+				angle += (glm::vec2(x, y) - glm::vec2(mouse)) / scale;
 				mouse = glm::ivec2(x, y);
 			}
 			return true;
