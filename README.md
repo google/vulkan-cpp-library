@@ -46,9 +46,9 @@ Notice that `Implicit Externally Synchronized Parameters` is not included.
 ### Xlib/xcb
 In the works.
 
-### Install
+## Install
 
-## Android
+### Android
 Install the latest Android SDK and NDK, the pre-release of Android N (API level 24) is required.
 Unit and integration tests are not supported.
 
@@ -56,7 +56,7 @@ To compile and install the library and samples, run:
 ANDROID_NDK_HOME=/<your-path>/android-ndk-r11c/ ANDROID_HOME=/<your-path>/android-sdk-linux/ ./gradlew installDebug
 
 
-## Visual Studio 2015
+### Visual Studio 2015
 Only 2015 is supported. The C++11 support in previous versions is not sufficient.
 * Open the vulkan-cpp.sln,
 * click "Property Manager" (next to "Solution Explorer", bottom left corner),
@@ -66,7 +66,7 @@ Only 2015 is supported. The C++11 support in previous versions is not sufficient
 * edit the VulkanSdk, GoogleTestDir, PngDir, GlmDir and GliDir to point to the locations of the respective libraries.
 * The project should now compile. Win32 and x64 in Release and Debug configurations are setup.
 
-### Acknowledgements
+## Acknowledgements
 * This library optionally uses [OpenGL Mathematics, glm.](http://glm.g-truc.net/0.9.7/index.html)
 * vcc-image uses [libpng](http://www.libpng.org/) for loading VK_IMAGE_TILING_LINEAR images.
 * vcc-image uses [OpenGL Image, gli](http://gli.g-truc.net/) for loading VK_IMAGE_TILING_OPTIMAL images.
