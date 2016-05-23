@@ -13,8 +13,8 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-#ifndef _VCC_IMAGE_H_
-#define _VCC_IMAGE_H_
+#ifndef _VCC_IMAGE_LOADER_H_
+#define _VCC_IMAGE_LOADER_H_
 
 #include <vcc/image.h>
 #include <vcc/queue.h>
@@ -34,12 +34,27 @@ VCC_LIBRARY image::image_type create(
 	VkFormatFeatureFlags feature_flags,
 	VkSharingMode sharingMode,
 	const std::vector<uint32_t> &queueFamilyIndices,
-	std::istream &stream);
+	std::istream &&stream);
+
+#if defined(__ANDROID__) || defined(ANDROID)
+/*
+ * Load an Android resource image through Java.
+ * Note: Loads into a linear 2D single layer image.
+ * Note: Calling thread must be able to execute JNI methods.
+ * Note: AAssetManager can be obtained from ANativeActivity.
+ */
+VCC_LIBRARY image::image_type create(
+	const type::supplier<vcc::queue::queue_type> &queue, VkImageCreateFlags flags,
+	VkImageUsageFlags usage, VkFormatFeatureFlags feature_flags,
+	VkSharingMode sharingMode, const std::vector<uint32_t> &queueFamilyIndices,
+	JNIEnv *env, jobject context, const char *resource_identifier);
+#endif  // __ANDROID__
 
 // For debugging purposes only, prints the result of trying vkGetPhysicalDeviceFormatProperties with every VkFormat.
-VCC_LIBRARY std::string dump_physical_device_format_properties(VkPhysicalDevice physical_device);
+VCC_LIBRARY std::string dump_physical_device_format_properties(
+	VkPhysicalDevice physical_device);
 
 }  // namespace image
 }  // namespace vcc
 
-#endif // _VCC_IMAGE_H_
+#endif // _VCC_IMAGE_LOADER_H_

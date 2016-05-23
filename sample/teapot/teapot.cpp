@@ -23,6 +23,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <type/types.h>
+#include <vcc/android_asset_istream.h>
 #include <vcc/buffer.h>
 #include <vcc/command_buffer.h>
 #include <vcc/command_pool.h>
@@ -60,7 +61,12 @@ namespace teapot {
 
 const bool validate = true;
 
+#if defined(__ANDROID__) || defined(ANDROID)
+void android_main(struct android_app* state) {
+	app_dummy();
+#else
 int main(int argc, const char **argv) {
+#endif // __ANDROID__
 
 	vcc::instance::instance_type instance;
 
@@ -71,9 +77,9 @@ int main(int argc, const char **argv) {
 		if (validate) {
 			std::set<std::string> required_instance_validation_layers{
 				//"VK_LAYER_LUNARG_api_dump",
-				"VK_LAYER_LUNARG_device_limits",
+				//"VK_LAYER_LUNARG_device_limits",
 				//"VK_LAYER_LUNARG_draw_state",
-				"VK_LAYER_LUNARG_image",
+				//"VK_LAYER_LUNARG_image",
 				//"VK_LAYER_LUNARG_mem_tracker",
 				//"VK_LAYER_LUNARG_object_tracker",
 				//"VK_LAYER_LUNARG_screenshot",
@@ -89,7 +95,11 @@ int main(int argc, const char **argv) {
 
 		const std::set<std::string> required_extensions = {
 			VK_KHR_SURFACE_EXTENSION_NAME,
+#ifdef WIN32
 			VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+#elif defined(__ANDROID__)
+			VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+#endif // __ANDROID__
 		};
 		const std::vector<VkExtensionProperties> instance_extensions(
 			vcc::enumerate::instance_extension_properties(""));
@@ -113,7 +123,7 @@ int main(int argc, const char **argv) {
 		if (validate) {
 			const std::set<std::string> required_validation_layers{
 				//"VK_LAYER_LUNARG_api_dump",
-				"VK_LAYER_LUNARG_device_limits",
+				//"VK_LAYER_LUNARG_device_limits",
 				//"VK_LAYER_LUNARG_draw_state",
 				//"VK_LAYER_LUNARG_image",
 				//"VK_LAYER_LUNARG_mem_tracker",
@@ -172,11 +182,13 @@ int main(int argc, const char **argv) {
 				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
 				VK_SHADER_STAGE_FRAGMENT_BIT, {} }
 		}));
+
+	const int num_push_colors = 5;
 	vcc::pipeline_layout::pipeline_layout_type pipeline_layout(
 		vcc::pipeline_layout::create(std::ref(device),
 			{ std::ref(desc_layout) },
 			{ VkPushConstantRange{VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-				sizeof(glm::vec4) * 5} },
+				sizeof(glm::vec4) * num_push_colors} },
 			type::memory_layout::linear_std430, type::vec4_array({
 				glm::vec4(1.f, 0.f, 0.f, 1.f), glm::vec4(1.f, 1.f, 0.f, 1.f),
 				glm::vec4(0.f, 1.f, 1.f, 1.f), glm::vec4(0.f, 0.f, 1.f, 1.f),
@@ -185,14 +197,24 @@ int main(int argc, const char **argv) {
 	vcc::pipeline_cache::pipeline_cache_type pipeline_cache(
 		vcc::pipeline_cache::create(std::ref(device)));
 
-	vcc::shader_module::shader_module_type vert_shader_module(vcc::shader_module::create(
-		std::ref(device),
-		std::ifstream("../../../teapot-vert.spv", std::ios_base::binary | std::ios_base::in)
-	));
-	vcc::shader_module::shader_module_type frag_shader_module(vcc::shader_module::create(
-		std::ref(device),
-		std::ifstream("../../../teapot-frag.spv", std::ios_base::binary | std::ios_base::in)
-	));
+	vcc::shader_module::shader_module_type vert_shader_module(
+		vcc::shader_module::create(std::ref(device),
+#if defined(__ANDROID__) || defined(ANDROID)
+			android::asset_istream(state->activity->assetManager, "teapot-vert.spv")
+#else
+			std::ifstream("../../../teapot-vert.spv",
+				std::ios_base::binary | std::ios_base::in)
+#endif  // __ ANDROID__
+			));
+	vcc::shader_module::shader_module_type frag_shader_module(
+		vcc::shader_module::create(std::ref(device),
+#if defined(__ANDROID__) || defined(ANDROID)
+			android::asset_istream(state->activity->assetManager, "teapot-frag.spv")
+#else
+			std::ifstream("../../../teapot-frag.spv",
+				std::ios_base::binary | std::ios_base::in)
+#endif  // __ ANDROID__
+			));
 
 	vcc::descriptor_pool::descriptor_pool_type desc_pool(
 		vcc::descriptor_pool::create(std::ref(device), 0, 1, {
@@ -279,7 +301,13 @@ int main(int argc, const char **argv) {
 		VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
 		VK_SHARING_MODE_EXCLUSIVE,
 		{},
-		std::ifstream("../../../textures/storforsen4/storforsen4.ktx", std::ios_base::binary | std::ios_base::in)));
+#if defined(__ANDROID__) || defined(ANDROID)
+			android::asset_istream(state->activity->assetManager, "storforsen4.ktx")
+#else
+			std::ifstream("../../../textures/storforsen4/storforsen4.ktx",
+				std::ios_base::binary | std::ios_base::in)
+#endif  // __ ANDROID__
+		));
 	const VkFormat image_format(vcc::image::get_format(image));
 
 	vcc::descriptor_set::update(device,
@@ -307,12 +335,13 @@ int main(int argc, const char **argv) {
 				}
 			} });
 
-	float x_angle(0), y_angle(0);
-	bool mouse_down(false);
-	int last_x, last_y;
-	const float scale_x(128), scale_y(128);
 	vcc::window::window_type window(vcc::window::create(
-		GetModuleHandle(NULL), std::ref(instance), std::ref(device),
+#ifdef WIN32
+		GetModuleHandle(NULL),
+#elif defined(__ANDROID__) || defined(ANDROID)
+		state,
+#endif // __ANDROID__
+		std::ref(instance), std::ref(device),
 		std::ref(queue), VkExtent2D{ 500, 500 },
 		VK_FORMAT_A8B8G8R8_UINT_PACK32, "Teapot demo"));
 
@@ -350,7 +379,8 @@ int main(int argc, const char **argv) {
 				std::ref(vert_shader_module), "main",{}),
 			vcc::pipeline::shader_stage(VK_SHADER_STAGE_FRAGMENT_BIT,
 				std::ref(frag_shader_module), "main",
-			{ VkSpecializationMapEntry{ 2, 0, sizeof(int) } }, type::int_type(5))
+			{ VkSpecializationMapEntry{ 2, 0, sizeof(int) } },
+			type::int_type(num_push_colors))
 		},
 		vcc::pipeline::vertex_input_state{
 			{
@@ -415,7 +445,17 @@ int main(int argc, const char **argv) {
 		std::ref(device), 0, vcc::queue::get_family_index(queue));
 	std::vector<vcc::command_buffer::command_buffer_type> command_buffers;
 
-	return vcc::window::run(window,
+	float start_camera_distance = 6.f;
+	float camera_distance = start_camera_distance;
+	glm::vec2 angle(0, 0);
+	glm::ivec2 start[2], current[2], mouse;
+	bool is_down[2] = {false, false};
+	const float scale(128);
+
+#if !defined(__ANDROID__) && !defined(ANDROID)
+	return
+#endif // __ANDROID__
+	vcc::window::run(window,
 		[&](VkExtent2D extent, VkFormat format,
 			std::vector<vcc::window::swapchain_type> &swapchain_images) {
 		type::mutate(projection_matrix)[0] = glm::perspective(
@@ -490,46 +530,80 @@ int main(int argc, const char **argv) {
 					vcc::command::draw_indexed{
 						(uint32_t) teapot::indices.size(),
 						num_instanced_drawings, 0, 0, 0 }));
-		}
-	},
+			}
+		},
 		[&](uint32_t index) {
-		const glm::mat4 model_matrix(glm::rotate(y_angle, glm::vec3(1, 0, 0))
-			* glm::rotate(x_angle, glm::vec3(0, 1, 0)));
-		auto modelview_matrix(type::mutate(modelview_matrix_array));
-		auto normal_matrix(type::mutate(normal_matrix_array));
-		for (std::size_t i = 0; i < num_instanced_drawings; ++i) {
-			const int num_per_row = (int)sqrt(num_instanced_drawings);
-			const int x = int(i) % num_per_row;
-			const int y = int(i) / num_per_row;
-			const glm::mat4 model_view(view_matrix * model_matrix
-				* glm::translate(glm::vec3(
-					6 * (int(x) - int(num_per_row) / 2),
-					0,
-					6 * (int(y) - int(num_instanced_drawings / num_per_row) / 2))));
-			modelview_matrix[int(i)] = model_view;
-			normal_matrix[int(i)] =
-				glm::mat3(glm::transpose(glm::inverse(model_view)));
-		}
-		vcc::queue::submit(queue, {}, { std::ref(command_buffers[index]) }, {});
-	},
+			auto modelview_matrix(type::mutate(modelview_matrix_array));
+			auto normal_matrix(type::mutate(normal_matrix_array));
+
+			const glm::mat4 view_matrix(glm::lookAt(glm::vec3(0, 0, camera_distance),
+				glm::vec3(0, 0, 0), glm::vec3(0, 1, 0))
+				* glm::rotate(angle.y, glm::vec3(1, 0, 0))
+				* glm::rotate(angle.x, glm::vec3(0, 1, 0)));
+			for (std::size_t i = 0; i < num_instanced_drawings; ++i) {
+				const int num_per_row = (int)sqrt(num_instanced_drawings);
+				const int x = int(i) % num_per_row;
+				const int y = int(i) / num_per_row;
+				const glm::mat4 model_view(view_matrix
+					* glm::translate(glm::vec3(6 * (int(x) - int(num_per_row) / 2), 0,
+						6 * (int(y) - int(num_instanced_drawings / num_per_row) / 2))));
+				modelview_matrix[int(i)] = model_view;
+				normal_matrix[int(i)] =
+					glm::mat3(glm::transpose(glm::inverse(model_view)));
+			}
+			vcc::queue::submit(queue, {},
+				{ std::ref(command_buffers[index]) }, {});
+		},
 		vcc::window::input_callbacks_type()
-		.set_mouse_down_callback([&mouse_down, &last_x, &last_y](
-			vcc::window::mouse_button_type, int x, int y) {
-		last_x = x;
-		last_y = y;
-		mouse_down = true;
-		return true;
-	}).set_mouse_up_callback([&mouse_down](
-			vcc::window::mouse_button_type, int x, int y) {
-		mouse_down = false;
-		return true;
-	}).set_mouse_move_callback([&](int x, int y) {
-		if (mouse_down) {
-			x_angle += (x - last_x) / scale_x;
-			y_angle += (y - last_y) / scale_y;
-			last_x = x;
-			last_y = y;
-		}
-		return true;
-	}));
+		.set_mouse_down_callback([&](
+				vcc::window::mouse_button_type button, int x, int y) {
+			mouse = glm::ivec2(x, y);
+			if (button >= 0 && button < 2) {
+				is_down[button] = true;
+			}
+			return true;
+		}).set_mouse_up_callback([&](
+				vcc::window::mouse_button_type button, int x, int y) {
+			if (button >= 0 && button < 2) {
+				is_down[button] = false;
+			}
+			return true;
+		}).set_mouse_move_callback([&](int x, int y) {
+			if (is_down[0]) {
+				angle = (glm::vec2(x, y) - glm::vec2(mouse)) / scale;
+				mouse = glm::ivec2(x, y);
+			}
+			return true;
+		}).set_touch_down_callback([&](int id, int x, int y) {
+			if (id >= 0 && id < 2) {
+				start[id] = glm::ivec2(x, y);
+				current[id] = start[id];
+				is_down[id] = true;
+			}
+			return true;
+		}).set_touch_up_callback([&](int id, int x, int y) {
+			is_down[0] = is_down[1] = false;
+			start_camera_distance = camera_distance;
+			return true;
+		}).set_touch_move_callback([&](int id, int x, int y) {
+			if (id == 0) {
+				angle += (glm::vec2(x, y) - glm::vec2(current[0])) / scale;
+			}
+			if (id >= 0 && id < 2) {
+				current[id] = glm::ivec2(x, y);
+				if (!is_down[id]) {
+					start[id] = current[id];
+					is_down[id] = true;
+				}
+			}
+			if (is_down[1]) {
+				const float start_distance(glm::length(
+					glm::vec2(start[0] - start[1])));
+				const float current_distance(glm::length(
+					glm::vec2(current[0] - current[1])));
+				camera_distance = start_camera_distance * start_distance
+					/ current_distance;
+			}
+			return true;
+		}));
 }

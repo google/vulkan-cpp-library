@@ -18,14 +18,19 @@
 
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <stdexcept>
 #include <type/supplier.h>
 #include <vector>
 
 #if defined(_WIN32) && !defined(VK_USE_PLATFORM_WIN32_KHR)
-#define VK_USE_PLATFORM_WIN32_KHR
+#define VK_USE_PLATFORM_WIN32_KHR 1
 #endif // _WIN32
+#if (defined(__ANDROID__) || defined(ANDROID)) && !defined(VK_USE_PLATFORM_ANDROID_KHR)
+#define VK_USE_PLATFORM_ANDROID_KHR 1
+#endif // __ANDROID__
+
 #define VK_PROTOTYPES 1
 #include <vulkan/vulkan.h>
 
@@ -163,13 +168,16 @@ struct pass {
 }  // namespace util
 }  // namespace vcc
 
-#define VCC_PRINT(fmt, ...) vcc::util::diagnostic_print(__FILE__, __FUNCTION__, __LINE__, fmt, __VA_ARGS__);
-
-#define VKCHECK(expr) { vcc::vcc_exception::maybe_throw(expr, __FILE__, __LINE__, __FUNCTION__, #expr); }
-#ifdef WIN32
-#define VKTRACE(expr) { /*OutputDebugString(#expr "\n");*/ expr; }
+#ifdef __GNUC__
+#define VCC_PRINT(fmt, ...) vcc::util::diagnostic_print(__FILE__, \
+	__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__);
 #else
-#define VKTRACE(expr) { std::cerr << #expr << std::endl; expr; }
-#endif // !WIN32
+#define VCC_PRINT(fmt, ...) vcc::util::diagnostic_print(__FILE__, \
+	__FUNCTION__, __LINE__, fmt, __VA_ARGS__);
+#endif // __GNUC__
+
+#define VKCHECK(expr) { vcc::vcc_exception::maybe_throw(expr, __FILE__, \
+	__LINE__, __FUNCTION__, #expr); }
+#define VKTRACE(expr) { expr; /*VCC_PRINT("%s", #expr)*/ }
 
 #endif /* UTIL_H_ */

@@ -13,6 +13,9 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+
+#if !defined(__ANDROID__) && !defined(ANDROID)
+
 #include <cassert>
 #include <png.h>
 #include <vcc/image.h>
@@ -113,12 +116,16 @@ image::image_type png_loader_type::load(
 		format, extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR,
 		usage, sharingMode, queueFamilyIndices, VK_IMAGE_LAYOUT_UNDEFINED));
 	memory::bind(device, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, image);
-	copy_to_image(*queue, device::get_physical_device(*device), format, VK_IMAGE_ASPECT_COLOR_BIT,
-		VkExtent2D{ extent.width, extent.height }, (uint8_t *)data.c_str(),
-		bytes_per_pixel(format), image);
+	const std::size_t bpp(bytes_per_pixel(format));
+	copy_to_image(*queue, device::get_physical_device(*device), format,
+		VK_IMAGE_ASPECT_COLOR_BIT, VkExtent2D{ extent.width, extent.height },
+		(uint8_t *)data.c_str(), bpp, bpp * extent.width, image);
 	return std::move(image);
 }
 
 }  // namespace internal
 }  // namespace image
 }  // namespace vcc
+
+#endif // __ANDROID__
+

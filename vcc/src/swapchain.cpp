@@ -38,8 +38,11 @@ swapchain_type create(const type::supplier<device::device_type> &device, const c
 	create.compositeAlpha = (VkCompositeAlphaFlagBitsKHR) create_info.compositeAlpha;
 	create.presentMode = create_info.presentMode;
 	create.clipped = create_info.clipped;
-	create.oldSwapchain = create_info.oldSwapchain
-		? internal::get_instance(*create_info.oldSwapchain) : VK_NULL_HANDLE;
+	if (create_info.oldSwapchain) {
+		create.oldSwapchain = internal::get_instance(*create_info.oldSwapchain);
+	} else {
+		create.oldSwapchain = VK_NULL_HANDLE;
+	}
 	VkSwapchainKHR swapchain;
 	{
 		if (create_info.oldSwapchain) {

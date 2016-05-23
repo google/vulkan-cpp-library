@@ -54,10 +54,10 @@ public:
 		return (bool) function;
 	}
 
-	template<typename... T>
-	auto operator() (T... values) const
-			->decltype(get()(std::forward<T>(values)...)) {
-		return get()(std::forward<T>(values)...);
+	template<typename... Args>
+	auto operator() (Args... values) const
+			->decltype(this->get()(std::forward<Args>(values)...)) {
+		return get()(std::forward<Args>(values)...);
 	}
 
 	supplier(function_type &&functor)

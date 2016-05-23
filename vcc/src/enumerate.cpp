@@ -13,6 +13,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+#include <algorithm>
 #include <cstring>
 #include <vcc/enumerate.h>
 #include <vector>
@@ -36,15 +37,21 @@ std::vector<VkLayerProperties> device_layer_properties(VkPhysicalDevice device) 
 	return std::move(properties);
 }
 
-bool contains_all(const std::vector<VkLayerProperties> &layers, const std::set<std::string> &required) {
-	std::size_t found(0);
-	for (const VkLayerProperties &layer: layers) {
-		found += required.count(layer.layerName);
+bool contains_all(const std::vector<VkLayerProperties> &layers,
+		const std::set<std::string> &required_layers) {
+	for (const std::string &required_layer : required_layers) {
+		if (std::find_if(layers.begin(), layers.end(),
+				[&required_layer](const VkLayerProperties &layer) {
+			return required_layer == layer.layerName;
+		}) == layers.end()) {
+			return false;
+		}
 	}
-	return found == required.size();
+	return true;
 }
 
-std::vector<std::string> filter(const std::vector<VkLayerProperties> &layers, const std::set<std::string> &optional) {
+std::vector<std::string> filter(const std::vector<VkLayerProperties> &layers,
+		const std::set<std::string> &optional) {
 	std::vector<std::string> available;
 	available.reserve(optional.size());
 	for (const VkLayerProperties &layer : layers) {
@@ -55,15 +62,22 @@ std::vector<std::string> filter(const std::vector<VkLayerProperties> &layers, co
 	return std::move(available);
 }
 
-bool contains_all(const std::vector<VkExtensionProperties> &extensions, const std::set<std::string> &required) {
-	std::size_t found(0);
-	for (const VkExtensionProperties &extension : extensions) {
-		found += required.count(extension.extensionName);
+bool contains_all(const std::vector<VkExtensionProperties> &extensions,
+		const std::set<std::string> &required_extensions) {
+	for (const std::string &required_extension : required_extensions) {
+		if (std::find_if(extensions.begin(), extensions.end(),
+			[&required_extension](const VkExtensionProperties &extension) {
+				return required_extension == extension.extensionName;
+		}) == extensions.end()) {
+			return false;
+		}
 	}
-	return found == required.size();
+	return true;
 }
 
-std::vector<std::string> filter(const std::vector<VkExtensionProperties> &extensions, const std::set<std::string> &optional) {
+std::vector<std::string> filter(
+		const std::vector<VkExtensionProperties> &extensions,
+		const std::set<std::string> &optional) {
 	std::vector<std::string> available;
 	available.reserve(optional.size());
 	for (const VkExtensionProperties &extension : extensions) {
@@ -74,21 +88,27 @@ std::vector<std::string> filter(const std::vector<VkExtensionProperties> &extens
 	return std::move(available);
 }
 
-std::vector<VkExtensionProperties> instance_extension_properties(const std::string &layer_name) {
+std::vector<VkExtensionProperties> instance_extension_properties(
+		const std::string &layer_name) {
 	uint32_t count;
-	VKCHECK(vkEnumerateInstanceExtensionProperties(layer_name.empty() ? NULL : layer_name.c_str(), &count, NULL));
+	VKCHECK(vkEnumerateInstanceExtensionProperties(layer_name.empty()
+		? NULL : layer_name.c_str(), &count, NULL));
 	std::vector<VkExtensionProperties> properties(count);
-	VKCHECK(vkEnumerateInstanceExtensionProperties(layer_name.empty() ? NULL : layer_name.c_str(), &count, &properties.front()));
+	VKCHECK(vkEnumerateInstanceExtensionProperties(layer_name.empty()
+		? NULL : layer_name.c_str(), &count, &properties.front()));
 	return std::move(properties);
 }
 
 std::vector<VkExtensionProperties> device_extension_properties(VkPhysicalDevice device, const std::string &layer_name) {
 	uint32_t count;
-	VKCHECK(vkEnumerateDeviceExtensionProperties(device, layer_name.empty() ? NULL : layer_name.c_str(), &count, NULL));
+	VKCHECK(vkEnumerateDeviceExtensionProperties(device, layer_name.empty()
+		? NULL : layer_name.c_str(), &count, NULL));
 	std::vector<VkExtensionProperties> properties(count);
-	VKCHECK(vkEnumerateDeviceExtensionProperties(device, layer_name.empty() ? NULL : layer_name.c_str(), &count, &properties.front()));
+	VKCHECK(vkEnumerateDeviceExtensionProperties(device, layer_name.empty()
+		? NULL : layer_name.c_str(), &count, &properties.front()));
 	return std::move(properties);
 }
 
-}
-}
+}  // namespace enumerate
+}  // namespace vcc
+

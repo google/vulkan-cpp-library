@@ -477,6 +477,45 @@ void cmd(cmd_args &args, render_pass_type<CommandsT...> &&render_pass) {
 }  // namespace internal
 
 }  // namespace command
+
+namespace command_buffer {
+
+template<typename... CommandsT>
+void compile(command_buffer_type &command_buffer,
+		VkCommandBufferUsageFlags flags,
+		render_pass::render_pass_type &render_pass,
+		uint32_t subpass,
+		framebuffer::framebuffer_type &framebuffer,
+		VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
+		VkQueryPipelineStatisticFlags pipelineStatistics,
+		CommandsT&&... commands) {
+	begin_type begin_instance(begin(std::ref(command_buffer), flags,
+		std::ref(render_pass), subpass, std::ref(framebuffer), occlusionQueryEnable,
+		queryFlags, pipelineStatistics));
+	command::internal::cmd_args args = { command_buffer };
+	args.references.add(render_pass, framebuffer);
+	// int array guarantees order of execution with older GCC compilers.
+	const int dummy[] = { (command::internal::cmd(args, std::forward<CommandsT>(commands)), 0)... };
+	command_buffer.references = std::move(args.references);
+	command_buffer.pre_execute_hook = std::move(args.pre_execute_callbacks);
+}
+
+template<typename... CommandsT>
+void compile(command_buffer_type &command_buffer,
+		VkCommandBufferUsageFlags flags,
+		VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
+		VkQueryPipelineStatisticFlags pipelineStatistics,
+		CommandsT&&... commands) {
+	begin_type begin_instance(begin(std::ref(command_buffer), flags,
+		occlusionQueryEnable, queryFlags, pipelineStatistics));
+	command::internal::cmd_args args = { command_buffer };
+	// int array guarantees order of execution with older GCC compilers.
+	const int dummy[] = { (command::internal::cmd(args, std::forward<CommandsT>(commands)), 0)... };
+	command_buffer.references = std::move(args.references);
+	command_buffer.pre_execute_hook = std::move(args.pre_execute_callbacks);
+}
+
+}  // namespace command_buffer
 }  // namespace vcc
 
 #endif  // _VCC_COMMAND_H_

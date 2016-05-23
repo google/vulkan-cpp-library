@@ -36,6 +36,8 @@ struct loader_type {
 		std::istream &stream) = 0;
 };
 
+#if !defined(__ANDROID__) && !defined(ANDROID)
+
 struct png_loader_type : public loader_type {
 	bool can_load(std::istream &stream);
 	image::image_type load(
@@ -47,6 +49,8 @@ struct png_loader_type : public loader_type {
 		const std::vector<uint32_t> &queueFamilyIndices,
 		std::istream &stream);
 };
+
+#endif // __ANDROID__
 
 struct gli_loader_type : public loader_type {
 	bool can_load(std::istream &stream);
@@ -67,7 +71,8 @@ struct gli_loader_type : public loader_type {
 */
 void copy_to_image(queue::queue_type &queue, VkPhysicalDevice physical_device,
 	VkFormat format, VkImageAspectFlags aspect_mask, VkExtent2D extent,
-	const void *source, std::size_t block_size, image::image_type &target_image);
+	const void *source, std::size_t block_size, std::size_t row_pitch,
+	image::image_type &target_image);
 
 uint32_t bytes_per_pixel(VkFormat format);
 
@@ -76,3 +81,4 @@ uint32_t bytes_per_pixel(VkFormat format);
 }  // namespace vcc
 
 #endif // _VCC_INTERNAL_LOADER_H_
+

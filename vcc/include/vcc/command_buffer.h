@@ -115,44 +115,11 @@ VCC_LIBRARY begin_type begin(
 	VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
 	VkQueryPipelineStatisticFlags pipelineStatistics);
 
-VCC_LIBRARY begin_type begin(const type::supplier<command_buffer_type> &command_buffer,
+VCC_LIBRARY begin_type begin(
+	const type::supplier<command_buffer_type> &command_buffer,
 	VkCommandBufferUsageFlags flags,
 	VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
 	VkQueryPipelineStatisticFlags pipelineStatistics);
-
-template<typename... CommandsT>
-void compile(command_buffer_type &command_buffer,
-		VkCommandBufferUsageFlags flags,
-		render_pass::render_pass_type &render_pass,
-		uint32_t subpass,
-		framebuffer::framebuffer_type &framebuffer,
-		VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
-		VkQueryPipelineStatisticFlags pipelineStatistics,
-		CommandsT&&... commands) {
-	begin_type begin(begin(std::ref(command_buffer), flags, render_pass, subpass,
-		framebuffer, occlusionQueryEnable, queryFlags, pipelineStatistics));
-	internal::cmd_args args = { command_buffer };
-	args.references.add(render_pass, framebuffer);
-	// int array guarantees order of execution with older GCC compilers.
-	const int dummy[] = { (internal::cmd(args, std::forward<CommandsT>(commands)), 0)... };
-	command_buffer.references = std::move(args.references);
-	command_buffer.pre_execute_callbacks = std::move(args.pre_execute_callbacks);
-}
-
-template<typename... CommandsT>
-void compile(command_buffer_type &command_buffer,
-		VkCommandBufferUsageFlags flags,
-		VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
-		VkQueryPipelineStatisticFlags pipelineStatistics,
-		CommandsT&&... commands) {
-	begin_type begin(begin(std::ref(command_buffer), flags,
-		occlusionQueryEnable, queryFlags, pipelineStatistics));
-	command::internal::cmd_args args = { command_buffer };
-	// int array guarantees order of execution with older GCC compilers.
-	const int dummy[] = { (command::internal::cmd(args, std::forward<CommandsT>(commands)), 0)... };
-	command_buffer.references = std::move(args.references);
-	command_buffer.pre_execute_hook = std::move(args.pre_execute_callbacks);
-}
 
 }  // namespace command_buffer
 }  // namespace vcc

@@ -4,6 +4,8 @@ Release/**
 *.spv
 **/Debug/
 **/Release/
+**/build/
+.gradle/
 *.vcxproj.user
 *.opensdf
 *.sdf

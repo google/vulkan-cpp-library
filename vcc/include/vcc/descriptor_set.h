@@ -16,6 +16,7 @@
 #ifndef DESCRIPTOR_SET_H_
 #define DESCRIPTOR_SET_H_
 
+#include <algorithm>
 #include <vcc/buffer.h>
 #include <vcc/buffer_view.h>
 #include <vcc/device.h>
@@ -141,6 +142,42 @@ inline write_buffer_view_type write_buffer_view(
 		dst_binding, dst_array_element, descriptor_type, buffers };
 }
 
+// TODO(gardell): Remove forward declaration once data::buffer_type is merged
+// into the codebase and renamed to input_buffer.
+struct write_buffer_data_type;
+
+namespace internal {
+
+struct update_storage {
+	std::vector<VkCopyDescriptorSet> copy_sets;
+	std::vector<VkWriteDescriptorSet> write_sets;
+	std::vector<std::vector<VkDescriptorImageInfo>> image_infos;
+	std::vector<std::vector<VkDescriptorBufferInfo>> buffer_infos;
+	std::vector<std::vector<VkBufferView>> buffer_view;
+
+	VCC_LIBRARY void reserve();
+
+	std::size_t copy_sets_size = 0, write_sets_size = 0, image_info_size = 0,
+		buffer_info_size = 0, buffer_view_size = 0;
+};
+
+VCC_LIBRARY void add(update_storage &storage, const copy &);
+VCC_LIBRARY void add(update_storage &storage, const write_image &);
+VCC_LIBRARY void add(update_storage &storage, const write_buffer_type &);
+VCC_LIBRARY void add(update_storage &storage, const write_buffer_view_type &);
+// TODO(gardell): Remove forward declaration once data::buffer_type is merged
+// into the codebase and renamed to input_buffer.
+VCC_LIBRARY void add(update_storage &storage, const write_buffer_data_type &);
+
+VCC_LIBRARY void count(update_storage &storage, const write_image &);
+VCC_LIBRARY void count(update_storage &storage, const write_buffer_type &);
+VCC_LIBRARY void count(update_storage &storage, const write_buffer_view_type &);
+// TODO(gardell): Remove forward declaration once data::buffer_type is merged
+// into the codebase and renamed to input_buffer.
+VCC_LIBRARY void count(update_storage &storage, const write_buffer_data_type &);
+
+}  // namespace internal
+
 // takes device plus a list of copy and write_* items.
 template <typename... ArgsT>
 void update(device::device_type &device, const ArgsT &... args) {
@@ -163,32 +200,6 @@ void update(device::device_type &device, const ArgsT &... args) {
 		(uint32_t)storage.write_sets.size(), storage.write_sets.data(),
 		(uint32_t)storage.copy_sets.size(), storage.copy_sets.data()));
 }
-
-namespace internal {
-
-struct update_storage {
-	std::vector<VkCopyDescriptorSet> copy_sets;
-	std::vector<VkWriteDescriptorSet> write_sets;
-	std::vector<std::vector<VkDescriptorImageInfo>> image_infos;
-	std::vector<std::vector<VkDescriptorBufferInfo>> buffer_infos;
-	std::vector<std::vector<VkBufferView>> buffer_view;
-
-	VCC_LIBRARY void reserve();
-
-	std::size_t copy_sets_size = 0, write_sets_size = 0, image_info_size = 0,
-		buffer_info_size = 0, buffer_view_size = 0;
-};
-
-VCC_LIBRARY void add(update_storage &storage, const copy &);
-VCC_LIBRARY void add(update_storage &storage, const write_image &);
-VCC_LIBRARY void add(update_storage &storage, const write_buffer_type &);
-VCC_LIBRARY void add(update_storage &storage, const write_buffer_view_type &);
-
-VCC_LIBRARY void count(update_storage &storage, const write_image &);
-VCC_LIBRARY void count(update_storage &storage, const write_buffer_type &);
-VCC_LIBRARY void count(update_storage &storage, const write_buffer_view_type &);
-
-}  // namespace internal
 
 }  // namespace descriptor_set
 }  // namespace vcc

@@ -43,13 +43,19 @@ will keep a reference to the object, where functions taking a reference will use
 The library is thread-safe as required by the Vulkan specification, `2.5 Threading Behavior`, `Externally Synchronized Parameters`, `Externally Synchronized Parameter Lists`.
 Notice that `Implicit Externally Synchronized Parameters` is not included.
 
-### Android support.
-In the works.
-
 ### Xlib/xcb
 In the works.
 
 ### Install
+
+## Android
+Install the latest Android SDK and NDK, the pre-release of Android N (API level 24) is required.
+Unit and integration tests are not supported.
+
+To compile and install the library and samples, run:
+ANDROID_NDK_HOME=/<your-path>/android-ndk-r11c/ ANDROID_HOME=/<your-path>/android-sdk-linux/ ./gradlew installDebug
+
+
 ## Visual Studio 2015
 Only 2015 is supported. The C++11 support in previous versions is not sufficient.
 * Open the vulkan-cpp.sln,

@@ -20,6 +20,10 @@
 #include <sstream>
 #include <vcc/util.h>
 
+#if defined(__ANDROID__) || defined(ANDROID)
+#include <android/log.h>
+#endif  // __ANDROID__
+
 namespace vcc {
 
 const char *vkresult_string(VkResult result) {
@@ -79,11 +83,15 @@ const char *vkresult_string(VkResult result) {
 	}
 }
 
-void vcc_exception::maybe_throw(VkResult result, const char *file, int line, const char *function, const char *expr) {
+void vcc_exception::maybe_throw(VkResult result, const char *file, int line,
+		const char *function, const char *expr) {
 	if (result != VK_SUCCESS) {
 		std::stringstream ss;
-		ss << file << "(" << line << "): In " << function << ": Expression " << expr << " resulted in " << vkresult_string(result);
-		throw vcc_exception(ss.str());
+		ss << file << "(" << line << "): In " << function << ": Expression "
+			<< expr << " resulted in " << vkresult_string(result);
+		std::string string(ss.str());
+		util::diagnostic_print(file, function, line, "%s", string.c_str());
+		throw vcc_exception(std::move(string));
 	}
 }
 
@@ -109,10 +117,25 @@ void diagnostic_print(const char *filename, const char *function, int line, cons
 #if 1
 	va_list args;
 	va_start(args, fmt);
+#if defined(__ANDROID__) || defined(ANDROID)
+	char buffer[1024];
+	snprintf(buffer, sizeof(buffer), "%s:%d", filename, line);
+	// Android logger does not support very long strings (~4000 characters).
+	const size_t size(vsnprintf(nullptr, 0, fmt, args));
+	std::string output(size, '\0');
+	vsprintf(&output[0], fmt, args);
+	std::stringstream ss(std::move(output));
+	while (ss) {
+		std::string line;
+		std::getline(ss, line);
+		__android_log_write(ANDROID_LOG_INFO, buffer, line.c_str());
+	}
+#else
 	fprintf(stderr, "%s(In %s:%d): ", filename, function, line);
 	vfprintf(stderr, fmt, args);
 	fprintf(stderr, "\n");
 	fflush(stderr);
+#endif  // __ANDROID__
 	va_end(args);
 #else
 	std::stringstream ss;

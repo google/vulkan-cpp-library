@@ -1,0 +1,54 @@
+apply plugin: 'com.android.model.application'
+
+def ndkDir = System.getenv("ANDROID_NDK_HOME")
+def propertiesFile = project.rootProject.file('local.properties')
+if (propertiesFile.exists()) {
+    Properties properties = new Properties()
+    properties.load(propertiesFile.newDataInputStream())
+    ndkDir = properties.getProperty('ndk.dir')
+}
+
+model {
+    android {
+        compileSdkVersion 'android-N'
+				buildToolsVersion '24.0.0 rc1'
+
+        defaultConfig {
+            applicationId = 'org.vulkan.cpp.library.teapot_activity'
+            minSdkVersion.apiLevel = 23
+            targetSdkVersion.apiLevel = 23
+            versionCode = 1
+            versionName = '1.0'
+        }
+        ndk {
+            moduleName ='teapot-activity'
+            stl = 'gnustl_shared'
+            cppFlags.addAll(['-std=c++11', '-fexceptions', '-I' + gradle.glmDir,
+              '-I' + "${ndkDir}/sources/android/native_app_glue"])
+            abiFilters.addAll(['armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64',
+              'mips', 'mips64'])
+            ldLibs.addAll(['log', 'android', 'vulkan', 'jnigraphics'])
+        }
+        sources {
+            main {
+                jni {
+                    source {
+                      srcDir "./"
+                    }
+                    dependencies {
+                        project ':nativeactivity' linkage 'static'
+                        project ':types' linkage 'static'
+                        project ':vcc' linkage 'static'
+                        project ':vcc-image' linkage 'static'
+                    }
+                }
+            }
+        }
+        buildTypes {
+            release {
+                minifyEnabled = false
+                proguardFiles.add(file('proguard-rules.txt'))
+            }
+        }
+    }
+}

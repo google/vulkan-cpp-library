@@ -34,8 +34,9 @@ uint32_t bytes_per_pixel(VkFormat format);
 * indicates we can't expect much more of the linear layout.
 */
 void copy_to_image(queue::queue_type &queue, VkPhysicalDevice physical_device,
-	VkFormat format, VkImageAspectFlags aspect_mask, VkExtent2D extent,
-	const void *source, std::size_t block_size, image::image_type &target_image) {
+		VkFormat format, VkImageAspectFlags aspect_mask, VkExtent2D extent,
+		const void *source, std::size_t block_size, std::size_t row_pitch,
+		image::image_type &target_image) {
 	const memory::map_type mapped(memory::map(vcc::internal::get_memory(target_image)));
 	VkSubresourceLayout layout;
 	VkImageSubresource resource{ aspect_mask, 0, 0 };
@@ -52,14 +53,19 @@ void copy_to_image(queue::queue_type &queue, VkPhysicalDevice physical_device,
 			}
 		}
 		destination_row += layout.rowPitch;
-		source_row += block_size * extent.width;
+		source_row += row_pitch;
 	}
 }
 
 std::string dump_format_feature_flags(VkFormatFeatureFlags flags);
 std::string dump_format_properties(const VkFormatProperties &properties);
 
-const std::vector<std::shared_ptr<loader_type>> g_loaders{ { std::make_shared<gli_loader_type>(), std::make_shared<png_loader_type>() } };
+const std::vector<std::shared_ptr<loader_type>> g_loaders{ {
+#if !defined(__ANDROID__) && !defined(ANDROID)
+		std::make_shared<png_loader_type>(),
+#endif // __ANDROID__
+		std::make_shared<gli_loader_type>()
+} };
 
 }  // namespace internal
 
@@ -82,7 +88,7 @@ VCC_LIBRARY image::image_type create(
 	VkFormatFeatureFlags feature_flags,
 	VkSharingMode sharingMode,
 	const std::vector<uint32_t> &queueFamilyIndices,
-	std::istream &stream) {
+	std::istream &&stream) {
 
 	for (const std::shared_ptr<internal::loader_type> &loader : internal::g_loaders) {
 		if (loader->can_load(stream)) {

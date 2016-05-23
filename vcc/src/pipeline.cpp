@@ -173,8 +173,11 @@ pipeline_type create_graphics(const type::supplier<device::device_type> &device,
 	create.layout = internal::get_instance(*layout);
 	create.renderPass = internal::get_instance(*render_pass);
 	create.subpass = subpass;
-	create.basePipelineHandle = basePipelineHandle
-		? internal::get_instance(*basePipelineHandle) : VK_NULL_HANDLE;
+	if (basePipelineHandle) {
+		create.basePipelineHandle = internal::get_instance(*basePipelineHandle);
+	} else {
+		create.basePipelineHandle = VK_NULL_HANDLE;
+	}
 	create.basePipelineIndex = -1;
 
 	VKCHECK(vkCreateGraphicsPipelines(internal::get_instance(*device),
@@ -239,8 +242,11 @@ pipeline_type create_compute(const type::supplier<device::device_type> &device,
 	create.flags = flags;
 	create.stage = convert_shader_stage(stage);
 	create.layout = internal::get_instance(*layout);
-	create.basePipelineHandle = basePipelineHandle
-		? internal::get_instance(*basePipelineHandle) : VK_NULL_HANDLE;
+	if (basePipelineHandle) {
+		create.basePipelineHandle = internal::get_instance(*basePipelineHandle);
+	} else {
+		create.basePipelineHandle = VK_NULL_HANDLE;
+	}
 	create.basePipelineIndex = -1;
 	VkPipeline instance;
 	VKCHECK(vkCreateComputePipelines(internal::get_instance(*device),

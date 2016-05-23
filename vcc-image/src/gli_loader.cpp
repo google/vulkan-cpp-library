@@ -61,17 +61,24 @@ image::image_type gli_loader_type::load(
 	const std::string data(ss.str());
 	gli::texture texture(gli::load(data.c_str(), data.size()));
 	if (texture.empty()) {
+		VCC_PRINT("failed to load texture");
 		throw vcc_exception("failed to load texture");
 	}
-	// TODO(gardell): If the format is not supported, expand
+	const type::supplier<device::device_type> device(
+		vcc::internal::get_parent(*queue));
+	const VkPhysicalDevice physical_device(device::get_physical_device(*device));
 	const VkFormat format(convert_format(texture.format()));
 	const VkImageType type(convert_type(texture.target()));
 	const VkExtent3D extent(convert_extent(texture.extent()));
-	const uint32_t face_total(static_cast<uint32_t>(texture.layers() * texture.faces()));
+	const uint32_t face_total(static_cast<uint32_t>(
+		texture.layers() * texture.faces()));
 	// TODO(gardell): Support different aspect masks?
 	const VkImageAspectFlags aspect_mask(VK_IMAGE_ASPECT_COLOR_BIT);
 
-	const type::supplier<device::device_type> device(vcc::internal::get_parent(*queue));
+	VkImageFormatProperties imageFormatProperties;
+	VKCHECK(vkGetPhysicalDeviceImageFormatProperties(physical_device, format,
+		type, VK_IMAGE_TILING_OPTIMAL, usage, flags, &imageFormatProperties));
+
 	image::image_type image(image::create(device,
 		flags, type, format, extent, static_cast<uint32_t>(texture.levels()),
 		face_total, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_OPTIMAL,
@@ -99,10 +106,10 @@ image::image_type gli_loader_type::load(
 						gli::is_compressed(texture.format())
 						? compressed_extent(texture) : extent);
 					const std::size_t block_size(gli::block_size(texture.format()));
-					copy_to_image(*queue, device::get_physical_device(*device),
-						format, aspect_mask,
+					copy_to_image(*queue, physical_device, format, aspect_mask,
 						VkExtent2D{ uint32_t(copy_extent.x), uint32_t(copy_extent.y) },
-						texture.data(layer, face, level), block_size, staging_image);
+						texture.data(layer, face, level), block_size,
+						block_size * copy_extent.x, staging_image);
 
 					command_buffer::compile(command_buffer,
 						VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, VK_FALSE, 0, 0,

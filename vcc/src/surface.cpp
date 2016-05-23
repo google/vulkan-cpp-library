@@ -13,8 +13,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-// TODO(gardell): Remove, buggy header.
-#if defined(VK_USE_PLATFORM_ANDROID_KHR) && defined(__ANDROID__)
+#if !defined(VK_USE_PLATFORM_ANDROID_KHR) && defined(__ANDROID__)
 #define VK_USE_PLATFORM_ANDROID_KHR
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
@@ -31,17 +30,15 @@ surface_type create(const type::supplier<<instance::instance_type> &instance, xc
 
 #ifdef __ANDROID__
 
-surface_type create(const type::supplier<<instance::instance_type> &instance, ANativeWindow *window) {
+surface_type create(const type::supplier<instance::instance_type> &instance,
+		ANativeWindow *window) {
 	VkSurfaceKHR surface;
-	VkAndroidSurfaceCreateInfoKHR create = {VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR, NULL, 0};
+	VkAndroidSurfaceCreateInfoKHR create = {
+		VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR, NULL, 0};
 	create.window = window;
-#if 1 // TODO(gardell): Shouldn't be needed, direct linkage should be possible
-	PFN_vkCreateAndroidSurfaceKHR create_surface = (PFN_vkCreateAndroidSurfaceKHR) vkGetInstanceProcAddr(instance->instance, "vkCreateAndroidSurfaceKHR");
-	VKCHECK(create_surface(instance->instance, &create, NULL, &surface));
-#else
-	VKCHECK(vkCreateAndroidSurfaceKHR(instance->instance, &create, NULL, &surface));
-#endif
-	return surface_type(surface, std::forward<type::supplier<<instance::instance_type>>(instance));
+	VKCHECK(vkCreateAndroidSurfaceKHR(internal::get_instance(*instance), &create,
+			NULL, &surface));
+	return surface_type(surface, instance);
 }
 
 #endif // VK_USE_PLATFORM_ANDROID_KHR

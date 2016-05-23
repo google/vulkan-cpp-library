@@ -21,7 +21,9 @@
 #include <vcc/physical_device.h>
 #include <vcc/surface.h>
 #include <vcc/window.h>
+#ifdef _WIN32
 #include <windowsx.h>
+#endif // WIN32
 
 namespace vcc {
 namespace window {
@@ -33,25 +35,45 @@ input_callbacks_type::input_callbacks_type()
 	  key_down_callback([](keycode_type) {return false; }),
 	  key_up_callback([](keycode_type) {return false; }) {}
 
-input_callbacks_type &input_callbacks_type::set_mouse_down_callback(const mouse_press_callback_type &callback) {
+input_callbacks_type &input_callbacks_type::set_mouse_down_callback(
+		const mouse_press_callback_type &callback) {
 	mouse_down_callback = callback;
 	return *this;
 }
 
-	input_callbacks_type &input_callbacks_type::set_mouse_up_callback(const mouse_press_callback_type &callback) {
+	input_callbacks_type &input_callbacks_type::set_mouse_up_callback(
+		const mouse_press_callback_type &callback) {
 	mouse_up_callback = callback;
 	return *this;
 }
-	input_callbacks_type &input_callbacks_type::set_mouse_move_callback(const mouse_move_callback_type &callback) {
+	input_callbacks_type &input_callbacks_type::set_mouse_move_callback(
+		const mouse_move_callback_type &callback) {
 	mouse_move_callback = callback;
 	return *this;
 }
-	input_callbacks_type &input_callbacks_type::set_key_down_callback(const key_press_callback_type &callback) {
+	input_callbacks_type &input_callbacks_type::set_key_down_callback(
+		const key_press_callback_type &callback) {
 	key_down_callback = callback;
 	return *this;
 }
-	input_callbacks_type &input_callbacks_type::set_key_up_callback(const key_press_callback_type &callback) {
+	input_callbacks_type &input_callbacks_type::set_key_up_callback(
+		const key_press_callback_type &callback) {
 	key_up_callback = callback;
+	return *this;
+}
+input_callbacks_type &input_callbacks_type::set_touch_down_callback(
+		const touch_press_callback_type &callback) {
+	touch_down_callback = callback;
+	return *this;
+}
+input_callbacks_type &input_callbacks_type::set_touch_up_callback(
+		const touch_press_callback_type &callback) {
+	touch_up_callback = callback;
+	return *this;
+}
+input_callbacks_type &input_callbacks_type::set_touch_move_callback(
+		const touch_move_callback_type &callback) {
+	touch_move_callback = callback;
 	return *this;
 }
 
@@ -165,6 +187,9 @@ void window_data_type::draw() {
 			// presentation engine will still present the image correctly.
 			break;
 		default:
+			if (err) {
+				VCC_PRINT("vcc::swapchain::acquire_next_image resulted in %u", err);
+			}
 			assert(!err);
 			break;
 		}
@@ -213,12 +238,12 @@ void window_data_type::draw() {
 		{ vcc::queue::wait_semaphore{ std::ref(present_complete_semaphore) } },
 		{ std::ref(command_buffer) }, {});
 
-	err = vcc::queue::present(present_queue, {}, { std::ref(swapchain) }, { current_buffer });
+	err = vcc::queue::present(present_queue, {}, { std::ref(swapchain) },
+		{ current_buffer });
 	switch (err) {
 	case VK_ERROR_OUT_OF_DATE_KHR:
 		// swapchain is out of date (e.g. the window was resized) and
 		// must be recreated:
-		// TODO(gardell): Store VkExtent.
 		resize_callback(extent, format, swapchain_images);
 		break;
 	case VK_SUBOPTIMAL_KHR:
@@ -242,7 +267,7 @@ void initialize(internal::window_data_type &data,
 		ANativeWindow *window
 #endif // __ANDROID__
 		) {
-	data.surface = vcc::surface::create(type::supplier<instance::instance_type>(data.instance),
+	data.surface = vcc::surface::create(data.instance,
 #ifdef _WIN32
 		data.connection,
 #endif // _WIN32
@@ -254,28 +279,33 @@ void initialize(internal::window_data_type &data,
 
 	data.present_queue = queue::get_present_queue(data.device, data.surface);
 
-	data.cmd_pool = vcc::command_pool::create(type::supplier<device::device_type>(data.device), 0, vcc::queue::get_family_index(data.present_queue));
+	data.cmd_pool = vcc::command_pool::create(data.device, 0,
+		vcc::queue::get_family_index(data.present_queue));
 
 	// Get the list of VkFormat's that are supported:
 	const VkPhysicalDevice physical_device(device::get_physical_device(*data.device));
-	const std::vector<VkSurfaceFormatKHR> surface_formats(vcc::surface::physical_device_formats(physical_device, data.surface));
+	const std::vector<VkSurfaceFormatKHR> surface_formats(
+		vcc::surface::physical_device_formats(physical_device, data.surface));
 	// If the format list includes just one entry of VK_FORMAT_UNDEFINED,
 	// the surface has no preferred format.  Otherwise, at least one
 	// supported format will be returned.
 	// TODO(gardell): Pick a requested format
 	assert(!surface_formats.empty());
-	data.format = surface_formats.front().format == VK_FORMAT_UNDEFINED ? VK_FORMAT_B8G8R8A8_UNORM : surface_formats.front().format;
+	data.format = surface_formats.front().format == VK_FORMAT_UNDEFINED
+		? VK_FORMAT_B8G8R8A8_UNORM : surface_formats.front().format;
 	data.color_space = surface_formats.front().colorSpace;
 }
 
 #ifdef _WIN32
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	LONG_PTR user_data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-	internal::window_data_type *window_data = reinterpret_cast<internal::window_data_type *>(user_data);
+	internal::window_data_type *window_data =
+		reinterpret_cast<internal::window_data_type *>(user_data);
 
 	switch (uMsg) {
 	case WM_NCCREATE:
-		SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)((LPCREATESTRUCT)lParam)->lpCreateParams);
+		SetWindowLongPtr(hWnd, GWLP_USERDATA,
+			(LONG_PTR)((LPCREATESTRUCT)lParam)->lpCreateParams);
 		break;
 	case WM_CREATE:
 		initialize(*window_data, hWnd);
@@ -285,7 +315,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		break;
 	case WM_SIZE:
 		{
-			const VkExtent2D extent{ uint32_t(lParam & 0xffff), uint32_t(lParam & 0xffff0000 >> 16) };
+			const VkExtent2D extent{
+				uint32_t(lParam & 0xffff), uint32_t(lParam & 0xffff0000 >> 16) };
 			window_data->render_thread.post([extent, window_data]() {
 				resize(*window_data, extent);
 			});
@@ -347,13 +378,37 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 #elif defined(__ANDROID__)
 
 int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
-    /*struct engine* engine = (struct engine*)app->userData;
-    if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
-        engine->animating = 1;
-        engine->state.x = AMotionEvent_getX(event, 0);
-        engine->state.y = AMotionEvent_getY(event, 0);
-        return 1;
-    }*/
+    internal::window_data_type *window_data =
+      (internal::window_data_type *) app->userData;
+    switch (AInputEvent_getType(event)) {
+      case AINPUT_EVENT_TYPE_MOTION: {
+        const size_t count(AMotionEvent_getPointerCount(event));
+				bool handled = false;
+        switch (AMotionEvent_getAction(event)) {
+          case AMOTION_EVENT_ACTION_MOVE:
+            for (size_t i = 0; i < count; ++i) {
+              const int32_t id(AMotionEvent_getPointerId(event, i));
+              handled |= window_data->input_callbacks.touch_move_callback(id,
+                AMotionEvent_getX(event, i), AMotionEvent_getY(event, i));
+            }
+            return !!handled;
+          case AMOTION_EVENT_ACTION_DOWN:
+            for (size_t i = 0; i < count; ++i) {
+              const int32_t id(AMotionEvent_getPointerId(event, i));
+              handled |= window_data->input_callbacks.touch_down_callback(id,
+                AMotionEvent_getX(event, i), AMotionEvent_getY(event, i));
+            }
+            return !!handled;
+          case AMOTION_EVENT_ACTION_UP:
+            for (size_t i = 0; i < count; ++i) {
+              const int32_t id(AMotionEvent_getPointerId(event, i));
+              handled |= window_data->input_callbacks.touch_up_callback(id,
+                AMotionEvent_getX(event, i), AMotionEvent_getY(event, i));
+            }
+            return !!handled;
+        }
+        } break;
+    }
     return 0;
 }
 
@@ -361,7 +416,8 @@ int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
  * Process the next main command.
  */
 void engine_handle_cmd(struct android_app* app, int32_t cmd) {
-	internal::window_data_type *data = (internal::window_data_type *) app->userData;
+    internal::window_data_type *data =
+        (internal::window_data_type *) app->userData;
     switch (cmd) {
         case APP_CMD_SAVE_STATE:
             // The system has asked us to save our current state.  Do so.
@@ -369,26 +425,29 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
         case APP_CMD_INIT_WINDOW:
             // The window is being shown, get it ready.
             if (app->window != NULL) {
-            	vcc::window::initialize(*data, app->window);
-				vcc::window::resize(*data, VkExtent2D{
-					(uint32_t) ANativeWindow_getWidth(app->window),
-					(uint32_t) ANativeWindow_getHeight(app->window)});
+              vcc::window::initialize(*data, app->window);
+              vcc::window::resize(*data, VkExtent2D{
+                (uint32_t) ANativeWindow_getWidth(app->window),
+                (uint32_t) ANativeWindow_getHeight(app->window)});
+              data->render_thread.set_drawing(true);
             }
             break;
         case APP_CMD_WINDOW_RESIZED:
-        	vcc::window::resize(*data, VkExtent2D{
-				(uint32_t) ANativeWindow_getWidth(app->window),
-				(uint32_t) ANativeWindow_getHeight(app->window)});
+            vcc::window::resize(*data, VkExtent2D{
+              (uint32_t) ANativeWindow_getWidth(app->window),
+              (uint32_t) ANativeWindow_getHeight(app->window)});
         	break;
         case APP_CMD_TERM_WINDOW:
             // The window is being hidden or closed, clean it up.
             break;
         case APP_CMD_GAINED_FOCUS:
             // When our app gains focus, we start monitoring the accelerometer.
+            data->render_thread.set_drawing(true);
             break;
         case APP_CMD_LOST_FOCUS:
             // When our app loses focus, we stop monitoring the accelerometer.
             // This is to avoid consuming battery while not being used.
+            data->render_thread.set_drawing(false);
             break;
     }
 }
@@ -472,36 +531,26 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-		//draw(*window.data);
 	}
 	window.data->render_thread.join();
 	return (int) msg.wParam;
-#elif defined(__ANDROID__)
 
+#elif defined(__ANDROID__)
 	for (;;) {
 		// Read all pending events.
-		int ident;
 		int events;
-		struct android_poll_source* source;
+		android_poll_source *source;
+		for (int ident;
+				(ident = ALooper_pollAll(-1, NULL, &events, (void**) &source)) >= 0;) {
 
-		// If not animating, we will block forever waiting for events.
-		// If animating, we loop until all events are read, then continue
-		// to draw the next frame of animation.
-		while ((ident = ALooper_pollAll(0, NULL, &events, (void**) &source)) >= 0) {
-
-			// Process this event.
-			if (source != NULL) {
+			if (source) {
 				source->process(window.data->state, source);
 			}
 
-			// Check if we are exiting.
 			if (window.data->state->destroyRequested != 0) {
+				window.data->render_thread.join();
 				return 0;
 			}
-		}
-
-		if (window.data->state->window) {
-			draw(*window.data);
 		}
 	}
 #endif // __ANDROID__

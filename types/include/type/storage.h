@@ -116,7 +116,7 @@ public:
 		return array.size();
 	}
 
-private:
+protected:
 
 	explicit storage_type(std::tuple<container_type, revision_type> &&copy)
 		: array(std::forward<container_type>(std::get<0>(copy))), revision(std::get<1>(copy)) {}

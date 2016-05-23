@@ -21,6 +21,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <type/types.h>
+#include <vcc/android_asset_istream.h>
 #include <vcc/buffer.h>
 #include <vcc/command_buffer.h>
 #include <vcc/command_pool.h>
@@ -52,13 +53,25 @@ namespace teapot {
 
 const bool validate = true;
 
+#if defined(__ANDROID__) || defined(ANDROID)
+void android_main(struct android_app* state) {
+	app_dummy();
+#elif defined(WIN32)
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	LPSTR lpCmdLine, int nCmdShow) {
+#else
+int main(int argc, const char **argv) {
+#endif
 
 	vcc::instance::instance_type instance;
 	{
 		const std::set<std::string> extensions = {
-			VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+			VK_KHR_SURFACE_EXTENSION_NAME,
+#ifdef WIN32
+			VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+#elif defined(__ANDROID__)
+			VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+#endif // __ANDROID__
 		};
 		assert(vcc::enumerate::contains_all(
 			vcc::enumerate::instance_extension_properties(""),
@@ -163,16 +176,14 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	vcc::queue::queue_type queue(vcc::queue::get_graphics_queue(
 		std::ref(device)));
 	vcc::window::window_type window(vcc::window::create(
-		hInstance, std::ref(instance), std::ref(device), std::ref(queue),
+#ifdef WIN32
+		hInstance,
+#elif defined(__ANDROID__) || defined(ANDROID)
+		state,
+#endif // __ANDROID__
+		std::ref(instance), std::ref(device), std::ref(queue),
 		VkExtent2D{ 500, 500 }, VK_FORMAT_A8B8G8R8_UINT_PACK32,
 		"Lighting demo"));
-
-	const glm::mat4 view_matrix(glm::lookAt(glm::vec3(0.0f, 6.0f, 6.0f),
-		glm::vec3(0, 0, 0), glm::vec3(0.0f, 1.0f, 0.0)));
-	float x_angle(0), y_angle(0);
-	bool mouse_down(false);
-	int last_x, last_y;
-	const float scale_x(128), scale_y(128);
 
 	const VkFormat depth_format = VK_FORMAT_D16_UNORM;
 	vcc::render_pass::render_pass_type render_pass(vcc::render_pass::create(
@@ -204,12 +215,26 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	vcc::pipeline_cache::pipeline_cache_type pipeline_cache(
 		vcc::pipeline_cache::create(std::ref(device)));
-	vcc::shader_module::shader_module_type vert_shader_module(vcc::shader_module::create(
-		std::ref(device),
-		std::ifstream("../../../lighting-vert.spv", std::ios_base::binary | std::ios_base::in)));
-	vcc::shader_module::shader_module_type frag_shader_module(vcc::shader_module::create(
-		std::ref(device),
-		std::ifstream("../../../lighting-frag.spv", std::ios_base::binary | std::ios_base::in)));
+
+	vcc::shader_module::shader_module_type vert_shader_module(
+		vcc::shader_module::create(std::ref(device),
+#if defined(__ANDROID__) || defined(ANDROID)
+			android::asset_istream(state->activity->assetManager, "lighting-vert.spv")
+#else
+			std::ifstream("../../../lighting-vert.spv",
+				std::ios_base::binary | std::ios_base::in)
+#endif  // __ ANDROID__
+			));
+	vcc::shader_module::shader_module_type frag_shader_module(
+		vcc::shader_module::create(std::ref(device),
+#if defined(__ANDROID__) || defined(ANDROID)
+			android::asset_istream(state->activity->assetManager, "lighting-frag.spv")
+#else
+			std::ifstream("../../../lighting-frag.spv",
+				std::ios_base::binary | std::ios_base::in)
+#endif  // __ ANDROID__
+			));
+
 	vcc::pipeline_layout::pipeline_layout_type pipeline_layout(
 		vcc::pipeline_layout::create(std::ref(device), { std::ref(desc_layout) }));
 	vcc::pipeline::pipeline_type pipeline(vcc::pipeline::create_graphics(
@@ -260,7 +285,18 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	vcc::command_pool::command_pool_type cmd_pool(vcc::command_pool::create(
 		std::ref(device), 0, vcc::queue::get_family_index(queue)));
 	std::vector<vcc::command_buffer::command_buffer_type> command_buffers;
-	return vcc::window::run(window,
+
+	float start_camera_distance = 6.f;
+	float camera_distance = start_camera_distance;
+	glm::vec2 angle(0, 0);
+	glm::ivec2 start[2], current[2], mouse;
+	bool is_down[2] = {false, false};
+	const float scale(128);
+
+#if !defined(__ANDROID__) && !defined(ANDROID)
+	return
+#endif // __ANDROID__
+	vcc::window::run(window,
 		[&](VkExtent2D extent, VkFormat format, std::vector<vcc::window::swapchain_type> &swapchain_images) {
 			type::mutate(projection_matrix)[0] =
 				glm::perspective(45.f, float(extent.width) / extent.height,
@@ -337,35 +373,63 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 			}
 		},
 		[&](uint32_t index) {
-			{
-				auto mutated_modelview_matrix(type::mutate(modelview_matrix));
-				mutated_modelview_matrix[0] = view_matrix
-					* glm::rotate(y_angle, glm::vec3(1, 0, 0))
-					* glm::rotate(x_angle, glm::vec3(0, 1, 0));
-				auto mutated_normal_matrix(type::mutate(normal_matrix));
-				mutated_normal_matrix[0] = glm::mat3(glm::transpose(
-					glm::inverse(mutated_modelview_matrix[0])));
-			}
+			glm::mat4 view_matrix(glm::lookAt(glm::vec3(0, 0, camera_distance),
+				glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
+			type::mutate(modelview_matrix)[0] = view_matrix
+				* glm::rotate(angle.y, glm::vec3(1, 0, 0))
+				* glm::rotate(angle.x, glm::vec3(0, 1, 0));
 			vcc::queue::submit(queue, {},
-				{ std::ref(command_buffers[index]) }, {});
+			{ std::ref(command_buffers[index]) }, {});
 		},
 		vcc::window::input_callbacks_type()
-		.set_mouse_down_callback([&mouse_down, &last_x, &last_y]
-				(vcc::window::mouse_button_type, int x, int y) {
-			last_x = x;
-			last_y = y;
-			mouse_down = true;
+		.set_mouse_down_callback([&](
+				vcc::window::mouse_button_type button, int x, int y) {
+			mouse = glm::ivec2(x, y);
+			if (button >= 0 && button < 2) {
+				is_down[button] = true;
+			}
 			return true;
-		}).set_mouse_up_callback([&mouse_down]
-				(vcc::window::mouse_button_type, int x, int y) {
-			mouse_down = false;
+		}).set_mouse_up_callback([&](
+				vcc::window::mouse_button_type button, int x, int y) {
+			if (button >= 0 && button < 2) {
+				is_down[button] = false;
+			}
 			return true;
 		}).set_mouse_move_callback([&](int x, int y) {
-			if (mouse_down) {
-				x_angle += (x - last_x) / scale_x;
-				y_angle += (y - last_y) / scale_y;
-				last_x = x;
-				last_y = y;
+			if (is_down[0]) {
+				angle = (glm::vec2(x, y) - glm::vec2(mouse)) / scale;
+				mouse = glm::ivec2(x, y);
+			}
+			return true;
+		}).set_touch_down_callback([&](int id, int x, int y) {
+			if (id >= 0 && id < 2) {
+				start[id] = glm::ivec2(x, y);
+				current[id] = start[id];
+				is_down[id] = true;
+			}
+			return true;
+		}).set_touch_up_callback([&](int id, int x, int y) {
+			is_down[0] = is_down[1] = false;
+			start_camera_distance = camera_distance;
+			return true;
+		}).set_touch_move_callback([&](int id, int x, int y) {
+			if (id == 0) {
+				angle += (glm::vec2(x, y) - glm::vec2(current[0])) / scale;
+			}
+			if (id >= 0 && id < 2) {
+				current[id] = glm::ivec2(x, y);
+				if (!is_down[id]) {
+					start[id] = current[id];
+					is_down[id] = true;
+				}
+			}
+			if (is_down[1]) {
+				const float start_distance(glm::length(
+					glm::vec2(start[0] - start[1])));
+				const float current_distance(glm::length(
+					glm::vec2(current[0] - current[1])));
+				camera_distance = start_camera_distance * start_distance
+					/ current_distance;
 			}
 			return true;
 		}));

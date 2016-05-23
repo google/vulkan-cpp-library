@@ -65,7 +65,8 @@ public:
 	}
 
 	void operator() (T... value) const {
-		for (const callbacks_container_type::value_type &callback : callbacks) {
+		for (const typename callbacks_container_type::value_type &callback
+				: callbacks) {
 			callback.second(value...);
 		}
 	}

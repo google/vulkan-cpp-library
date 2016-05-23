@@ -19,6 +19,7 @@
 #ifdef __ANDROID__
 #include <android_native_app_glue.h>
 #endif // __ANDROID__
+#include <condition_variable>
 #include <thread>
 #include <vector>
 #include <vcc/command_pool.h>
@@ -133,8 +134,6 @@ inline image_view::image_view_type &get_image_view(swapchain_type &swapchain) {
 }
 
 typedef std::function<void(VkFormat)> initialize_callback_type;
-// First argument is graphics queue, second is present queue.
-typedef std::function<std::pair<queue::queue_type, queue::queue_type>(surface::surface_type &)> queue_callback_type;
 typedef std::function<void(VkExtent2D, VkFormat, std::vector<swapchain_type> &)> resize_callback_type;
 typedef std::function<void(uint32_t)> draw_callback_type;
 
@@ -149,21 +148,38 @@ enum mouse_button_type {
 	mouse_button_8 = 7
 };
 
-typedef std::function<bool(mouse_button_type, int, int)> mouse_press_callback_type;
+typedef std::function<bool(mouse_button_type, int, int)>
+	mouse_press_callback_type;
 typedef std::function<bool(int, int)> mouse_move_callback_type;
 typedef std::function<bool(keycode_type)> key_press_callback_type;
+// first argument is the identifier of the touch
+typedef std::function<bool(int, int, int)> touch_press_callback_type;
+typedef std::function<bool(int, int, int)> touch_move_callback_type;
 
 struct input_callbacks_type {
 	VCC_LIBRARY input_callbacks_type();
 	mouse_press_callback_type mouse_down_callback, mouse_up_callback;
 	mouse_move_callback_type mouse_move_callback;
 	key_press_callback_type key_down_callback, key_up_callback;
+	touch_press_callback_type touch_down_callback, touch_up_callback;
+	touch_move_callback_type touch_move_callback;
 
-	VCC_LIBRARY input_callbacks_type &set_mouse_down_callback(const mouse_press_callback_type &callback);
-	VCC_LIBRARY input_callbacks_type &set_mouse_up_callback(const mouse_press_callback_type &callback);
-	VCC_LIBRARY input_callbacks_type &set_mouse_move_callback(const mouse_move_callback_type &callback);
-	VCC_LIBRARY input_callbacks_type &set_key_down_callback(const key_press_callback_type &callback);
-	VCC_LIBRARY input_callbacks_type &set_key_up_callback(const key_press_callback_type &callback);
+	VCC_LIBRARY input_callbacks_type &set_mouse_down_callback(
+		const mouse_press_callback_type &callback);
+	VCC_LIBRARY input_callbacks_type &set_mouse_up_callback(
+		const mouse_press_callback_type &callback);
+	VCC_LIBRARY input_callbacks_type &set_mouse_move_callback(
+		const mouse_move_callback_type &callback);
+	VCC_LIBRARY input_callbacks_type &set_key_down_callback(
+		const key_press_callback_type &callback);
+	VCC_LIBRARY input_callbacks_type &set_key_up_callback(
+		const key_press_callback_type &callback);
+	VCC_LIBRARY input_callbacks_type &set_touch_down_callback(
+		const touch_press_callback_type &callback);
+	VCC_LIBRARY input_callbacks_type &set_touch_up_callback(
+		const touch_press_callback_type &callback);
+	VCC_LIBRARY input_callbacks_type &set_touch_move_callback(
+		const touch_move_callback_type &callback);
 };
 
 namespace internal {

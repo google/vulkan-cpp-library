@@ -1,0 +1,28 @@
+gradle.ext.set("glmDir", "/home/gardell/glm-from-gli/")
+gradle.ext.set("gliDir", "/home/gardell/gli-0.8.1.0/")
+
+gradle.ext.rootDir = new File("./")
+
+include ':types'
+project(':types').projectDir = new File(gradle.rootDir, 'types')
+
+include ':vcc'
+project(':vcc').projectDir = new File(gradle.rootDir, 'vcc')
+
+include ':vcc-image'
+project(':vcc-image').projectDir = new File(gradle.rootDir, 'vcc-image')
+
+include ':teapot'
+project(':teapot').projectDir = new File(gradle.rootDir, 'sample/teapot')
+
+include ':cube'
+project(':cube').projectDir = new File(gradle.rootDir, 'sample/cube')
+
+include ':lighting'
+project(':lighting').projectDir = new File(gradle.rootDir, 'sample/lighting')
+
+include ':normal-mapping-and-cube-texture'
+project(':normal-mapping-and-cube-texture').projectDir = new File(gradle.rootDir, 'sample/normal-mapping-and-cube-texture')
+
+include ':nativeactivity'
+project(':nativeactivity').projectDir = new File(gradle.rootDir, 'nativeactivity')

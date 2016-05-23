@@ -14,11 +14,14 @@
 * limitations under the License.
 */
 #include <cassert>
+#include <iostream>
 #include <sstream>
 #include <vcc/debug.h>
 #ifdef WIN32
 #include <windows.h>
-#endif // WIN32
+#elif defined(__ANDROID__) || defined(ANDROID)
+#include <android/log.h>
+#endif // __ANDROID__
 
 namespace vcc {
 namespace debug {
@@ -39,15 +42,21 @@ const char *debug_severity(VkDebugReportFlagsEXT severity) {
 	}
 }
 
-bool print_function(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg) {
-	std::stringstream ss;
-	const char *severity = debug_severity(flags);
-	ss << severity << ": [" << pLayerPrefix << "] Code " << msgCode << " : " << pMsg;
-	const std::string string(ss.str());
+bool print_function(VkDebugReportFlagsEXT flags,
+		VkDebugReportObjectTypeEXT objType, uint64_t srcObject, size_t location,
+		int32_t msgCode, const char* pLayerPrefix, const char* pMsg) {
 #ifdef _WIN32
-	OutputDebugString(string.c_str());
+    std::stringstream ss;
+    ss << debug_severity(flags) << ": [" << pLayerPrefix << "] Code "
+        << msgCode << " : " << pMsg;
+    const std::string string(ss.str());
+    OutputDebugString(string.c_str());
+#elif defined(__ANDROID__) || defined(ANDROID)
+    __android_log_print(ANDROID_LOG_INFO, debug_severity(flags),
+        "[%s] Code %d: %s", pLayerPrefix, msgCode, pMsg);
 #else
-	std::cerr << string << std::endl;
+    fprintf(stderr, debug_severity(flags), "[%s] Code %d: %s\n", pLayerPrefix,
+        msgCode, pMsg);
 #endif
     return false;
 }

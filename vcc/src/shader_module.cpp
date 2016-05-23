@@ -26,6 +26,7 @@ shader_module_type create(const type::supplier<device::device_type> &device, std
 	const std::string string(ss.str());
 	VkShaderModuleCreateInfo create = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, NULL};
 	create.pCode = (const uint32_t *) string.c_str();
+	assert(stream);
 	assert(string.size() % 4 == 0);
 	create.codeSize = string.size();
 
