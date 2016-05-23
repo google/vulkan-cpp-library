@@ -47,7 +47,7 @@ spv_result_t parsed_instruction(void* user_data,
 		const spv_parsed_instruction_t* parsed_instruction) {
 	intermediate_type &intermediate(*((intermediate_type *) user_data));
 	const uint32_t result_id(parsed_instruction->result_id);
-	const SpvOp opcode(parsed_instruction->opcode);
+	const SpvOp opcode((SpvOp) parsed_instruction->opcode);
 	const instruction_parser parser(*parsed_instruction);
 	switch (opcode) {
 	case SpvOpConstant:
@@ -375,7 +375,8 @@ module_type convert(const intermediate_type &intermediate) {
 }
 
 intermediate_type parse_intermediate(std::istream &stream) {
-	std::shared_ptr<spv_context_t> context(spvContextCreate(), spvContextDestroy);
+	std::shared_ptr<spv_context_t> context(
+		spvContextCreate(SPV_ENV_VULKAN_1_0), spvContextDestroy);
 	assert(context);
 
 	const std::string content(std::istreambuf_iterator<char>(stream.rdbuf()),

@@ -17,5 +17,6 @@
 #define _SPIRV_REFLECTION_INCLUDES_H_
 
 #include <libspirv.h>
+#include <spirv/spirv.h>
 
 #endif  // _SPIRV_REFLECTION_INCLUDES_H_
