@@ -41,36 +41,48 @@ input_callbacks_type &input_callbacks_type::set_mouse_down_callback(
 	return *this;
 }
 
-	input_callbacks_type &input_callbacks_type::set_mouse_up_callback(
+input_callbacks_type &input_callbacks_type::set_mouse_up_callback(
 		const mouse_press_callback_type &callback) {
 	mouse_up_callback = callback;
 	return *this;
 }
-	input_callbacks_type &input_callbacks_type::set_mouse_move_callback(
+
+input_callbacks_type &input_callbacks_type::set_mouse_move_callback(
 		const mouse_move_callback_type &callback) {
 	mouse_move_callback = callback;
 	return *this;
 }
-	input_callbacks_type &input_callbacks_type::set_key_down_callback(
+
+input_callbacks_type &input_callbacks_type::set_mouse_scroll_callback(
+	const mouse_scroll_callback_type &callback) {
+	mouse_scroll_callback = callback;
+	return *this;
+}
+
+input_callbacks_type &input_callbacks_type::set_key_down_callback(
 		const key_press_callback_type &callback) {
 	key_down_callback = callback;
 	return *this;
 }
-	input_callbacks_type &input_callbacks_type::set_key_up_callback(
+
+input_callbacks_type &input_callbacks_type::set_key_up_callback(
 		const key_press_callback_type &callback) {
 	key_up_callback = callback;
 	return *this;
 }
+
 input_callbacks_type &input_callbacks_type::set_touch_down_callback(
 		const touch_press_callback_type &callback) {
 	touch_down_callback = callback;
 	return *this;
 }
+
 input_callbacks_type &input_callbacks_type::set_touch_up_callback(
 		const touch_press_callback_type &callback) {
 	touch_up_callback = callback;
 	return *this;
 }
+
 input_callbacks_type &input_callbacks_type::set_touch_move_callback(
 		const touch_move_callback_type &callback) {
 	touch_move_callback = callback;
@@ -376,6 +388,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	case WM_MOUSEMOVE:
 		window_data->input_callbacks.mouse_move_callback(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 		break;
+	case WM_MOUSEWHEEL: {
+		window_data->input_callbacks.mouse_scroll_callback(GET_WHEEL_DELTA_WPARAM(wParam));
+	} break;
 	case WM_KEYDOWN:
 		window_data->input_callbacks.key_down_callback(keycode_type(wParam));
 		break;

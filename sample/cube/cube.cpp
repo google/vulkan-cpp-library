@@ -348,6 +348,7 @@ int main(int argc, const char **argv) {
 		std::ref(device), 0, vcc::queue::get_family_index(queue)));
 	std::vector<vcc::command_buffer::command_buffer_type> command_buffers;
 
+	const float camera_scroll_delta_multiplier(.01f);
 	float start_camera_distance = 6.f;
 	float camera_distance = start_camera_distance;
 	glm::vec2 angle(1, 0);
@@ -459,6 +460,9 @@ int main(int argc, const char **argv) {
 				angle += (glm::vec2(x, y) - glm::vec2(mouse)) / scale;
 				mouse = glm::ivec2(x, y);
 			}
+			return true;
+		}).set_mouse_scroll_callback([&](int delta) {
+			camera_distance += delta * camera_scroll_delta_multiplier;
 			return true;
 		}).set_touch_down_callback([&](int id, int x, int y) {
 			if (id >= 0 && id < 2) {

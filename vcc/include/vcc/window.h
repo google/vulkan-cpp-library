@@ -173,6 +173,7 @@ enum mouse_button_type {
 typedef std::function<bool(mouse_button_type, int, int)>
 	mouse_press_callback_type;
 typedef std::function<bool(int, int)> mouse_move_callback_type;
+typedef std::function<bool(int)> mouse_scroll_callback_type;
 typedef std::function<bool(keycode_type)> key_press_callback_type;
 // first argument is the identifier of the touch
 typedef std::function<bool(int, int, int)> touch_press_callback_type;
@@ -182,6 +183,7 @@ struct input_callbacks_type {
 	VCC_LIBRARY input_callbacks_type();
 	mouse_press_callback_type mouse_down_callback, mouse_up_callback;
 	mouse_move_callback_type mouse_move_callback;
+	mouse_scroll_callback_type mouse_scroll_callback;
 	key_press_callback_type key_down_callback, key_up_callback;
 	touch_press_callback_type touch_down_callback, touch_up_callback;
 	touch_move_callback_type touch_move_callback;
@@ -192,6 +194,8 @@ struct input_callbacks_type {
 		const mouse_press_callback_type &callback);
 	VCC_LIBRARY input_callbacks_type &set_mouse_move_callback(
 		const mouse_move_callback_type &callback);
+	VCC_LIBRARY input_callbacks_type &set_mouse_scroll_callback(
+		const mouse_scroll_callback_type &callback);
 	VCC_LIBRARY input_callbacks_type &set_key_down_callback(
 		const key_press_callback_type &callback);
 	VCC_LIBRARY input_callbacks_type &set_key_up_callback(
