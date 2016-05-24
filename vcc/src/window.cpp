@@ -136,7 +136,9 @@ void resize(internal::window_data_type &data, VkExtent2D extent) {
 		std::vector<vcc::image::image_type> swapchain_images(vcc::swapchain::get_images(data.swapchain));
 		data.swapchain_images.reserve(swapchain_images.size());
 
-		for (vcc::image::image_type &swapchain_image : swapchain_images) {
+		for (vcc::image::image_type &si : swapchain_images) {
+			std::shared_ptr<vcc::image::image_type> swapchain_image(
+				std::make_shared<vcc::image::image_type>(std::move(si)));
 			// Render loop will expect image to have been used before and in VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 			// layout and will change to COLOR_ATTACHMENT_OPTIMAL, so init the image to that state
 			vcc::command_buffer::command_buffer_type command_buffer(std::move(vcc::command_buffer::allocate(type::supplier<device::device_type>(data.device), std::ref(data.cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
@@ -150,16 +152,60 @@ void resize(internal::window_data_type &data, VkExtent2D extent) {
 							VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 							VK_QUEUE_FAMILY_IGNORED,
 							queue::get_family_index(data.present_queue),
-							std::ref(swapchain_image),
+							swapchain_image,
 							{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
 						}
 					}));
 			vcc::queue::submit(data.present_queue, {}, { std::reference_wrapper<vcc::command_buffer::command_buffer_type>(command_buffer) }, {});
 
-			vcc::image_view::image_view_type view(vcc::image_view::create(std::ref(swapchain_image), VK_IMAGE_VIEW_TYPE_2D, data.format,
-			{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
-			{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }));
-			data.swapchain_images.push_back(swapchain_type(std::move(swapchain_image), std::move(view)));
+			vcc::image_view::image_view_type view(vcc::image_view::create(
+				swapchain_image, VK_IMAGE_VIEW_TYPE_2D, data.format,
+				{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G,
+					VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
+				{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }));
+
+			vcc::command_buffer::command_buffer_type pre_draw_command(std::move(
+				vcc::command_buffer::allocate(data.device, std::ref(data.cmd_pool),
+					VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
+			vcc::command_buffer::compile(pre_draw_command, 0, VK_FALSE, 0, 0,
+				vcc::command::pipeline_barrier(
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, {}, {},
+					{
+						vcc::command::image_memory_barrier{ 0,
+							VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
+							| VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+							VK_IMAGE_LAYOUT_UNDEFINED,
+							VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+							queue::get_family_index(data.present_queue),
+							queue::get_family_index(*data.graphics_queue),
+							swapchain_image,
+							{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+						}
+					}));
+
+			vcc::command_buffer::command_buffer_type post_draw_command(std::move(
+				vcc::command_buffer::allocate(data.device, std::ref(data.cmd_pool),
+					VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
+			vcc::command_buffer::compile(post_draw_command, 0, VK_FALSE, 0, 0,
+				vcc::command::pipeline_barrier(
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, {}, {},
+					{
+						vcc::command::image_memory_barrier{
+							VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+							0,
+							VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+							VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+							queue::get_family_index(*data.graphics_queue),
+							queue::get_family_index(data.present_queue),
+							swapchain_image,
+							{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } }
+					}));
+
+			data.swapchain_images.push_back(swapchain_type(swapchain_image,
+				std::move(view), std::move(pre_draw_command),
+				std::move(post_draw_command)));
 		}
 		data.resize_callback(data.extent, data.format, data.swapchain_images);
 	}
@@ -196,47 +242,15 @@ void window_data_type::draw() {
 	} while (err == VK_ERROR_OUT_OF_DATE_KHR);
 	// Assume the command buffer has been run on current_buffer before so
 	// we need to set the image layout back to COLOR_ATTACHMENT_OPTIMAL
-	vcc::command_buffer::command_buffer_type command_buffer(std::move(
-		vcc::command_buffer::allocate(device, std::ref(cmd_pool),
-			VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-	vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
-		vcc::command::pipeline_barrier(
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, {}, {},
-			{
-				vcc::command::image_memory_barrier{ 0,
-					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
-					| VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-					VK_IMAGE_LAYOUT_UNDEFINED,
-					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-					queue::get_family_index(present_queue),
-					queue::get_family_index(*graphics_queue),
-					std::ref(get_image(swapchain_images[current_buffer])),
-					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
-				}
-			}));
-	vcc::queue::submit(*graphics_queue, {}, { std::ref(command_buffer) }, {});
+	vcc::queue::submit(*graphics_queue, {},
+		{ std::ref(get_pre_draw_command(swapchain_images[current_buffer])) }, {});
 
 	draw_callback(current_buffer);
 
-	vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
-		vcc::command::pipeline_barrier(
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, {}, {},
-			{
-				vcc::command::image_memory_barrier{
-					VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-					0,
-					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-					queue::get_family_index(*graphics_queue),
-					queue::get_family_index(present_queue),
-					std::ref(get_image(swapchain_images[current_buffer])),
-					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } }
-			}));
 	vcc::queue::submit(present_queue,
 		{ vcc::queue::wait_semaphore{ std::ref(present_complete_semaphore) } },
-		{ std::ref(command_buffer) }, {});
+		{ std::ref(get_post_draw_command(swapchain_images[current_buffer])) },
+		{});
 
 	err = vcc::queue::present(present_queue, {}, { std::ref(swapchain) },
 		{ current_buffer });
@@ -254,8 +268,6 @@ void window_data_type::draw() {
 	default:
 		assert(!err);
 	}
-
-	vcc::queue::wait_idle(present_queue);
 }
 
 } // namespace internal

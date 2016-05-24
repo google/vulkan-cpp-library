@@ -109,7 +109,12 @@ struct render_thread {
 struct swapchain_type {
 	friend void resize(internal::window_data_type &data, VkExtent2D extent);
 	friend image::image_type &get_image(swapchain_type &swapchain);
-	friend image_view::image_view_type &get_image_view(swapchain_type &swapchain);
+	friend image_view::image_view_type &get_image_view(
+		swapchain_type &swapchain);
+	friend command_buffer::command_buffer_type &get_pre_draw_command(
+		swapchain_type &swapchain);
+	friend command_buffer::command_buffer_type &get_post_draw_command(
+		swapchain_type &swapchain);
 
 	swapchain_type() = default;
 	swapchain_type(const swapchain_type&) = delete;
@@ -118,19 +123,34 @@ struct swapchain_type {
 	swapchain_type &operator=(swapchain_type&&) = default;
 
 private:
-	swapchain_type(image::image_type &&image, image_view::image_view_type &&view)
-		: image(std::forward<image::image_type>(image)),
-		  view(std::forward<image_view::image_view_type>(view)) {}
-	image::image_type image;
-	image_view::image_view_type view;
+	swapchain_type(const type::supplier<image::image_type> &image,
+		image_view::image_view_type &&view,
+		command_buffer::command_buffer_type &&pre_draw_command,
+		command_buffer::command_buffer_type &&post_draw_command)
+		: image(image), view(std::forward<image_view::image_view_type>(view)),
+		  pre_draw_command(std::forward<command_buffer::command_buffer_type>(
+			pre_draw_command)),
+		  post_draw_command(std::forward<command_buffer::command_buffer_type>(
+			post_draw_command)) {}
+	type::supplier<image::image_type> image;
+	type::supplier<image_view::image_view_type> view;
+	command_buffer::command_buffer_type pre_draw_command, post_draw_command;
 };
 
 inline image::image_type &get_image(swapchain_type &swapchain) {
-	return swapchain.image;
+	return *swapchain.image;
 }
 
 inline image_view::image_view_type &get_image_view(swapchain_type &swapchain) {
-	return swapchain.view;
+	return *swapchain.view;
+}
+
+command_buffer::command_buffer_type &get_pre_draw_command(swapchain_type &swapchain) {
+	return swapchain.pre_draw_command;
+}
+
+command_buffer::command_buffer_type &get_post_draw_command(swapchain_type &swapchain) {
+	return swapchain.post_draw_command;
 }
 
 typedef std::function<void(VkFormat)> initialize_callback_type;
@@ -246,6 +266,7 @@ struct window_data_type {
 	swapchain::swapchain_type swapchain;
 	std::vector<swapchain_type> swapchain_images;
 	command_pool::command_pool_type cmd_pool;
+	vcc::semaphore::semaphore_type present_complete_semaphore;
 };
 
 }  // namespace internal

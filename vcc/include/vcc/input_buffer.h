@@ -75,8 +75,8 @@ class input_buffer_type {
 		VkSharingMode sharingMode,
 		const std::vector<uint32_t> &queueFamilyIndices,
 		StorageType... storages);
-	friend VCC_LIBRARY void flush(input_buffer_type &buffer);
-	friend VCC_LIBRARY void flush(queue::queue_type &queue,
+	friend VCC_LIBRARY bool flush(input_buffer_type &buffer);
+	friend VCC_LIBRARY bool flush(queue::queue_type &queue,
 		input_buffer_type &buffer);
 	template<typename U>
 	friend auto internal::get_mutex(const U &value)->decltype(value.mutex)&;
@@ -143,11 +143,11 @@ input_buffer_type create(type::memory_layout layout,
 }
 
 // Flushes content of the buffer to the GPU if there is data with an old revision.
-VCC_LIBRARY void flush(input_buffer_type &buffer);
+VCC_LIBRARY bool flush(input_buffer_type &buffer);
 
 // Flushes content of the buffer to the GPU if there is data with an old revision.
 // A memory barrier is pushed on the queue.
-VCC_LIBRARY void flush(queue::queue_type &queue, input_buffer_type &buffer);
+VCC_LIBRARY bool flush(queue::queue_type &queue, input_buffer_type &buffer);
 
 }  // namespace input_buffer
 }  // namespace vcc
