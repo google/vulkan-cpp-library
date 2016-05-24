@@ -23,6 +23,7 @@
 #include <type/types.h>
 #include <vcc/android_asset_istream.h>
 #include <vcc/buffer.h>
+#include <vcc/command.h>
 #include <vcc/command_buffer.h>
 #include <vcc/command_pool.h>
 #include <vcc/descriptor_pool.h>
@@ -361,73 +362,75 @@ int main(int argc, const char **argv) {
 	vcc::window::run(window,
 		[&](VkExtent2D extent, VkFormat format,
 			std::vector<vcc::window::swapchain_type> &swapchain_images) {
-		projection_matrix = glm::perspective(45.f,
-			float(extent.width) / extent.height, 1.f, 100.f);
+			projection_matrix = glm::perspective(45.f,
+				float(extent.width) / extent.height, 1.f, 100.f);
 
-		command_buffers = vcc::command_buffer::allocate(std::ref(device),
-			std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			(uint32_t)swapchain_images.size());
+			command_buffers = vcc::command_buffer::allocate(std::ref(device),
+				std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+				(uint32_t)swapchain_images.size());
 
-		auto depth_image(std::make_shared<vcc::image::image_type>(
-			vcc::image::create(
-				std::ref(device), 0, VK_IMAGE_TYPE_2D, VK_FORMAT_D16_UNORM,
-				{ extent.width, extent.height, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT,
-				VK_IMAGE_TILING_OPTIMAL,
-				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-				VK_SHARING_MODE_EXCLUSIVE, {}, VK_IMAGE_LAYOUT_UNDEFINED)));
-		vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *depth_image);
+			auto depth_image(std::make_shared<vcc::image::image_type>(
+				vcc::image::create(
+					std::ref(device), 0, VK_IMAGE_TYPE_2D, VK_FORMAT_D16_UNORM,
+					{ extent.width, extent.height, 1 }, 1, 1,
+					VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_OPTIMAL,
+					VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+					VK_SHARING_MODE_EXCLUSIVE, {}, VK_IMAGE_LAYOUT_UNDEFINED)));
+			vcc::memory::bind(std::ref(device),
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *depth_image);
 
-		vcc::command_buffer::command_buffer_type command_buffer(
-			std::move(vcc::command_buffer::allocate(std::ref(device),
-				std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-		vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
-			vcc::command::pipeline_barrier(
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
-				{ vcc::command::image_memory_barrier{ 0,
-				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-				VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-				VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-				depth_image,{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 } } }));
-		vcc::queue::submit(queue, {}, { std::ref(command_buffer) }, {});
-		vcc::queue::wait_idle(queue);
+			vcc::command_buffer::command_buffer_type command_buffer(
+				std::move(vcc::command_buffer::allocate(std::ref(device),
+					std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
+			vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
+				vcc::command::pipeline_barrier(
+					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
+					{ vcc::command::image_memory_barrier{ 0,
+					VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+					VK_IMAGE_LAYOUT_UNDEFINED,
+					VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+					depth_image, { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 } } }));
 
-		for (std::size_t i = 0; i < swapchain_images.size(); ++i) {
-			auto framebuffer(vcc::framebuffer::create(std::ref(device),
-				std::ref(render_pass),
-				{
-					std::ref(vcc::window::get_image_view(swapchain_images[i])),
-					vcc::image_view::create(depth_image,{
-						VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 })
-				}, extent, 1));
-			vcc::command_buffer::compile(command_buffers[i], 0, VK_FALSE,
-				0, 0,
-				vcc::command::render_pass(std::ref(render_pass),
-					std::move(framebuffer), VkRect2D{ { 0, 0 }, extent },
+			vcc::queue::submit(queue, {}, { std::ref(command_buffer) }, {});
+			vcc::queue::wait_idle(queue);
+
+			for (std::size_t i = 0; i < swapchain_images.size(); ++i) {
+				auto framebuffer(vcc::framebuffer::create(std::ref(device),
+					std::ref(render_pass),
 					{
-						vcc::command::clear_color({ { .2f, .2f, .2f, .2f } }),
-						vcc::command::clear_depth_stencil({ 1, 0 })
-					},
-					VK_SUBPASS_CONTENTS_INLINE,
-					vcc::command::bind_pipeline{
-						VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
-					vcc::command::bind_vertex_data_buffers(
-						{ std::ref(vertex_buffer) }, { 0, 0 }),
-					vcc::command::bind_index_data_buffer(
-						std::ref(index_buffer), 0, VK_INDEX_TYPE_UINT16),
-					vcc::command::bind_descriptor_sets{
-						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						std::ref(pipeline_layout), 0,
-						{ std::ref(desc_set) },{} },
-					vcc::command::set_viewport{
-						0, { { 0.f, 0.f, float(extent.width),
-							float(extent.height), 0.f, 1.f } } },
-					vcc::command::set_scissor{
-						0, { { { 0, 0 }, extent } } },
-					vcc::command::draw_indexed{
-						(uint32_t)indices.size(), 1, 0, 0, 0 }));
-		}
+						std::ref(vcc::window::get_image_view(swapchain_images[i])),
+						vcc::image_view::create(depth_image,{
+							VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 })
+					}, extent, 1));
+				vcc::command_buffer::compile(command_buffers[i], 0, VK_FALSE,
+					0, 0,
+					vcc::command::render_pass(std::ref(render_pass),
+						std::move(framebuffer), VkRect2D{ { 0, 0 }, extent },
+						{
+							vcc::command::clear_color({ { .2f, .2f, .2f, .2f } }),
+							vcc::command::clear_depth_stencil({ 1, 0 })
+						},
+						VK_SUBPASS_CONTENTS_INLINE,
+						vcc::command::bind_pipeline{
+							VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
+						vcc::command::bind_vertex_data_buffers(
+							{ std::ref(vertex_buffer) }, { 0, 0 }),
+						vcc::command::bind_index_data_buffer(
+							std::ref(index_buffer), 0, VK_INDEX_TYPE_UINT16),
+						vcc::command::bind_descriptor_sets{
+							VK_PIPELINE_BIND_POINT_GRAPHICS,
+							std::ref(pipeline_layout), 0,
+							{ std::ref(desc_set) },{} },
+						vcc::command::set_viewport{
+							0, { { 0.f, 0.f, float(extent.width),
+								float(extent.height), 0.f, 1.f } } },
+						vcc::command::set_scissor{
+							0, { { { 0, 0 }, extent } } },
+						vcc::command::draw_indexed{
+							(uint32_t)indices.size(), 1, 0, 0, 0 }));
+			}
 		},
 		[&](uint32_t index) {
 			glm::mat4 view_matrix(glm::lookAt(glm::vec3(0, 0, camera_distance),

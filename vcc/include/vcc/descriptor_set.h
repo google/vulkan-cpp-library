@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <vcc/buffer.h>
 #include <vcc/buffer_view.h>
+#include <vcc/data/buffer.h>
 #include <vcc/device.h>
 #include <vcc/descriptor_pool.h>
 #include <vcc/descriptor_set_layout.h>
@@ -91,6 +92,17 @@ inline buffer_info_type buffer_info(
 	return buffer_info_type{buffer, offset, range};
 }
 
+struct buffer_info_data_type {
+	type::supplier<data::buffer_type> buffer;
+	VkDeviceSize offset, range;
+};
+
+VCC_LIBRARY buffer_info_data_type buffer_info(
+	const type::supplier<data::buffer_type> &buffer,
+	VkDeviceSize offset, VkDeviceSize range);
+VCC_LIBRARY buffer_info_data_type buffer_info(
+	const type::supplier<data::buffer_type> &buffer);
+
 struct write_image {
 	type::supplier<descriptor_set_type> dst_set;
 	uint32_t dst_binding, dst_array_element;
@@ -122,6 +134,26 @@ inline write_buffer_type write_buffer(
 		dst_binding, dst_array_element, descriptor_type, buffers};
 }
 
+struct write_buffer_data_type {
+	type::supplier<descriptor_set_type> dst_set;
+	uint32_t dst_binding, dst_array_element;
+	// Must be any of the following
+	// VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_
+	// STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC or VK_DESCRIPTOR_
+	// TYPE_STORAGE_BUFFER_DYNAMIC
+	VkDescriptorType descriptor_type;
+	std::vector<buffer_info_data_type> buffers;
+};
+
+inline write_buffer_data_type write_buffer(
+	const type::supplier<descriptor_set_type> &dst_set,
+	uint32_t dst_binding, uint32_t dst_array_element,
+	VkDescriptorType descriptor_type,
+	const std::vector<buffer_info_data_type> &buffers) {
+	return write_buffer_data_type{ dst_set, dst_binding,
+		dst_array_element, descriptor_type, buffers };
+}
+
 struct write_buffer_view_type {
 	type::supplier<descriptor_set_type> dst_set;
 	uint32_t dst_binding, dst_array_element;
@@ -142,10 +174,6 @@ inline write_buffer_view_type write_buffer_view(
 		dst_binding, dst_array_element, descriptor_type, buffers };
 }
 
-// TODO(gardell): Remove forward declaration once data::buffer_type is merged
-// into the codebase and renamed to input_buffer.
-struct write_buffer_data_type;
-
 namespace internal {
 
 struct update_storage {
@@ -165,15 +193,11 @@ VCC_LIBRARY void add(update_storage &storage, const copy &);
 VCC_LIBRARY void add(update_storage &storage, const write_image &);
 VCC_LIBRARY void add(update_storage &storage, const write_buffer_type &);
 VCC_LIBRARY void add(update_storage &storage, const write_buffer_view_type &);
-// TODO(gardell): Remove forward declaration once data::buffer_type is merged
-// into the codebase and renamed to input_buffer.
 VCC_LIBRARY void add(update_storage &storage, const write_buffer_data_type &);
 
 VCC_LIBRARY void count(update_storage &storage, const write_image &);
 VCC_LIBRARY void count(update_storage &storage, const write_buffer_type &);
 VCC_LIBRARY void count(update_storage &storage, const write_buffer_view_type &);
-// TODO(gardell): Remove forward declaration once data::buffer_type is merged
-// into the codebase and renamed to input_buffer.
 VCC_LIBRARY void count(update_storage &storage, const write_buffer_data_type &);
 
 }  // namespace internal

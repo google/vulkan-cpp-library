@@ -14,6 +14,7 @@
 * limitations under the License.
 */
 #define NOMINMAX
+#include <vcc/command.h>
 #include <vcc/command_buffer.h>
 #include <vcc/data/buffer.h>
 #include <vcc/memory.h>
@@ -66,117 +67,4 @@ void flush(queue::queue_type &queue, buffer_type &buffer) {
 }
 
 }  // namespace data
-
-namespace command {
-
-namespace internal {
-
-void cmd(cmd_args &args, const bind_index_data_buffer_type&bidb) {
-	const type::supplier<data::buffer_type> &buffer(bidb.buffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-	cmd(args, bind_index_buffer_type{std::ref(data::internal::get_buffer(*buffer)), bidb.offset, bidb.indexType});
-}
-
-void cmd(cmd_args &args, const bind_vertex_data_buffers_type&bvdb) {
-	std::vector<type::supplier<buffer::buffer_type>> buffers;
-	buffers.reserve(bvdb.buffers.size());
-	for (const type::supplier<data::buffer_type> &buffer : bvdb.buffers) {
-		args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-		buffers.push_back(std::ref(data::internal::get_buffer(*buffer)));
-	}
-	cmd(args, bind_vertex_buffers_type{std::move(buffers), bvdb.offsets});
-}
-
-void cmd(cmd_args &args, const draw_indirect_data_type&did) {
-	const type::supplier<data::buffer_type> &buffer(did.buffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-	cmd(args, draw_indirect_type{std::ref(data::internal::get_buffer(*buffer)), did.offset, did.drawCount, did.stride});
-}
-
-void cmd(cmd_args &args, const draw_indexed_indirect_data_type&diid) {
-	const type::supplier<data::buffer_type> &buffer(diid.buffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-	cmd(args, draw_indexed_indirect_type{std::ref(data::internal::get_buffer(*buffer)), diid.offset, diid.drawCount, diid.stride});
-}
-
-void cmd(cmd_args &args, const dispatch_indirect_data_type&did) {
-	const type::supplier<data::buffer_type> &buffer(did.buffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-	cmd(args, dispatch_indirect_type{std::ref(data::internal::get_buffer(*buffer)), did.offset});
-}
-
-void cmd(cmd_args &args, const copy_data_buffer_type&cdb) {
-	const type::supplier<data::buffer_type> &buffer(cdb.srcBuffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-	cmd(args, copy_buffer_type{std::ref(data::internal::get_buffer(*buffer)), cdb.dstBuffer, cdb.regions});
-}
-
-void cmd(cmd_args &args, const copy_data_buffer_to_image_type&cdbti) {
-	const type::supplier<data::buffer_type> &buffer(cdbti.srcBuffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer);});
-	cmd(args, copy_buffer_to_image_type{std::ref(data::internal::get_buffer(*buffer)), cdbti.dstImage, cdbti.dstImageLayout, cdbti.regions});
-}
-
-}  // namespace internal
-
-}  // namespace command
-
-namespace descriptor_set {
-
-buffer_info_data_type buffer_info(
-		const type::supplier<data::buffer_type> &buffer, VkDeviceSize offset,
-		VkDeviceSize range) {
-	return buffer_info_data_type{ buffer, offset, range };
-}
-
-buffer_info_data_type buffer_info(const type::supplier<data::buffer_type> &buffer) {
-	const std::size_t size(type::size(data::internal::get_serialize(*buffer)));
-	return buffer_info_data_type{ buffer, 0, size };
-}
-
-namespace internal {
-
-void add(update_storage &storage, const write_buffer_data_type &wbdt) {
-	std::vector<buffer_info_type> buffer_infos;
-	buffer_infos.reserve(wbdt.buffers.size());
-	for (std::size_t i = 0; i < wbdt.buffers.size(); ++i) {
-		const buffer_info_data_type &buffer(wbdt.buffers[i]);
-		buffer_infos.push_back(buffer_info_type{
-			std::ref(data::internal::get_buffer(*buffer.buffer)),
-			buffer.offset, buffer.range});
-		const type::supplier<data::buffer_type> &buf(buffer.buffer);
-		wbdt.dst_set->pre_execute_callbacks.put(
-			std::make_pair(wbdt.dst_binding, uint32_t(wbdt.dst_array_element + i)),
-			[buf](queue::queue_type &queue) {data::flush(queue, *buf); });
-	}
-	add(storage, write_buffer_type{ wbdt.dst_set, wbdt.dst_binding,
-		wbdt.dst_array_element, wbdt.descriptor_type,
-		std::move(buffer_infos) });
-}
-
-void count(update_storage &storage, const write_buffer_data_type &wbdt) {
-	++storage.write_sets_size;
-	storage.buffer_info_size += wbdt.buffers.size();
-}
-
-}
-
-}  // namespace descriptor_set
-
-namespace memory {
-namespace internal {
-
-VkMemoryRequirements get_memory_requirements(const data::buffer_type &buffer) {
-	return get_memory_requirements(data::internal::get_buffer(buffer));
-}
-
-void bind(const type::supplier<memory_type> &memory, VkDeviceSize offset, data::buffer_type &buffer) {
-	return bind(memory, offset, data::internal::get_buffer(buffer));
-}
-
-}  // namespace internal
-}  // namespace memory
-
 }  // namespace vcc
-
-

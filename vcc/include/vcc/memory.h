@@ -19,6 +19,7 @@
 #include <climits>
 #include <numeric>
 #include <vcc/buffer.h>
+#include <vcc/data/buffer.h>
 #include <vcc/device.h>
 #include <vcc/image.h>
 #include <vcc/physical_device.h>
@@ -44,15 +45,24 @@ private:
 	VkDeviceSize size;
 };
 
-VCC_LIBRARY memory_type allocate(const type::supplier<device::device_type> &device,
+VCC_LIBRARY memory_type allocate(
+	const type::supplier<device::device_type> &device,
 	VkDeviceSize allocationSize, uint32_t memoryTypeIndex);
 
 namespace internal {
 
-VCC_LIBRARY VkMemoryRequirements get_memory_requirements(const image::image_type &image);
-VCC_LIBRARY VkMemoryRequirements get_memory_requirements(const buffer::buffer_type &buffer);
-VCC_LIBRARY void bind(const type::supplier<memory_type> &memory, VkDeviceSize offset, image::image_type &image);
-VCC_LIBRARY void bind(const type::supplier<memory_type> &memory, VkDeviceSize offset, buffer::buffer_type &buffer);
+VCC_LIBRARY VkMemoryRequirements get_memory_requirements(
+	const image::image_type &image);
+VCC_LIBRARY VkMemoryRequirements get_memory_requirements(
+	const buffer::buffer_type &buffer);
+VCC_LIBRARY void bind(const type::supplier<memory_type> &memory,
+	VkDeviceSize offset, image::image_type &image);
+VCC_LIBRARY void bind(const type::supplier<memory_type> &memory,
+	VkDeviceSize offset, buffer::buffer_type &buffer);
+VCC_LIBRARY VkMemoryRequirements get_memory_requirements(
+	const data::buffer_type &buffer);
+VCC_LIBRARY void bind(const type::supplier<memory_type> &memory,
+	VkDeviceSize offset, data::buffer_type &buffer);
 
 template<std::size_t Index>
 struct bind_t {

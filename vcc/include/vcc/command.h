@@ -18,6 +18,7 @@
 
 #include <array>
 #include <vcc/command_buffer.h>
+#include <vcc/data/buffer.h>
 #include <vcc/descriptor_set.h>
 #include <vcc/event.h>
 #include <vcc/pipeline.h>
@@ -93,6 +94,18 @@ inline bind_index_buffer_type bind_index_buffer(
 	return bind_index_buffer_type{ buffer, offset, indexType };
 }
 
+struct bind_index_data_buffer_type {
+	type::supplier<data::buffer_type> buffer;
+	VkDeviceSize offset;
+	VkIndexType indexType;
+};
+
+inline bind_index_data_buffer_type bind_index_data_buffer(
+	const type::supplier<data::buffer_type> &buffer,
+	VkDeviceSize offset, VkIndexType indexType) {
+	return bind_index_data_buffer_type{ buffer, offset, indexType };
+}
+
 struct bind_vertex_buffers_type {
 	std::vector<type::supplier<buffer::buffer_type>> buffers;
 	std::vector<VkDeviceSize> offsets;
@@ -102,6 +115,17 @@ inline bind_vertex_buffers_type bind_vertex_buffers(uint32_t firstBinding,
 	const std::vector<type::supplier<buffer::buffer_type>> &buffers,
 	const std::vector<VkDeviceSize> &offsets) {
 	return bind_vertex_buffers_type{ buffers, offsets };
+}
+
+struct bind_vertex_data_buffers_type {
+	std::vector<type::supplier<data::buffer_type>> buffers;
+	std::vector<VkDeviceSize> offsets;
+};
+
+inline bind_vertex_data_buffers_type bind_vertex_data_buffers(
+	const std::vector<type::supplier<data::buffer_type>> &buffers,
+	const std::vector<VkDeviceSize> &offsets) {
+	return bind_vertex_data_buffers_type{ buffers, offsets };
 }
 
 struct draw {
@@ -125,6 +149,18 @@ inline draw_indirect_type draw_indirect(
 	return draw_indirect_type{ buffer, offset, drawCount, stride };
 }
 
+struct draw_indirect_data_type {
+	type::supplier<data::buffer_type> buffer;
+	VkDeviceSize offset;
+	uint32_t drawCount, stride;
+};
+
+inline draw_indirect_data_type draw_indirect_data(
+	const type::supplier<data::buffer_type> &buffer,
+	VkDeviceSize offset, uint32_t drawCount, uint32_t stride) {
+	return draw_indirect_data_type{ buffer, offset, drawCount, stride };
+}
+
 struct draw_indexed_indirect_type {
 	type::supplier<buffer::buffer_type> buffer;
 	VkDeviceSize offset;
@@ -135,6 +171,18 @@ inline draw_indexed_indirect_type draw_indexed_indirect(
 	const type::supplier<buffer::buffer_type> &buffer,
 	VkDeviceSize offset, uint32_t drawCount, uint32_t stride) {
 	return draw_indexed_indirect_type{ buffer, offset, drawCount, stride };
+}
+
+struct draw_indexed_indirect_data_type {
+	type::supplier<data::buffer_type> buffer;
+	VkDeviceSize offset;
+	uint32_t drawCount, stride;
+};
+
+inline draw_indexed_indirect_data_type draw_indexed_indirect_data(
+	const type::supplier<data::buffer_type> &buffer,
+	VkDeviceSize offset, uint32_t drawCount, uint32_t stride) {
+	return draw_indexed_indirect_data_type{ buffer, offset, drawCount, stride };
 }
 
 struct dispatch {
@@ -151,6 +199,17 @@ inline dispatch_indirect_type dispatch_indirect(
 	return dispatch_indirect_type{ buffer, offset };
 }
 
+struct dispatch_indirect_data_type {
+	type::supplier<data::buffer_type> buffer;
+	VkDeviceSize offset;
+};
+
+inline dispatch_indirect_data_type dispatch_indirect_data(
+	const type::supplier<data::buffer_type> &buffer,
+	VkDeviceSize offset) {
+	return dispatch_indirect_data_type{ buffer, offset };
+}
+
 struct copy_buffer_type {
 	type::supplier<buffer::buffer_type> srcBuffer, dstBuffer;
 	std::vector<VkBufferCopy> regions;
@@ -161,6 +220,19 @@ inline copy_buffer_type copy_buffer(
 	type::supplier<buffer::buffer_type> &&dstBuffer,
 	const std::vector<VkBufferCopy> &regions) {
 	return copy_buffer_type{ srcBuffer, dstBuffer, regions };
+}
+
+struct copy_data_buffer_type {
+	type::supplier<data::buffer_type> srcBuffer;
+	type::supplier<buffer::buffer_type> dstBuffer;
+	std::vector<VkBufferCopy> regions;
+};
+
+inline copy_data_buffer_type copy_data_buffer(
+	const type::supplier<data::buffer_type> &srcBuffer,
+	const type::supplier<buffer::buffer_type> &dstBuffer,
+	const std::vector<VkBufferCopy> &regions) {
+	return copy_data_buffer_type{ srcBuffer, dstBuffer, regions };
 }
 
 struct copy_image {
@@ -194,6 +266,23 @@ inline copy_buffer_to_image_type copy_buffer_to_image(
 	const std::vector<VkBufferImageCopy> &regions) {
 	return copy_buffer_to_image_type{
 		srcBuffer, dstImage, dstImageLayout, regions };
+}
+
+struct copy_data_buffer_to_image_type {
+	type::supplier<data::buffer_type> srcBuffer;
+	type::supplier<image::image_type> dstImage;
+	VkImageLayout dstImageLayout;
+	std::vector<VkBufferImageCopy> regions;
+};
+
+inline copy_data_buffer_to_image_type copy_data_buffer_to_image(
+	const type::supplier<data::buffer_type> &srcBuffer,
+	const type::supplier<image::image_type> &dstImage,
+	VkImageLayout dstImageLayout,
+	const std::vector<VkBufferImageCopy> &regions) {
+	return copy_data_buffer_to_image_type{
+		srcBuffer, dstImage,
+		dstImageLayout, regions };
 }
 
 struct copy_image_to_buffer {
@@ -280,6 +369,18 @@ inline buffer_memory_barrier_type buffer_memory_barrier(
 		srcAccessMask, dstAccessMask,
 		srcQueueFamilyIndex, dstQueueFamilyIndex,
 		buffer, offset, size
+	};
+}
+
+inline buffer_memory_barrier_type buffer_memory_barrier(
+	VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask,
+	uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex,
+	const type::supplier<data::buffer_type> &buffer,
+	VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE) {
+	return buffer_memory_barrier_type{
+		srcAccessMask, dstAccessMask,
+		srcQueueFamilyIndex, dstQueueFamilyIndex,
+		std::ref(data::internal::get_buffer(*buffer)), offset, size
 	};
 }
 
@@ -444,6 +545,13 @@ VCC_LIBRARY void cmd(cmd_args &, const copy_query_pool_results &);
 VCC_LIBRARY void cmd(cmd_args &, const push_constants_type &);
 VCC_LIBRARY void cmd(cmd_args &, const next_subpass &);
 VCC_LIBRARY void cmd(cmd_args &, const execute_commands &);
+VCC_LIBRARY void cmd(cmd_args &, const bind_index_data_buffer_type&);
+VCC_LIBRARY void cmd(cmd_args &, const bind_vertex_data_buffers_type&);
+VCC_LIBRARY void cmd(cmd_args &, const draw_indirect_data_type&);
+VCC_LIBRARY void cmd(cmd_args &, const draw_indexed_indirect_data_type&);
+VCC_LIBRARY void cmd(cmd_args &, const dispatch_indirect_data_type&);
+VCC_LIBRARY void cmd(cmd_args &, const copy_data_buffer_type&);
+VCC_LIBRARY void cmd(cmd_args &, const copy_data_buffer_to_image_type&);
 
 // Need C++14 to do auto argument lambdas.
 struct call_cmd_type {

@@ -25,6 +25,7 @@
 #include <type/types.h>
 #include <vcc/android_asset_istream.h>
 #include <vcc/buffer.h>
+#include <vcc/command.h>
 #include <vcc/command_buffer.h>
 #include <vcc/command_pool.h>
 #include <vcc/debug.h>

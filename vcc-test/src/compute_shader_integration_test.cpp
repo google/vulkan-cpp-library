@@ -17,6 +17,7 @@
 #include <fstream>
 #include <gtest/gtest.h>
 #include <type/types.h>
+#include <vcc/command.h>
 #include <vcc/command_pool.h>
 #include <vcc/data/buffer.h>
 #include <vcc/descriptor_pool.h>

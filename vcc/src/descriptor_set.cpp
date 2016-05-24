@@ -118,6 +118,24 @@ void add(update_storage &storage, const write_buffer_type &write) {
 	}
 }
 
+void add(update_storage &storage, const write_buffer_data_type &wbdt) {
+	std::vector<buffer_info_type> buffer_infos;
+	buffer_infos.reserve(wbdt.buffers.size());
+	for (std::size_t i = 0; i < wbdt.buffers.size(); ++i) {
+		const buffer_info_data_type &buffer(wbdt.buffers[i]);
+		buffer_infos.push_back(buffer_info_type{
+			std::ref(data::internal::get_buffer(*buffer.buffer)),
+			buffer.offset, buffer.range });
+		const type::supplier<data::buffer_type> &buf(buffer.buffer);
+		wbdt.dst_set->pre_execute_callbacks.put(
+			std::make_pair(wbdt.dst_binding, uint32_t(wbdt.dst_array_element + i)),
+			[buf](queue::queue_type &queue) {data::flush(queue, *buf); });
+	}
+	add(storage, write_buffer_type{ wbdt.dst_set, wbdt.dst_binding,
+		wbdt.dst_array_element, wbdt.descriptor_type,
+		std::move(buffer_infos) });
+}
+
 void add(update_storage &storage, const write_buffer_view_type &write) {
 	VkWriteDescriptorSet set = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, NULL};
 	set.dstSet = vcc::internal::get_instance(*write.dst_set);
@@ -149,6 +167,11 @@ void count(update_storage &storage, const write_buffer_type &write) {
 	storage.buffer_info_size += write.buffers.size();
 }
 
+void count(update_storage &storage, const write_buffer_data_type &wbdt) {
+	++storage.write_sets_size;
+	storage.buffer_info_size += wbdt.buffers.size();
+}
+
 void count(update_storage &storage, const write_buffer_view_type &write) {
 	++storage.write_sets_size;
 	storage.buffer_view_size += write.buffers.size();
@@ -163,6 +186,17 @@ void update_storage::reserve() {
 }
 
 }  // namespace internal
+
+buffer_info_data_type buffer_info(
+	const type::supplier<data::buffer_type> &buffer, VkDeviceSize offset,
+	VkDeviceSize range) {
+	return buffer_info_data_type{ buffer, offset, range };
+}
+
+buffer_info_data_type buffer_info(const type::supplier<data::buffer_type> &buffer) {
+	const std::size_t size(type::size(data::internal::get_serialize(*buffer)));
+	return buffer_info_data_type{ buffer, 0, size };
+}
 
 }  // namespace descriptor_set
 }  // namespace vcc
