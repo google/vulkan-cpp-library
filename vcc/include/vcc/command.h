@@ -18,9 +18,9 @@
 
 #include <array>
 #include <vcc/command_buffer.h>
-#include <vcc/data/buffer.h>
 #include <vcc/descriptor_set.h>
 #include <vcc/event.h>
+#include <vcc/input_buffer.h>
 #include <vcc/pipeline.h>
 #include <vcc/query_pool.h>
 
@@ -95,13 +95,13 @@ inline bind_index_buffer_type bind_index_buffer(
 }
 
 struct bind_index_data_buffer_type {
-	type::supplier<data::buffer_type> buffer;
+	type::supplier<input_buffer::input_buffer_type> buffer;
 	VkDeviceSize offset;
 	VkIndexType indexType;
 };
 
 inline bind_index_data_buffer_type bind_index_data_buffer(
-	const type::supplier<data::buffer_type> &buffer,
+	const type::supplier<input_buffer::input_buffer_type> &buffer,
 	VkDeviceSize offset, VkIndexType indexType) {
 	return bind_index_data_buffer_type{ buffer, offset, indexType };
 }
@@ -118,12 +118,12 @@ inline bind_vertex_buffers_type bind_vertex_buffers(uint32_t firstBinding,
 }
 
 struct bind_vertex_data_buffers_type {
-	std::vector<type::supplier<data::buffer_type>> buffers;
+	std::vector<type::supplier<input_buffer::input_buffer_type>> buffers;
 	std::vector<VkDeviceSize> offsets;
 };
 
-inline bind_vertex_data_buffers_type bind_vertex_data_buffers(
-	const std::vector<type::supplier<data::buffer_type>> &buffers,
+inline bind_vertex_data_buffers_type bind_vertex_buffers(
+	const std::vector<type::supplier<input_buffer::input_buffer_type>> &buffers,
 	const std::vector<VkDeviceSize> &offsets) {
 	return bind_vertex_data_buffers_type{ buffers, offsets };
 }
@@ -150,13 +150,13 @@ inline draw_indirect_type draw_indirect(
 }
 
 struct draw_indirect_data_type {
-	type::supplier<data::buffer_type> buffer;
+	type::supplier<input_buffer::input_buffer_type> buffer;
 	VkDeviceSize offset;
 	uint32_t drawCount, stride;
 };
 
-inline draw_indirect_data_type draw_indirect_data(
-	const type::supplier<data::buffer_type> &buffer,
+inline draw_indirect_data_type draw_indirect(
+	const type::supplier<input_buffer::input_buffer_type> &buffer,
 	VkDeviceSize offset, uint32_t drawCount, uint32_t stride) {
 	return draw_indirect_data_type{ buffer, offset, drawCount, stride };
 }
@@ -174,13 +174,13 @@ inline draw_indexed_indirect_type draw_indexed_indirect(
 }
 
 struct draw_indexed_indirect_data_type {
-	type::supplier<data::buffer_type> buffer;
+	type::supplier<input_buffer::input_buffer_type> buffer;
 	VkDeviceSize offset;
 	uint32_t drawCount, stride;
 };
 
 inline draw_indexed_indirect_data_type draw_indexed_indirect_data(
-	const type::supplier<data::buffer_type> &buffer,
+	const type::supplier<input_buffer::input_buffer_type> &buffer,
 	VkDeviceSize offset, uint32_t drawCount, uint32_t stride) {
 	return draw_indexed_indirect_data_type{ buffer, offset, drawCount, stride };
 }
@@ -200,12 +200,12 @@ inline dispatch_indirect_type dispatch_indirect(
 }
 
 struct dispatch_indirect_data_type {
-	type::supplier<data::buffer_type> buffer;
+	type::supplier<input_buffer::input_buffer_type> buffer;
 	VkDeviceSize offset;
 };
 
 inline dispatch_indirect_data_type dispatch_indirect_data(
-	const type::supplier<data::buffer_type> &buffer,
+	const type::supplier<input_buffer::input_buffer_type> &buffer,
 	VkDeviceSize offset) {
 	return dispatch_indirect_data_type{ buffer, offset };
 }
@@ -223,13 +223,13 @@ inline copy_buffer_type copy_buffer(
 }
 
 struct copy_data_buffer_type {
-	type::supplier<data::buffer_type> srcBuffer;
+	type::supplier<input_buffer::input_buffer_type> srcBuffer;
 	type::supplier<buffer::buffer_type> dstBuffer;
 	std::vector<VkBufferCopy> regions;
 };
 
 inline copy_data_buffer_type copy_data_buffer(
-	const type::supplier<data::buffer_type> &srcBuffer,
+	const type::supplier<input_buffer::input_buffer_type> &srcBuffer,
 	const type::supplier<buffer::buffer_type> &dstBuffer,
 	const std::vector<VkBufferCopy> &regions) {
 	return copy_data_buffer_type{ srcBuffer, dstBuffer, regions };
@@ -269,14 +269,14 @@ inline copy_buffer_to_image_type copy_buffer_to_image(
 }
 
 struct copy_data_buffer_to_image_type {
-	type::supplier<data::buffer_type> srcBuffer;
+	type::supplier<input_buffer::input_buffer_type> srcBuffer;
 	type::supplier<image::image_type> dstImage;
 	VkImageLayout dstImageLayout;
 	std::vector<VkBufferImageCopy> regions;
 };
 
 inline copy_data_buffer_to_image_type copy_data_buffer_to_image(
-	const type::supplier<data::buffer_type> &srcBuffer,
+	const type::supplier<input_buffer::input_buffer_type> &srcBuffer,
 	const type::supplier<image::image_type> &dstImage,
 	VkImageLayout dstImageLayout,
 	const std::vector<VkBufferImageCopy> &regions) {
@@ -375,12 +375,12 @@ inline buffer_memory_barrier_type buffer_memory_barrier(
 inline buffer_memory_barrier_type buffer_memory_barrier(
 	VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask,
 	uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex,
-	const type::supplier<data::buffer_type> &buffer,
+	const type::supplier<input_buffer::input_buffer_type> &buffer,
 	VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE) {
 	return buffer_memory_barrier_type{
 		srcAccessMask, dstAccessMask,
 		srcQueueFamilyIndex, dstQueueFamilyIndex,
-		std::ref(data::internal::get_buffer(*buffer)), offset, size
+		std::ref(input_buffer::internal::get_buffer(*buffer)), offset, size
 	};
 }
 

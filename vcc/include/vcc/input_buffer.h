@@ -13,8 +13,8 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-#ifndef DATA_BUFFER_H_
-#define DATA_BUFFER_H_
+#ifndef INPUT_BUFFER_H_
+#define INPUT_BUFFER_H_
 
 #include <type/serialize.h>
 #include <vcc/buffer.h>
@@ -27,7 +27,7 @@ struct queue_type;
 
 }  // namespace queue
 
-namespace data {
+namespace input_buffer {
 namespace internal {
 
 template<typename T>
@@ -66,18 +66,18 @@ auto get_serialize(const T &value)->const decltype(value.serialize)& {
  * propagated on all gpu buffers using this buffer.
  */
 
-class buffer_type {
+class input_buffer_type {
 	template<typename... StorageType>
-	friend buffer_type create(type::memory_layout layout,
+	friend input_buffer_type create(type::memory_layout layout,
 		const type::supplier<device::device_type> &device,
 		VkBufferCreateFlags flags,
 		VkBufferUsageFlags usage,
 		VkSharingMode sharingMode,
 		const std::vector<uint32_t> &queueFamilyIndices,
 		StorageType... storages);
-	friend VCC_LIBRARY void flush(buffer_type &buffer);
+	friend VCC_LIBRARY void flush(input_buffer_type &buffer);
 	friend VCC_LIBRARY void flush(queue::queue_type &queue,
-		buffer_type &buffer);
+		input_buffer_type &buffer);
 	template<typename U>
 	friend auto internal::get_mutex(const U &value)->decltype(value.mutex)&;
 	template<typename U>
@@ -89,15 +89,15 @@ class buffer_type {
 	template<typename U>
 	friend auto internal::get_serialize(const U &value)->const decltype(value.serialize)&;
 public:
-	buffer_type() = default;
-	buffer_type(const buffer_type&) = delete;
-	buffer_type(buffer_type &&copy) {
+	input_buffer_type() = default;
+	input_buffer_type(const input_buffer_type&) = delete;
+	input_buffer_type(input_buffer_type &&copy) {
 		std::unique_lock<std::mutex> lock(copy.mutex);
 		serialize = std::move(copy.serialize);
 		buffer = std::move(copy.buffer);
 	}
-	buffer_type &operator=(const buffer_type&) = delete;
-	buffer_type &operator=(buffer_type &&copy) {
+	input_buffer_type &operator=(const input_buffer_type&) = delete;
+	input_buffer_type &operator=(input_buffer_type &&copy) {
 		std::lock(mutex, copy.mutex);
 		std::unique_lock<std::mutex> lock(mutex, std::adopt_lock);
 		std::unique_lock<std::mutex> copy_lock(copy.mutex, std::adopt_lock);
@@ -108,7 +108,7 @@ public:
 
 private:
 	template<typename... StorageType>
-	buffer_type(type::memory_layout layout,
+	input_buffer_type(type::memory_layout layout,
 		const type::supplier<device::device_type> &device,
 		VkBufferCreateFlags flags,
 		VkBufferUsageFlags usage,
@@ -131,25 +131,25 @@ private:
  * Notice: The buffer must be bound to memory before usage.
  */
 template<typename... StorageType>
-buffer_type create(type::memory_layout layout,
+input_buffer_type create(type::memory_layout layout,
 		const type::supplier<device::device_type> &device,
 		VkBufferCreateFlags flags,
 		VkBufferUsageFlags usage,
 		VkSharingMode sharingMode,
 		const std::vector<uint32_t> &queueFamilyIndices,
 		StorageType... storages) {
-	return buffer_type(layout, device, flags, usage, sharingMode, queueFamilyIndices,
+	return input_buffer_type(layout, device, flags, usage, sharingMode, queueFamilyIndices,
 			std::forward<StorageType>(storages)...);
 }
 
 // Flushes content of the buffer to the GPU if there is data with an old revision.
-VCC_LIBRARY void flush(buffer_type &buffer);
+VCC_LIBRARY void flush(input_buffer_type &buffer);
 
 // Flushes content of the buffer to the GPU if there is data with an old revision.
 // A memory barrier is pushed on the queue.
-VCC_LIBRARY void flush(queue::queue_type &queue, buffer_type &buffer);
+VCC_LIBRARY void flush(queue::queue_type &queue, input_buffer_type &buffer);
 
-}  // namespace data
+}  // namespace input_buffer
 }  // namespace vcc
 
-#endif /* DATA_BUFFER_H_ */
+#endif /* INPUT_BUFFER_H_ */

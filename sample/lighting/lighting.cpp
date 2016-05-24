@@ -13,8 +13,6 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-#include <vcc/data/buffer.h>
-
 #include <cassert>
 #include <chrono>
 #include <fstream>
@@ -32,6 +30,7 @@
 #include <vcc/device.h>
 #include <vcc/enumerate.h>
 #include <vcc/framebuffer.h>
+#include <vcc/input_buffer.h>
 #include <vcc/instance.h>
 #include <vcc/memory.h>
 #include <vcc/physical_device.h>
@@ -104,7 +103,7 @@ int main(int argc, const char **argv) {
 	type::mat4 modelview_matrix;
 	type::mat3 normal_matrix;
 
-	vcc::data::buffer_type matrix_uniform_buffer(vcc::data::create(
+	vcc::input_buffer::input_buffer_type matrix_uniform_buffer(vcc::input_buffer::create(
 		type::linear, std::ref(device), 0, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		VK_SHARING_MODE_EXCLUSIVE, {},
 		std::ref(projection_matrix), std::ref(modelview_matrix),
@@ -129,7 +128,7 @@ int main(int argc, const char **argv) {
 		type::vec4(glm::vec4(1.f, 1.f, 1.f, 1.f)), type::float_type(120.f)
 	};
 
-	vcc::data::buffer_type light_uniform_buffer(vcc::data::create(
+	vcc::input_buffer::input_buffer_type light_uniform_buffer(vcc::input_buffer::create(
 		type::linear_std140, std::ref(device), 0,
 		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
 		std::ref(light.position), std::ref(light.attenuation),
@@ -139,13 +138,13 @@ int main(int argc, const char **argv) {
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 		light_uniform_buffer);
 
-	vcc::data::buffer_type vertex_buffer(vcc::data::create(
+	vcc::input_buffer::input_buffer_type vertex_buffer(vcc::input_buffer::create(
 		type::interleaved_std140, std::ref(device), 0,
 		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
 		std::ref(teapot::vertices), std::ref(teapot::normals)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 		vertex_buffer);
-	vcc::data::buffer_type index_buffer(vcc::data::create(
+	vcc::input_buffer::input_buffer_type index_buffer(vcc::input_buffer::create(
 		type::linear, std::ref(device), 0, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 		VK_SHARING_MODE_EXCLUSIVE, {}, std::ref(teapot::indices)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
@@ -356,7 +355,7 @@ int main(int argc, const char **argv) {
 						VK_SUBPASS_CONTENTS_INLINE,
 						vcc::command::bind_pipeline{
 							VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
-						vcc::command::bind_vertex_data_buffers(
+						vcc::command::bind_vertex_buffers(
 							{ std::ref(vertex_buffer) }, { 0, 0 }),
 						vcc::command::bind_index_data_buffer(
 							std::ref(index_buffer), 0, VK_INDEX_TYPE_UINT16),

@@ -19,7 +19,7 @@
 #include <climits>
 #include <numeric>
 #include <vcc/buffer.h>
-#include <vcc/data/buffer.h>
+#include <vcc/input_buffer.h>
 #include <vcc/device.h>
 #include <vcc/image.h>
 #include <vcc/physical_device.h>
@@ -60,9 +60,9 @@ VCC_LIBRARY void bind(const type::supplier<memory_type> &memory,
 VCC_LIBRARY void bind(const type::supplier<memory_type> &memory,
 	VkDeviceSize offset, buffer::buffer_type &buffer);
 VCC_LIBRARY VkMemoryRequirements get_memory_requirements(
-	const data::buffer_type &buffer);
+	const input_buffer::input_buffer_type &buffer);
 VCC_LIBRARY void bind(const type::supplier<memory_type> &memory,
-	VkDeviceSize offset, data::buffer_type &buffer);
+	VkDeviceSize offset, input_buffer::input_buffer_type &buffer);
 
 template<std::size_t Index>
 struct bind_t {

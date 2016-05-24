@@ -16,14 +16,14 @@
 #define NOMINMAX
 #include <vcc/command.h>
 #include <vcc/command_buffer.h>
-#include <vcc/data/buffer.h>
+#include <vcc/input_buffer.h>
 #include <vcc/memory.h>
 #include <vcc/queue.h>
 
 namespace vcc {
-namespace data {
+namespace input_buffer {
 
-void flush(buffer_type &buffer) {
+void flush(input_buffer_type &buffer) {
 	if (type::dirty(buffer.serialize)) {
 		std::unique_lock<std::mutex> lock(buffer.mutex);
 		if (type::dirty(buffer.serialize)) {
@@ -37,7 +37,7 @@ void flush(buffer_type &buffer) {
 	}
 }
 
-void flush(queue::queue_type &queue, buffer_type &buffer) {
+void flush(queue::queue_type &queue, input_buffer_type &buffer) {
 	flush(buffer);
 	command_pool::command_pool_type command_pool(command_pool::create(
 		vcc::internal::get_parent(queue), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, queue::get_family_index(queue)));
@@ -66,5 +66,5 @@ void flush(queue::queue_type &queue, buffer_type &buffer) {
 		std::chrono::nanoseconds::max());
 }
 
-}  // namespace data
+}  // namespace input_buffer
 }  // namespace vcc

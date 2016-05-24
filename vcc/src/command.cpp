@@ -398,49 +398,49 @@ void cmd(cmd_args &args, const execute_commands &ec) {
 }
 
 void cmd(cmd_args &args, const bind_index_data_buffer_type&bidb) {
-	const type::supplier<data::buffer_type> &buffer(bidb.buffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer); });
-	cmd(args, bind_index_buffer_type{ std::ref(data::internal::get_buffer(*buffer)), bidb.offset, bidb.indexType });
+	const type::supplier<input_buffer::input_buffer_type> &buffer(bidb.buffer);
+	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
+	cmd(args, bind_index_buffer_type{ std::ref(input_buffer::internal::get_buffer(*buffer)), bidb.offset, bidb.indexType });
 }
 
 void cmd(cmd_args &args, const bind_vertex_data_buffers_type&bvdb) {
 	std::vector<type::supplier<buffer::buffer_type>> buffers;
 	buffers.reserve(bvdb.buffers.size());
-	for (const type::supplier<data::buffer_type> &buffer : bvdb.buffers) {
-		args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer); });
-		buffers.push_back(std::ref(data::internal::get_buffer(*buffer)));
+	for (const type::supplier<input_buffer::input_buffer_type> &buffer : bvdb.buffers) {
+		args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
+		buffers.push_back(std::ref(input_buffer::internal::get_buffer(*buffer)));
 	}
 	cmd(args, bind_vertex_buffers_type{ std::move(buffers), bvdb.offsets });
 }
 
 void cmd(cmd_args &args, const draw_indirect_data_type&did) {
-	const type::supplier<data::buffer_type> &buffer(did.buffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer); });
-	cmd(args, draw_indirect_type{ std::ref(data::internal::get_buffer(*buffer)), did.offset, did.drawCount, did.stride });
+	const type::supplier<input_buffer::input_buffer_type> &buffer(did.buffer);
+	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
+	cmd(args, draw_indirect_type{ std::ref(input_buffer::internal::get_buffer(*buffer)), did.offset, did.drawCount, did.stride });
 }
 
 void cmd(cmd_args &args, const draw_indexed_indirect_data_type&diid) {
-	const type::supplier<data::buffer_type> &buffer(diid.buffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer); });
-	cmd(args, draw_indexed_indirect_type{ std::ref(data::internal::get_buffer(*buffer)), diid.offset, diid.drawCount, diid.stride });
+	const type::supplier<input_buffer::input_buffer_type> &buffer(diid.buffer);
+	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
+	cmd(args, draw_indexed_indirect_type{ std::ref(input_buffer::internal::get_buffer(*buffer)), diid.offset, diid.drawCount, diid.stride });
 }
 
 void cmd(cmd_args &args, const dispatch_indirect_data_type&did) {
-	const type::supplier<data::buffer_type> &buffer(did.buffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer); });
-	cmd(args, dispatch_indirect_type{ std::ref(data::internal::get_buffer(*buffer)), did.offset });
+	const type::supplier<input_buffer::input_buffer_type> &buffer(did.buffer);
+	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
+	cmd(args, dispatch_indirect_type{ std::ref(input_buffer::internal::get_buffer(*buffer)), did.offset });
 }
 
 void cmd(cmd_args &args, const copy_data_buffer_type&cdb) {
-	const type::supplier<data::buffer_type> &buffer(cdb.srcBuffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer); });
-	cmd(args, copy_buffer_type{ std::ref(data::internal::get_buffer(*buffer)), cdb.dstBuffer, cdb.regions });
+	const type::supplier<input_buffer::input_buffer_type> &buffer(cdb.srcBuffer);
+	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
+	cmd(args, copy_buffer_type{ std::ref(input_buffer::internal::get_buffer(*buffer)), cdb.dstBuffer, cdb.regions });
 }
 
 void cmd(cmd_args &args, const copy_data_buffer_to_image_type&cdbti) {
-	const type::supplier<data::buffer_type> &buffer(cdbti.srcBuffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {data::flush(queue, *buffer); });
-	cmd(args, copy_buffer_to_image_type{ std::ref(data::internal::get_buffer(*buffer)), cdbti.dstImage, cdbti.dstImageLayout, cdbti.regions });
+	const type::supplier<input_buffer::input_buffer_type> &buffer(cdbti.srcBuffer);
+	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
+	cmd(args, copy_buffer_to_image_type{ std::ref(input_buffer::internal::get_buffer(*buffer)), cdbti.dstImage, cdbti.dstImageLayout, cdbti.regions });
 }
 
 }  // namespace internal

@@ -19,11 +19,11 @@
 #include <type/types.h>
 #include <vcc/command.h>
 #include <vcc/command_pool.h>
-#include <vcc/data/buffer.h>
 #include <vcc/descriptor_pool.h>
 #include <vcc/descriptor_set.h>
 #include <vcc/device.h>
 #include <vcc/enumerate.h>
+#include <vcc/input_buffer.h>
 #include <vcc/instance.h>
 #include <vcc/memory.h>
 #include <vcc/physical_device.h>
@@ -74,7 +74,7 @@ TEST(ComputeShaderIntegrationTest, ComputeShaderIntegrationTest1) {
 		const auto mutate(type::mutate(input_array));
 		std::iota(std::begin(mutate), std::end(mutate), 1.f);
 	}
-	vcc::data::buffer_type input_buffer(vcc::data::create(
+	vcc::input_buffer::input_buffer_type input_buffer(vcc::input_buffer::create(
 		type::linear_std140, std::ref(device), 0, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		VK_SHARING_MODE_EXCLUSIVE, {}, std::ref(input_array)));
 	const type::supplier<vcc::memory::memory_type> input_memory(

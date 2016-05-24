@@ -167,7 +167,6 @@
     <ClInclude Include="..\include\vcc\command.h" />
     <ClInclude Include="..\include\vcc\command_buffer.h" />
     <ClInclude Include="..\include\vcc\command_pool.h" />
-    <ClInclude Include="..\include\vcc\data\buffer.h" />
     <ClInclude Include="..\include\vcc\debug.h" />
     <ClInclude Include="..\include\vcc\descriptor_pool.h" />
     <ClInclude Include="..\include\vcc\descriptor_set.h" />
@@ -179,6 +178,7 @@
     <ClInclude Include="..\include\vcc\framebuffer.h" />
     <ClInclude Include="..\include\vcc\image.h" />
     <ClInclude Include="..\include\vcc\image_view.h" />
+    <ClInclude Include="..\include\vcc\input_buffer.h" />
     <ClInclude Include="..\include\vcc\instance.h" />
     <ClInclude Include="..\include\vcc\internal\hook.h" />
     <ClInclude Include="..\include\vcc\internal\raii.h" />
@@ -205,7 +205,6 @@
     <ClCompile Include="..\src\command.cpp" />
     <ClCompile Include="..\src\command_buffer.cpp" />
     <ClCompile Include="..\src\command_pool.cpp" />
-    <ClCompile Include="..\src\data\data_buffer.cpp" />
     <ClCompile Include="..\src\debug.cpp" />
     <ClCompile Include="..\src\descriptor_pool.cpp" />
     <ClCompile Include="..\src\descriptor_set.cpp" />
@@ -217,6 +216,7 @@
     <ClCompile Include="..\src\framebuffer.cpp" />
     <ClCompile Include="..\src\image.cpp" />
     <ClCompile Include="..\src\image_view.cpp" />
+    <ClCompile Include="..\src\input_buffer.cpp" />
     <ClCompile Include="..\src\instance.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\memory.cpp" />

@@ -13,14 +13,8 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Header Files\data">
-      <UniqueIdentifier>{d998aa04-30d0-43a7-81d4-c5c5067fb1ef}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\internal">
       <UniqueIdentifier>{e0b2213c-a9ef-4d54-aeb9-1d74ab2d0e39}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\data">
-      <UniqueIdentifier>{7848c054-ccc9-4081-9602-7f0c61efc060}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -120,9 +114,6 @@
     <ClInclude Include="..\include\vcc\window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\vcc\data\buffer.h">
-      <Filter>Header Files\data</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\vcc\internal\raii.h">
       <Filter>Header Files\internal</Filter>
     </ClInclude>
@@ -130,6 +121,9 @@
       <Filter>Header Files\internal</Filter>
     </ClInclude>
     <ClInclude Include="..\include\vcc\command.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\vcc\input_buffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -227,10 +221,10 @@
     <ClCompile Include="..\src\window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\data\data_buffer.cpp">
-      <Filter>Source Files\data</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\command.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\input_buffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

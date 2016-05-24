@@ -13,8 +13,6 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-#include <vcc/data/buffer.h>
-
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -38,6 +36,7 @@
 #include <vcc/image.h>
 #include <vcc/image_view.h>
 #include <vcc/image_loader.h>
+#include <vcc/input_buffer.h>
 #include <vcc/instance.h>
 #include <vcc/memory.h>
 #include <vcc/physical_device.h>
@@ -295,16 +294,25 @@ int main(int argc, const char **argv) {
 	type::mat4_array modelview_matrix_array(1);
 	type::mat3_array normal_matrix_array(1);
 
-	vcc::data::buffer_type matrix_uniform_buffer(vcc::data::create(type::linear, std::ref(device), 0, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
-		std::ref(projection_matrix), std::ref(modelview_matrix_array), std::ref(normal_matrix_array)));
-	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, matrix_uniform_buffer);
+	vcc::input_buffer::input_buffer_type matrix_uniform_buffer(
+		vcc::input_buffer::create(type::linear, std::ref(device), 0,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
+			std::ref(projection_matrix), std::ref(modelview_matrix_array),
+			std::ref(normal_matrix_array)));
+	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+		matrix_uniform_buffer);
 
-	vcc::data::buffer_type vertex_buffer(vcc::data::create(type::interleaved_std140, std::ref(device), 0, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
+	vcc::input_buffer::input_buffer_type vertex_buffer(vcc::input_buffer::create(
+		type::interleaved_std140, std::ref(device), 0,
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
 		std::ref(vertices), std::ref(texcoords), std::ref(normals)));
-	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, vertex_buffer);
-	vcc::data::buffer_type index_buffer(vcc::data::create(type::linear, std::ref(device), 0, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
-		std::ref(indices)));
-	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, index_buffer);
+	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+		vertex_buffer);
+	vcc::input_buffer::input_buffer_type index_buffer(vcc::input_buffer::create(
+		type::linear, std::ref(device), 0, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		VK_SHARING_MODE_EXCLUSIVE, {}, std::ref(indices)));
+	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+		index_buffer);
 
 	const VkFormat depth_format = VK_FORMAT_D16_UNORM;
 
@@ -499,7 +507,7 @@ int main(int argc, const char **argv) {
 					},
 					VK_SUBPASS_CONTENTS_INLINE,
 					vcc::command::bind_pipeline{ VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
-					vcc::command::bind_vertex_data_buffers({ std::ref(vertex_buffer) }, { 0, 0 }),
+					vcc::command::bind_vertex_buffers({ std::ref(vertex_buffer) }, { 0, 0 }),
 					vcc::command::bind_index_data_buffer(std::ref(index_buffer), 0, VK_INDEX_TYPE_UINT16),
 					vcc::command::bind_descriptor_sets{ VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline_layout), 0,{ std::ref(desc_set) },{} },
 					vcc::command::set_viewport{ 0,{ VkViewport{ 0.f, 0.f, float(extent.width), float(extent.height), 0.f, 1.f } } },

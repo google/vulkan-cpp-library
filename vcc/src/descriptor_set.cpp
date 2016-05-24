@@ -124,12 +124,12 @@ void add(update_storage &storage, const write_buffer_data_type &wbdt) {
 	for (std::size_t i = 0; i < wbdt.buffers.size(); ++i) {
 		const buffer_info_data_type &buffer(wbdt.buffers[i]);
 		buffer_infos.push_back(buffer_info_type{
-			std::ref(data::internal::get_buffer(*buffer.buffer)),
+			std::ref(input_buffer::internal::get_buffer(*buffer.buffer)),
 			buffer.offset, buffer.range });
-		const type::supplier<data::buffer_type> &buf(buffer.buffer);
+		const type::supplier<input_buffer::input_buffer_type> &buf(buffer.buffer);
 		wbdt.dst_set->pre_execute_callbacks.put(
 			std::make_pair(wbdt.dst_binding, uint32_t(wbdt.dst_array_element + i)),
-			[buf](queue::queue_type &queue) {data::flush(queue, *buf); });
+			[buf](queue::queue_type &queue) {input_buffer::flush(queue, *buf); });
 	}
 	add(storage, write_buffer_type{ wbdt.dst_set, wbdt.dst_binding,
 		wbdt.dst_array_element, wbdt.descriptor_type,
@@ -188,13 +188,13 @@ void update_storage::reserve() {
 }  // namespace internal
 
 buffer_info_data_type buffer_info(
-	const type::supplier<data::buffer_type> &buffer, VkDeviceSize offset,
+	const type::supplier<input_buffer::input_buffer_type> &buffer, VkDeviceSize offset,
 	VkDeviceSize range) {
 	return buffer_info_data_type{ buffer, offset, range };
 }
 
-buffer_info_data_type buffer_info(const type::supplier<data::buffer_type> &buffer) {
-	const std::size_t size(type::size(data::internal::get_serialize(*buffer)));
+buffer_info_data_type buffer_info(const type::supplier<input_buffer::input_buffer_type> &buffer) {
+	const std::size_t size(type::size(input_buffer::internal::get_serialize(*buffer)));
 	return buffer_info_data_type{ buffer, 0, size };
 }
 

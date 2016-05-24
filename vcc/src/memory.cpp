@@ -75,12 +75,12 @@ void bind(const type::supplier<memory_type> &memory, VkDeviceSize offset,
 	vcc::internal::get_offset(buffer) = offset;
 }
 
-VkMemoryRequirements get_memory_requirements(const data::buffer_type &buffer) {
-	return get_memory_requirements(data::internal::get_buffer(buffer));
+VkMemoryRequirements get_memory_requirements(const input_buffer::input_buffer_type &buffer) {
+	return get_memory_requirements(input_buffer::internal::get_buffer(buffer));
 }
 
-void bind(const type::supplier<memory_type> &memory, VkDeviceSize offset, data::buffer_type &buffer) {
-	return bind(memory, offset, data::internal::get_buffer(buffer));
+void bind(const type::supplier<memory_type> &memory, VkDeviceSize offset, input_buffer::input_buffer_type &buffer) {
+	return bind(memory, offset, input_buffer::internal::get_buffer(buffer));
 }
 
 }  // namespace internal

@@ -19,11 +19,11 @@
 #include <algorithm>
 #include <vcc/buffer.h>
 #include <vcc/buffer_view.h>
-#include <vcc/data/buffer.h>
 #include <vcc/device.h>
 #include <vcc/descriptor_pool.h>
 #include <vcc/descriptor_set_layout.h>
 #include <vcc/image_view.h>
+#include <vcc/input_buffer.h>
 #include <vcc/internal/hook.h>
 #include <vcc/util.h>
 
@@ -93,15 +93,15 @@ inline buffer_info_type buffer_info(
 }
 
 struct buffer_info_data_type {
-	type::supplier<data::buffer_type> buffer;
+	type::supplier<input_buffer::input_buffer_type> buffer;
 	VkDeviceSize offset, range;
 };
 
 VCC_LIBRARY buffer_info_data_type buffer_info(
-	const type::supplier<data::buffer_type> &buffer,
+	const type::supplier<input_buffer::input_buffer_type> &buffer,
 	VkDeviceSize offset, VkDeviceSize range);
 VCC_LIBRARY buffer_info_data_type buffer_info(
-	const type::supplier<data::buffer_type> &buffer);
+	const type::supplier<input_buffer::input_buffer_type> &buffer);
 
 struct write_image {
 	type::supplier<descriptor_set_type> dst_set;

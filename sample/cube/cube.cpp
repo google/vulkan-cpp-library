@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <vcc/data/buffer.h>
-
 #include <algorithm>
 #include <cassert>
 #include <fstream>
@@ -35,6 +33,7 @@
 #include <vcc/image.h>
 #include <vcc/image_view.h>
 #include <vcc/image_loader.h>
+#include <vcc/input_buffer.h>
 #include <vcc/instance.h>
 #include <vcc/memory.h>
 #include <vcc/physical_device.h>
@@ -188,21 +187,21 @@ int main(int argc, const char **argv) {
 
 	glm::mat4 projection_matrix;
 	type::mat4 projection_modelview_matrix;
-	vcc::data::buffer_type matrix_uniform_buffer(vcc::data::create(
+	vcc::input_buffer::input_buffer_type matrix_uniform_buffer(vcc::input_buffer::create(
 		type::linear, std::ref(device), 0, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		VK_SHARING_MODE_EXCLUSIVE, {}, std::ref(projection_modelview_matrix)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 		matrix_uniform_buffer);
 
-	vcc::data::buffer_type vertex_buffer(vcc::data::create(
+	vcc::input_buffer::input_buffer_type vertex_buffer(vcc::input_buffer::create(
 		type::interleaved_std140, std::ref(device), 0,
 		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
 		std::ref(vertices), std::ref(texcoords)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 		vertex_buffer);
 
-	vcc::data::buffer_type index_buffer(vcc::data::create(type::linear,
-		std::ref(device), 0, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+	vcc::input_buffer::input_buffer_type index_buffer(vcc::input_buffer::create(
+		type::linear, std::ref(device), 0, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 		VK_SHARING_MODE_EXCLUSIVE, {}, std::ref(indices)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 		index_buffer);
@@ -415,7 +414,7 @@ int main(int argc, const char **argv) {
 						VK_SUBPASS_CONTENTS_INLINE,
 						vcc::command::bind_pipeline{
 							VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
-						vcc::command::bind_vertex_data_buffers(
+						vcc::command::bind_vertex_buffers(
 							{ std::ref(vertex_buffer) }, { 0, 0 }),
 						vcc::command::bind_index_data_buffer(
 							std::ref(index_buffer), 0, VK_INDEX_TYPE_UINT16),
