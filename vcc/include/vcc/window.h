@@ -145,11 +145,13 @@ inline image_view::image_view_type &get_image_view(swapchain_type &swapchain) {
 	return *swapchain.view;
 }
 
-command_buffer::command_buffer_type &get_pre_draw_command(swapchain_type &swapchain) {
+inline command_buffer::command_buffer_type &get_pre_draw_command(
+		swapchain_type &swapchain) {
 	return swapchain.pre_draw_command;
 }
 
-command_buffer::command_buffer_type &get_post_draw_command(swapchain_type &swapchain) {
+inline command_buffer::command_buffer_type &get_post_draw_command(
+		swapchain_type &swapchain) {
 	return swapchain.post_draw_command;
 }
 
