@@ -145,21 +145,25 @@ public:
 			return &(*merge)[index];
 		}
 		iterator &operator++() {
-			assert(index++ < merge->size());
+			assert(index < merge->size());
+			++index;
 			return *this;
 		}
 		iterator operator++(int) {
 			const iterator it(*this);
-			assert(index++ < merge->size);
+			assert(index < merge->size);
+			++index;
 			return it;
 		}
 		iterator &operator--() {
-			assert(--index >= 0);
+			--index;
+			assert(index >= 0);
 			return *this;
 		}
 		iterator operator--(int) {
 			const iterator it(*this);
-			assert(--index >= 0);
+			--index;
+			assert(index >= 0);
 			return it;
 		}
 		std::size_t operator+(const iterator &it) const {
