@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\type\internal.h" />
     <ClInclude Include="..\include\type\memory.h" />
     <ClInclude Include="..\include\type\merge.h" />
     <ClInclude Include="..\include\type\revision.h" />

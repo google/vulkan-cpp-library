@@ -59,7 +59,8 @@ TEST(SerializeTypeTest, Constructor) {
 	ASSERT_EQ(type::size(serialized), sizeof(float) * 3);
 	float output[3];
 	type::flush(serialized, output);
-	ASSERT_TRUE(std::equal(array.begin(), array.end(), output));
+	auto read_array(type::read(array));
+	ASSERT_TRUE(std::equal(read_array.begin(), read_array.end(), output));
 }
 
 TEST(SerializeTypeTest, LinearArrayLayout1) {
@@ -72,9 +73,12 @@ TEST(SerializeTypeTest, LinearArrayLayout1) {
 	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
 	float output[size];
 	type::flush(serialized, output);
-	ASSERT_TRUE(std::equal(array1.begin(), array1.end(), output));
-	ASSERT_TRUE(std::equal(array2.begin(), array2.end(), (float2 *) (&output[0] + 3)));
-	ASSERT_TRUE(std::equal(array3.begin(), array3.end(), (float3 *) (&output[0] + 3 + 6)));
+	auto read_array1(type::read(array1));
+	ASSERT_TRUE(std::equal(read_array1.begin(), read_array1.end(), output));
+	auto read_array2(type::read(array2));
+	ASSERT_TRUE(std::equal(read_array2.begin(), read_array2.end(), (float2 *) (&output[0] + 3)));
+	auto read_array3(type::read(array3));
+	ASSERT_TRUE(std::equal(read_array3.begin(), read_array3.end(), (float3 *) (&output[0] + 3 + 6)));
 }
 
 TEST(SerializeTypeTest, LinearStd140ArrayLayout1) {
@@ -92,14 +96,19 @@ TEST(SerializeTypeTest, LinearStd140ArrayLayout1) {
 	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
 	float output[size];
 	type::flush(serialized, output);
+	auto read_array1(type::read(array1));
 	for (std::size_t i = 0; i < array1.size(); ++i) {
-		ASSERT_EQ(array1[i], output[i * 4]);
+		ASSERT_EQ(read_array1[i], output[i * 4]);
 	}
+	auto read_array2(type::read(array2));
 	for (std::size_t i = 0; i < array2.size(); ++i) {
-		ASSERT_EQ(array2[i], *reinterpret_cast<float2 *>(&output[12 + i * 4]));
+		ASSERT_EQ(read_array2[i],
+			*reinterpret_cast<float2 *>(&output[12 + i * 4]));
 	}
+	auto read_array3(type::read(array3));
 	for (std::size_t i = 0; i < array3.size(); ++i) {
-		ASSERT_EQ(array3[i], *reinterpret_cast<float3 *>(&output[24 + i * 4]));
+		ASSERT_EQ(read_array3[i],
+			*reinterpret_cast<float3 *>(&output[24 + i * 4]));
 	}
 }
 
@@ -118,11 +127,15 @@ TEST(SerializeTypeTest, LinearStd430ArrayLayout1) {
 	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
 	float output[size];
 	type::flush(serialized, output);
-	ASSERT_TRUE(std::equal(array1.begin(), array1.end(), output));
-	ASSERT_TRUE(std::equal(array2.begin(), array2.end(), (float2 *)(&output[0] + 4)));
-	ASSERT_EQ(array3[0], *((float3 *)(&output[0] + 4 + 8)));
-	ASSERT_EQ(array3[1], *((float3 *)(&output[0] + 4 + 8 + 4)));
-	ASSERT_EQ(array3[2], *((float3 *)(&output[0] + 4 + 8 + 8)));
+	auto read_array1(type::read(array1));
+	ASSERT_TRUE(std::equal(read_array1.begin(), read_array1.end(), output));
+	auto read_array2(type::read(array2));
+	ASSERT_TRUE(std::equal(read_array2.begin(), read_array2.end(),
+		(float2 *)(&output[0] + 4)));
+	auto read_array3(type::read(array3));
+	ASSERT_EQ(read_array3[0], *((float3 *)(&output[0] + 4 + 8)));
+	ASSERT_EQ(read_array3[1], *((float3 *)(&output[0] + 4 + 8 + 4)));
+	ASSERT_EQ(read_array3[2], *((float3 *)(&output[0] + 4 + 8 + 8)));
 }
 
 TEST(SerializeTypeTest, LinearStd140ArrayLayout2) {
@@ -141,14 +154,28 @@ TEST(SerializeTypeTest, LinearStd140ArrayLayout2) {
 	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
 	float output[size];
 	type::flush(serialized, output);
-	ASSERT_TRUE(std::equal(array1.begin(), array1.end(), (float4 *)(&output[0] + 0)));
-	ASSERT_TRUE(std::equal(array2.begin(), array2.end(), (float3 *)(&output[0] + 4)));
-	ASSERT_TRUE(std::equal(array3.begin(), array3.end(), (float3 *)(&output[0] + 8)));
-	ASSERT_EQ(array4[0], output[12]);
-	ASSERT_TRUE(std::equal(array5.begin(), array5.end(), (float4 *)(&output[0] + 16)));
-	ASSERT_TRUE(std::equal(array6.begin(), array6.end(), (float4 *)(&output[0] + 20)));
-	ASSERT_TRUE(std::equal(array7.begin(), array7.end(), (float4 *)(&output[0] + 24)));
-	ASSERT_EQ(array8[0], output[28]);
+	auto read_array1(type::read(array1));
+	ASSERT_TRUE(std::equal(read_array1.begin(), read_array1.end(),
+		(float4 *)(&output[0] + 0)));
+	auto read_array2(type::read(array2));
+	ASSERT_TRUE(std::equal(read_array2.begin(), read_array2.end(),
+		(float3 *)(&output[0] + 4)));
+	auto read_array3(type::read(array3));
+	ASSERT_TRUE(std::equal(read_array3.begin(), read_array3.end(),
+		(float3 *)(&output[0] + 8)));
+	auto read_array4(type::read(array4));
+	ASSERT_EQ(read_array4[0], output[12]);
+	auto read_array5(type::read(array5));
+	ASSERT_TRUE(std::equal(read_array5.begin(), read_array5.end(),
+		(float4 *)(&output[0] + 16)));
+	auto read_array6(type::read(array6));
+	ASSERT_TRUE(std::equal(read_array6.begin(), read_array6.end(),
+		(float4 *)(&output[0] + 20)));
+	auto read_array7(type::read(array7));
+	ASSERT_TRUE(std::equal(read_array7.begin(), read_array7.end(),
+		(float4 *)(&output[0] + 24)));
+	auto read_array8(type::read(array8));
+	ASSERT_EQ(read_array8[0], output[28]);
 }
 
 TEST(SerializeTypeTest, LinearStd430ArrayLayout2) {
@@ -167,14 +194,28 @@ TEST(SerializeTypeTest, LinearStd430ArrayLayout2) {
 	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
 	float output[size];
 	type::flush(serialized, output);
-	ASSERT_TRUE(std::equal(array1.begin(), array1.end(), (float4 *)(&output[0] + 0)));
-	ASSERT_TRUE(std::equal(array2.begin(), array2.end(), (float3 *)(&output[0] + 4)));
-	ASSERT_TRUE(std::equal(array3.begin(), array3.end(), (float3 *)(&output[0] + 8)));
-	ASSERT_EQ(array4[0], output[12]);
-	ASSERT_TRUE(std::equal(array5.begin(), array5.end(), (float4 *)(&output[0] + 16)));
-	ASSERT_TRUE(std::equal(array6.begin(), array6.end(), (float4 *)(&output[0] + 20)));
-	ASSERT_TRUE(std::equal(array7.begin(), array7.end(), (float4 *)(&output[0] + 24)));
-	ASSERT_EQ(array8[0], output[28]);
+	auto read_array1(type::read(array1));
+	ASSERT_TRUE(std::equal(read_array1.begin(), read_array1.end(),
+		(float4 *)(&output[0] + 0)));
+	auto read_array2(type::read(array2));
+	ASSERT_TRUE(std::equal(read_array2.begin(), read_array2.end(),
+		(float3 *)(&output[0] + 4)));
+	auto read_array3(type::read(array3));
+	ASSERT_TRUE(std::equal(read_array3.begin(), read_array3.end(),
+		(float3 *)(&output[0] + 8)));
+	auto read_array4(type::read(array4));
+	ASSERT_EQ(read_array4[0], output[12]);
+	auto read_array5(type::read(array5));
+	ASSERT_TRUE(std::equal(read_array5.begin(), read_array5.end(),
+		(float4 *)(&output[0] + 16)));
+	auto read_array6(type::read(array6));
+	ASSERT_TRUE(std::equal(read_array6.begin(), read_array6.end(),
+		(float4 *)(&output[0] + 20)));
+	auto read_array7(type::read(array7));
+	ASSERT_TRUE(std::equal(read_array7.begin(), read_array7.end(),
+		(float4 *)(&output[0] + 24)));
+	auto read_array8(type::read(array8));
+	ASSERT_EQ(read_array8[0], output[28]);
 }
 
 
@@ -193,9 +234,9 @@ TEST(SerializeTypeTest, LinearPrimitiveLayout1) {
 	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
 	float output[size];
 	type::flush(serialized, output);
-	ASSERT_EQ(primitive1, output[0]);
-	ASSERT_EQ(primitive2, *((float2 *) &output[2]));
-	ASSERT_EQ(primitive3, *((float3 *) &output[4]));
+	ASSERT_EQ(type::read(primitive1), output[0]);
+	ASSERT_EQ(type::read(primitive2), *((float2 *) &output[2]));
+	ASSERT_EQ(type::read(primitive3), *((float3 *) &output[4]));
 }
 
 TEST(SerializeTypeTest, InterleavedStd140ArrayLayout1) {
@@ -213,14 +254,19 @@ TEST(SerializeTypeTest, InterleavedStd140ArrayLayout1) {
 	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
 	float output[size];
 	type::flush(serialized, output);
+	auto read_array1(type::read(array1));
 	for (std::size_t i = 0; i < array1.size(); ++i) {
-		ASSERT_EQ(array1[i], output[i * 12]);
+		ASSERT_EQ(read_array1[i], output[i * 12]);
 	}
+	auto read_array2(type::read(array2));
 	for (std::size_t i = 0; i < array2.size(); ++i) {
-		ASSERT_EQ(array2[i], *reinterpret_cast<float2 *>(&output[4 + i * 12]));
+		ASSERT_EQ(read_array2[i],
+			*reinterpret_cast<float2 *>(&output[4 + i * 12]));
 	}
+	auto read_array3(type::read(array3));
 	for (std::size_t i = 0; i < array3.size(); ++i) {
-		ASSERT_EQ(array3[i], *reinterpret_cast<float3 *>(&output[8 + i * 12]));
+		ASSERT_EQ(read_array3[i],
+			*reinterpret_cast<float3 *>(&output[8 + i * 12]));
 	}
 }
 

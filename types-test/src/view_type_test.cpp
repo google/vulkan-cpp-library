@@ -25,17 +25,18 @@ TEST(ViewTypeTest, Constructor) {
 TEST(ViewTypeTest, Read) {
 	type::const_t_array<float> array({ 1, 2, 3 });
 	type::view_type<float> view(type::make_view(std::ref(array)));
+	auto read_view(view.read());
 	ASSERT_EQ(3, view.size());
-	EXPECT_EQ(1, view[0]);
-	EXPECT_EQ(2, view[1]);
-	EXPECT_EQ(3, view[2]);
+	EXPECT_EQ(1, read_view[0]);
+	EXPECT_EQ(2, read_view[1]);
+	EXPECT_EQ(3, read_view[2]);
 }
 
 TEST(ViewTypeTest, Revision) {
 	type::t_array<float> array({ 1, 2, 3 });
 	type::view_type<float> view(type::make_view(std::ref(array)));
 	ASSERT_EQ(1, view.revision());
-	type::mutate(array)[1] = 4;
+	type::write(array)[1] = 4;
 	ASSERT_EQ(2, view.revision());
-	ASSERT_EQ(4, view[1]);
+	ASSERT_EQ(4, view.read()[1]);
 }

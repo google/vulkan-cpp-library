@@ -45,6 +45,9 @@
     <ClInclude Include="..\include\type\types.h">
       <Filter>Header Files\type</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\type\internal.h">
+      <Filter>Header Files\type</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\memory.cpp">

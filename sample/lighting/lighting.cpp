@@ -299,7 +299,7 @@ int main(int argc, const char **argv) {
 #endif // __ANDROID__
 	vcc::window::run(window,
 		[&](VkExtent2D extent, VkFormat format, std::vector<vcc::window::swapchain_type> &swapchain_images) {
-			type::mutate(projection_matrix)[0] =
+			type::write(projection_matrix)[0] =
 				glm::perspective(45.f, float(extent.width) / extent.height,
 					1.f, 100.f);
 			command_buffers.clear();
@@ -376,7 +376,7 @@ int main(int argc, const char **argv) {
 		[&](uint32_t index) {
 			glm::mat4 view_matrix(glm::lookAt(glm::vec3(0, 0, camera_distance),
 				glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
-			type::mutate(modelview_matrix)[0] = view_matrix
+			type::write(modelview_matrix)[0] = view_matrix
 				* glm::rotate(angle.y, glm::vec3(1, 0, 0))
 				* glm::rotate(angle.x, glm::vec3(0, 1, 0));
 			vcc::queue::submit(queue, {},

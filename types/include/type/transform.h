@@ -25,14 +25,12 @@ namespace type {
 template<typename T>
 class transform_type {
 private:
-	typedef storage_type<T, true, true> internal_storage_type;
-	typedef mutable_storage_type<T, true> internal_mutable_storage_type;
-	typedef std::function<void(internal_mutable_storage_type &&)> update_function_type;
-	template<typename U>
-	friend typename internal_storage_type::lock_type get_lock(transform_type<U> &array);
+	typedef t_array<T> internal_storage_type;
+	typedef writable_storage_type<T, true> internal_writable_storage_type;
+	typedef std::function<void(internal_writable_storage_type &&)> update_function_type;
 
 	template<typename U>
-	friend revision_type &get_revision(transform_type<U> &array);
+	friend readable_t_array<U, true> read(transform_type<U> &);
 
 public:
 	static const bool is_array = true;
@@ -46,46 +44,23 @@ public:
 	typedef typename internal_storage_type::pointer pointer;
 	typedef typename internal_storage_type::const_pointer const_pointer;
 
-	const_iterator begin() const {
-		flush();
-		return storage.cbegin();
-	}
-
-	const_iterator end() const {
-		flush();
-		return storage.cend();
-	}
-
-	const_iterator cbegin() const {
-		flush();
-		return storage.cbegin();
-	}
-
-	const_iterator cend() const {
-		flush();
-		return storage.cend();
-	}
-
-	const_reference operator[] (std::size_t index) const {
-		flush();
-		return storage[index];
-	}
+	template<typename ContainerT, typename FunctorT>
+	transform_type(const supplier<ContainerT> &container, FunctorT functor)
+		: update_function([container, functor](internal_writable_storage_type &&storage) {
+			auto read_container(read(*container));
+			std::transform(read_container.begin(), read_container.end(),
+				storage.begin(), functor);
+		  }),
+		  storage(container->size()),
+		  revision(REVISION_NONE) {}
 
 	size_type size() const {
 		return storage.size();
 	}
 
-	template<typename ContainerT, typename FunctorT>
-	transform_type(const supplier<ContainerT> &container, FunctorT functor)
-		: update_function([container, functor](internal_mutable_storage_type &&storage) {
-			std::transform(container->begin(), container->end(), storage.begin(), functor);
-		  }),
-		  storage(container->size()),
-		  revision(REVISION_NONE) {}
-
 private:
 	void flush() const {
-		update_function(mutate(storage));
+		update_function(write(storage));
 	}
 
 	update_function_type update_function;
@@ -93,10 +68,20 @@ private:
 	revision_type revision;
 };
 
+template<typename T>
+using read_transform_type = readable_t_array<T, true>;
+
+template<typename T>
+read_transform_type<T> read(transform_type<T> &array) {
+	array.flush();
+	return read(array.storage);
+}
+
 template<typename ContainerT, typename FunctorT>
-auto make_transform(ContainerT container, FunctorT functor)
-		->transform_type<decltype(functor((*make_supplier(container))[0]))> {
-	return transform_type<decltype(functor((*make_supplier(container))[0]))>(make_supplier(container), functor);
+auto make_transform(ContainerT container, FunctorT functor)->
+		transform_type<decltype(functor(read(*make_supplier(container))[0]))> {
+	typedef decltype(functor(read(*make_supplier(container))[0])) type;
+	return transform_type<type>(make_supplier(container), functor);
 }
 
 }  // namespace type

@@ -460,7 +460,7 @@ int main(int argc, const char **argv) {
 	vcc::window::run(window,
 		[&](VkExtent2D extent, VkFormat format,
 			std::vector<vcc::window::swapchain_type> &swapchain_images) {
-		type::mutate(projection_matrix)[0] = glm::perspective(
+		type::write(projection_matrix)[0] = glm::perspective(
 			45.f, float(extent.width) / extent.height, 1.f, 100.f);
 		command_buffers.clear();
 
@@ -535,23 +535,25 @@ int main(int argc, const char **argv) {
 			}
 		},
 		[&](uint32_t index) {
-			auto modelview_matrix(type::mutate(modelview_matrix_array));
-			auto normal_matrix(type::mutate(normal_matrix_array));
+			{
+				auto modelview_matrix(type::write(modelview_matrix_array));
+				auto normal_matrix(type::write(normal_matrix_array));
 
-			const glm::mat4 view_matrix(glm::lookAt(glm::vec3(0, 0, camera_distance),
-				glm::vec3(0, 0, 0), glm::vec3(0, 1, 0))
-				* glm::rotate(angle.y, glm::vec3(1, 0, 0))
-				* glm::rotate(angle.x, glm::vec3(0, 1, 0)));
-			for (std::size_t i = 0; i < num_instanced_drawings; ++i) {
-				const int num_per_row = (int)sqrt(num_instanced_drawings);
-				const int x = int(i) % num_per_row;
-				const int y = int(i) / num_per_row;
-				const glm::mat4 model_view(view_matrix
-					* glm::translate(glm::vec3(6 * (int(x) - int(num_per_row) / 2), 0,
-						6 * (int(y) - int(num_instanced_drawings / num_per_row) / 2))));
-				modelview_matrix[int(i)] = model_view;
-				normal_matrix[int(i)] =
-					glm::mat3(glm::transpose(glm::inverse(model_view)));
+				const glm::mat4 view_matrix(glm::lookAt(glm::vec3(0, 0, camera_distance),
+					glm::vec3(0, 0, 0), glm::vec3(0, 1, 0))
+					* glm::rotate(angle.y, glm::vec3(1, 0, 0))
+					* glm::rotate(angle.x, glm::vec3(0, 1, 0)));
+				for (std::size_t i = 0; i < num_instanced_drawings; ++i) {
+					const int num_per_row = (int)sqrt(num_instanced_drawings);
+					const int x = int(i) % num_per_row;
+					const int y = int(i) / num_per_row;
+					const glm::mat4 model_view(view_matrix
+						* glm::translate(glm::vec3(6 * (int(x) - int(num_per_row) / 2), 0,
+							6 * (int(y) - int(num_instanced_drawings / num_per_row) / 2))));
+					modelview_matrix[int(i)] = model_view;
+					normal_matrix[int(i)] =
+						glm::mat3(glm::transpose(glm::inverse(model_view)));
+				}
 			}
 			vcc::queue::submit(queue, {},
 				{ std::ref(command_buffers[index]) }, {});

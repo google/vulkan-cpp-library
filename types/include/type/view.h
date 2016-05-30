@@ -38,14 +38,32 @@ class view_type {
 	friend auto internal::make_view(U value)->view_type<typename ContainerT::value_type>;
 
 private:
+	struct read_instance_type {
+		virtual ~read_instance_type() {}
+		virtual const T &get(int index) const = 0;
+	};
+
 	struct instance_type {
 		virtual ~instance_type() {}
 		virtual std::size_t size() const = 0;
 		virtual bool is_array() const = 0;
-		virtual const T &get(int index) const = 0;
-		virtual void lock() = 0;
-		virtual void unlock() = 0;
+		virtual std::unique_ptr<read_instance_type> read() const = 0;
 		virtual revision_type revision() const = 0;
+	};
+
+	template<typename ContainerT>
+	struct read_instance_template_type : public read_instance_type {
+
+		typedef decltype(type::read(*((ContainerT *) nullptr))) container_type;
+
+		explicit read_instance_template_type(container_type &&container)
+			: container(std::forward<container_type>(container)) {}
+
+		const T &get(int index) const override {
+			return container[index];
+		}
+
+		container_type container;
 	};
 
 	template<typename ContainerT>
@@ -54,11 +72,8 @@ private:
 		typedef typename ContainerT::reference reference;
 		typedef typename ContainerT::const_reference const_reference;
 		typedef typename ContainerT::size_type size_type;
-		typedef typename ContainerT::lock_type lock_type;
 
-		lock_type container_lock;
-
-		std::size_t size() const override {
+		size_type size() const override {
 			return container->size();
 		}
 
@@ -66,16 +81,10 @@ private:
 			return ContainerT::is_array;
 		}
 
-		const T &get(int index) const override {
-			return (*container)[index];
-		}
-
-		void lock() override {
-			container_lock = internal::get_lock(*container);
-		}
-
-		void unlock() override {
-			container_lock = lock_type();
+		std::unique_ptr<read_instance_type> read() const override {
+			return std::unique_ptr<read_instance_type>(
+				new read_instance_template_type<ContainerT>(
+					type::read(*container)));
 		}
 
 		revision_type revision() const override {
@@ -104,36 +113,29 @@ public:
 	view_type &operator=(const view_type&) = delete;
 	view_type &operator=(view_type&&) = default;
 
-	struct lock_type {
+	struct read_type {
 		friend class view_type;
 	public:
-		lock_type() : view(nullptr) {}
-		lock_type(const lock_type&) = delete;
-		lock_type(lock_type &&copy) : view(copy.view) {
-			copy.view = nullptr;
+		read_type() : view(nullptr) {}
+		read_type(const read_type &) = delete;
+		read_type(read_type &&) = default;
+		read_type &operator=(const read_type &) = delete;
+		read_type &operator=(read_type &&) = default;
+
+		const T &operator[](int index) const {
+			return instance->get(index);
 		}
-		lock_type &operator=(const lock_type&) = delete;
-		lock_type &operator=(lock_type&&copy) {
-			release();
-			view = copy.view;
-			copy.view = nullptr;
-			return *this;
-		}
-		~lock_type() {
-			release();
-		}
+
 	private:
-		explicit lock_type(view_type *view) : view(view) {}
-		void release() {
-			if (view) {
-				view->unlock();
-			}
-		}
-		view_type *view;
+		explicit read_type(std::unique_ptr<read_instance_type> &&instance)
+			: instance(
+				std::forward<std::unique_ptr<read_instance_type>>(instance)) {}
+
+		std::unique_ptr<read_instance_type> instance;
 	};
 
-	lock_type lock() {
-		return lock_type(this);
+	read_type read() const {
+		return read_type(instance->read());
 	}
 
 	std::size_t size() const {
@@ -142,10 +144,6 @@ public:
 
 	bool is_array() const {
 		return instance->is_array();
-	}
-
-	const T &operator[](int index) const {
-		return instance->get(index);
 	}
 
 	revision_type revision() const {

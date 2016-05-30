@@ -106,23 +106,59 @@ typedef const_t_primitive<glm::mat2> const_mat2;
 typedef const_t_primitive<glm::mat3> const_mat3;
 typedef const_t_primitive<glm::mat4> const_mat4;
 
-typedef mutable_t_array<float> mutable_float_array;
+typedef writable_t_array<float> writable_float_array;
 
-typedef mutable_t_array<glm::vec2> mutable_vec2_array;
-typedef mutable_t_array<glm::vec3> mutable_vec3_array;
-typedef mutable_t_array<glm::vec4> mutable_vec4_array;
+typedef writable_t_array<glm::vec2> writable_vec2_array;
+typedef writable_t_array<glm::vec3> writable_vec3_array;
+typedef writable_t_array<glm::vec4> writable_vec4_array;
 
-typedef mutable_t_array<int> mutable_int_array;
-typedef mutable_t_array<glm::ivec2> mutable_ivec2_array;
-typedef mutable_t_array<glm::ivec3> mutable_ivec3_array;
-typedef mutable_t_array<glm::ivec4> mutable_ivec4_array;
+typedef writable_t_array<int> writable_int_array;
+typedef writable_t_array<glm::ivec2> writable_ivec2_array;
+typedef writable_t_array<glm::ivec3> writable_ivec3_array;
+typedef writable_t_array<glm::ivec4> writable_ivec4_array;
 
-typedef mutable_t_array<glm::mat2> mutable_mat2_array;
-typedef mutable_t_array<glm::mat3> mutable_mat3_array;
-typedef mutable_t_array<glm::mat4> mutable_mat4_array;
+typedef writable_t_array<glm::mat2> writable_mat2_array;
+typedef writable_t_array<glm::mat3> writable_mat3_array;
+typedef writable_t_array<glm::mat4> writable_mat4_array;
 
-typedef mutable_t_array<uint8_t> mutable_ubyte_array;
-typedef mutable_t_array<uint16_t> mutable_ushort_array;
+typedef writable_t_array<uint8_t> writable_ubyte_array;
+typedef writable_t_array<uint16_t> writable_ushort_array;
+
+typedef readable_t_array<float, true> readable_float_array;
+
+typedef readable_t_array<glm::vec2, true> readable_vec2_array;
+typedef readable_t_array<glm::vec3, true> readable_vec3_array;
+typedef readable_t_array<glm::vec4, true> readable_vec4_array;
+
+typedef readable_t_array<int, true> readable_int_array;
+typedef readable_t_array<glm::ivec2, true> readable_ivec2_array;
+typedef readable_t_array<glm::ivec3, true> readable_ivec3_array;
+typedef readable_t_array<glm::ivec4, true> readable_ivec4_array;
+
+typedef readable_t_array<glm::mat2, true> readable_mat2_array;
+typedef readable_t_array<glm::mat3, true> readable_mat3_array;
+typedef readable_t_array<glm::mat4, true> readable_mat4_array;
+
+typedef readable_t_array<uint8_t, true> readable_ubyte_array;
+typedef readable_t_array<uint16_t, true> readable_ushort_array;
+
+typedef readable_t_array<float, false> readable_const_float_array;
+
+typedef readable_t_array<glm::vec2, false> readable_const_vec2_array;
+typedef readable_t_array<glm::vec3, false> readable_const_vec3_array;
+typedef readable_t_array<glm::vec4, false> readable_const_vec4_array;
+
+typedef readable_t_array<int, false> readable_const_int_array;
+typedef readable_t_array<glm::ivec2, false> readable_const_ivec2_array;
+typedef readable_t_array<glm::ivec3, false> readable_const_ivec3_array;
+typedef readable_t_array<glm::ivec4, false> readable_const_ivec4_array;
+
+typedef readable_t_array<glm::mat2, false> readable_const_mat2_array;
+typedef readable_t_array<glm::mat3, false> readable_const_mat3_array;
+typedef readable_t_array<glm::mat4, false> readable_const_mat4_array;
+
+typedef readable_t_array<uint8_t, false> readable_const_ubyte_array;
+typedef readable_t_array<uint16_t, false> readable_const_ushort_array;
 
 enum element_enum {
 	type_unknown = 0,
@@ -294,43 +330,43 @@ template<>
 struct type_information<const_mat4>
 	: public type_information<mat4> {};
 template<>
-struct type_information<mutable_float_array>
+struct type_information<writable_float_array>
 	: public type_information<float_array> {};
 template<>
-struct type_information<mutable_vec2_array>
+struct type_information<writable_vec2_array>
 	: public type_information<vec2_array> {};
 template<>
-struct type_information<mutable_vec3_array>
+struct type_information<writable_vec3_array>
 	: public type_information<vec3_array> {};
 template<>
-struct type_information<mutable_vec4_array>
+struct type_information<writable_vec4_array>
 	: public type_information<vec4_array> {};
 template<>
-struct type_information<mutable_int_array>
+struct type_information<writable_int_array>
 	: public type_information<int_array> {};
 template<>
-struct type_information<mutable_ivec2_array>
+struct type_information<writable_ivec2_array>
 	: public type_information<ivec2_array> {};
 template<>
-struct type_information<mutable_ivec3_array>
+struct type_information<writable_ivec3_array>
 	: public type_information<ivec3_array> {};
 template<>
-struct type_information<mutable_ivec4_array>
+struct type_information<writable_ivec4_array>
 	: public type_information<ivec4_array> {};
 template<>
-struct type_information<mutable_mat2_array>
+struct type_information<writable_mat2_array>
 	: public type_information<mat2_array> {};
 template<>
-struct type_information<mutable_mat3_array>
+struct type_information<writable_mat3_array>
 	: public type_information<mat3_array> {};
 template<>
-struct type_information<mutable_mat4_array>
+struct type_information<writable_mat4_array>
 	: public type_information<mat4_array> {};
 template<>
-struct type_information<mutable_ubyte_array>
+struct type_information<writable_ubyte_array>
 	: public type_information<ubyte_array> {};
 template<>
-struct type_information<mutable_ushort_array>
+struct type_information<writable_ushort_array>
 	: public type_information<ushort_array> {};
 
 }  // namespace type

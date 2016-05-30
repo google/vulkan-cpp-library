@@ -461,7 +461,7 @@ int main(int argc, const char **argv) {
 #endif // __ANDROID__
 	vcc::window::run(window,
 		[&](VkExtent2D extent, VkFormat format, std::vector<vcc::window::swapchain_type> &swapchain_images) {
-		type::mutate(projection_matrix)[0] = glm::perspective(45.f, float(extent.width) / extent.height, 1.f, 100.f);
+		type::write(projection_matrix)[0] = glm::perspective(45.f, float(extent.width) / extent.height, 1.f, 100.f);
 		command_buffers.clear();
 
 		std::shared_ptr<vcc::image::image_type> depth_image(
@@ -523,8 +523,8 @@ int main(int argc, const char **argv) {
 			const glm::mat4 modelview_matrix(view_matrix
 				* glm::rotate(angle.y, glm::vec3(1, 0, 0))
 				* glm::rotate(angle.x, glm::vec3(0, 1, 0)));
-			type::mutate(modelview_matrix_array)[0] = modelview_matrix;
-			type::mutate(normal_matrix_array)[0] =
+			type::write(modelview_matrix_array)[0] = modelview_matrix;
+			type::write(normal_matrix_array)[0] =
 				glm::mat3(glm::transpose(glm::inverse(modelview_matrix)));
 			vcc::queue::submit(queue, {},
 			{ std::ref(command_buffers[index]) }, {});

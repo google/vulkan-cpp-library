@@ -71,7 +71,7 @@ TEST(ComputeShaderIntegrationTest, ComputeShaderIntegrationTest1) {
 	const std::size_t num_elements(16);
 	type::float_array input_array(num_elements);
 	{
-		const auto mutate(type::mutate(input_array));
+		const auto mutate(type::write(input_array));
 		std::iota(std::begin(mutate), std::end(mutate), 1.f);
 	}
 	vcc::input_buffer::input_buffer_type input_buffer(vcc::input_buffer::create(
@@ -151,8 +151,9 @@ TEST(ComputeShaderIntegrationTest, ComputeShaderIntegrationTest1) {
 		vcc::memory::map_type map(vcc::memory::map(std::ref(output_memory)));
 		const auto output_ptr(
 			reinterpret_cast<decltype(input_array)::value_type *>(map.data));
+		auto read_input_array(type::read(input_array));
 		for (int i = 0; i < num_elements; ++i) {
-			ASSERT_FLOAT_EQ(2 * input_array[i], output_ptr[i]);
+			ASSERT_FLOAT_EQ(2 * read_input_array[i], output_ptr[i]);
 		}
 	}
 }

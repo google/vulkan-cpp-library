@@ -37,9 +37,10 @@ TEST(TransformTypeTest, Iterate) {
 	type::transform_type<float2> transform(type::make_transform(std::ref(array), [](float f){
 		return float2{f, -f};
 	}));
+	auto read_transform(type::read(transform));
 	for (std::size_t i = 0; i < array.size(); ++i) {
-		float2 f{array[i], -array[i]};
-		EXPECT_EQ(f, transform[i]);
+		const float2 f{ float(i + 1), -float(i + 1) };
+		EXPECT_EQ(f, read_transform[i]);
 	}
 }
 
@@ -48,11 +49,12 @@ TEST(TransformTypeTest, Mutate) {
 	type::transform_type<float2> transform(type::make_transform(std::ref(array), [](float f){
 		return float2{f, -f};
 	}));
-	for (float &f : type::mutate(array)) {
+	for (float &f : type::write(array)) {
 		f += 1;
 	}
+	auto transform_read(type::read(transform));
 	for (std::size_t i = 0; i < array.size(); ++i) {
-		float2 f{array[i], -array[i]};
-		EXPECT_EQ(f, transform[i]);
+		float2 f{ float(i + 2), -float(i + 2) };
+		EXPECT_EQ(f, transform_read[i]);
 	}
 }

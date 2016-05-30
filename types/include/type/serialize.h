@@ -63,11 +63,11 @@ struct view_adapter : public adapter {
 	}
 
 	void copy(void *destination) {
-		auto lock(view->lock());
+		auto read(view->read());
 		if (view->revision() > revision) {
 			uint8_t *const d = (uint8_t *)destination + offset;
 			for (std::size_t i = 0; i < count; ++i) {
-				internal::copy_type<T>::copy((*view)[int(i)], &d[i * stride]);
+				internal::copy_type<T>::copy(read[int(i)], &d[i * stride]);
 			}
 			revision = view->revision();
 		}

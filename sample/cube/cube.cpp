@@ -435,7 +435,7 @@ int main(int argc, const char **argv) {
 		[&](uint32_t index) {
 			glm::mat4 view_matrix(glm::lookAt(glm::vec3(0, 0, camera_distance),
 				glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
-			type::mutate(projection_modelview_matrix)[0] = projection_matrix
+			type::write(projection_modelview_matrix)[0] = projection_matrix
 				* view_matrix * glm::rotate(angle.y, glm::vec3(1, 0, 0))
 				* glm::rotate(angle.x, glm::vec3(0, 1, 0));
 			vcc::queue::submit(queue, {},
