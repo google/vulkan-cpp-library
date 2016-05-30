@@ -116,7 +116,7 @@ public:
 	struct read_type {
 		friend class view_type;
 	public:
-		read_type() : view(nullptr) {}
+		read_type() = default;
 		read_type(const read_type &) = delete;
 		read_type(read_type &&) = default;
 		read_type &operator=(const read_type &) = delete;
