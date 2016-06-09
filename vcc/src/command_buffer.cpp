@@ -45,7 +45,10 @@ std::vector<command_buffer_type> allocate(
 }
 
 begin_type::~begin_type() {
-	VKCHECK(vkEndCommandBuffer(vcc::internal::get_instance(*command_buffer)));
+	if (command_buffer) {
+		VKCHECK(vkEndCommandBuffer(
+			vcc::internal::get_instance(*command_buffer)));
+	}
 }
 
 begin_type::begin_type(

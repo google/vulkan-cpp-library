@@ -591,14 +591,14 @@ namespace command_buffer {
 template<typename... CommandsT>
 void compile(command_buffer_type &command_buffer,
 		VkCommandBufferUsageFlags flags,
-		render_pass::render_pass_type &render_pass,
+		const type::supplier<render_pass::render_pass_type> &render_pass,
 		uint32_t subpass,
-		framebuffer::framebuffer_type &framebuffer,
+		const type::supplier<framebuffer::framebuffer_type> &framebuffer,
 		VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
 		VkQueryPipelineStatisticFlags pipelineStatistics,
 		CommandsT&&... commands) {
 	begin_type begin_instance(begin(std::ref(command_buffer), flags,
-		std::ref(render_pass), subpass, std::ref(framebuffer), occlusionQueryEnable,
+		render_pass, subpass, framebuffer, occlusionQueryEnable,
 		queryFlags, pipelineStatistics));
 	command::internal::cmd_args args = { command_buffer };
 	args.references.add(render_pass, framebuffer);

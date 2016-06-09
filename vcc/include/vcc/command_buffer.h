@@ -56,9 +56,9 @@ struct command_buffer_type
 	template<typename... CommandsT>
 	friend void compile(command_buffer_type &command_buffer,
 		VkCommandBufferUsageFlags flags,
-		render_pass::render_pass_type &render_pass,
+		const type::supplier<render_pass::render_pass_type> &render_pass,
 		uint32_t subpass,
-		framebuffer::framebuffer_type &framebuffer,
+		const type::supplier<framebuffer::framebuffer_type> &framebuffer,
 		VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
 		VkQueryPipelineStatisticFlags pipelineStatistics,
 		CommandsT&&... commands);
@@ -93,6 +93,7 @@ VCC_LIBRARY std::vector<command_buffer_type> allocate(
 	VkCommandBufferLevel level, uint32_t commandBufferCount);
 
 struct begin_type {
+	begin_type() = default;
 	begin_type(const begin_type &) = delete;
 	begin_type(begin_type &&) = default;
 	begin_type &operator=(const begin_type &) = delete;
