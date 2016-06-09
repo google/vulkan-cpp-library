@@ -391,6 +391,9 @@ void cmd(cmd_args &args, const execute_commands &ec) {
 	for (const type::supplier<command_buffer::command_buffer_type> &command : ec.commandBuffers) {
 		command_buffers.push_back(vcc::internal::get_instance(*command));
 		args.references.add(command);
+		args.pre_execute_callbacks.add([command](queue::queue_type &queue) {
+			command_buffer::internal::get_pre_execute_hook(*command)(queue);
+		});
 	}
 	VKTRACE(vkCmdExecuteCommands(
 		vcc::internal::get_instance(args.buffer.get()),
