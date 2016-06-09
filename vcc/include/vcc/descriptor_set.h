@@ -36,7 +36,7 @@ struct queue_type;
 namespace descriptor_set {
 
 struct descriptor_set_type
-	: internal::movable_allocated_with_pool_parent2<VkDescriptorSet,
+	: public internal::movable_allocated_with_pool_parent2<VkDescriptorSet,
 	  device::device_type, descriptor_pool::descriptor_pool_type,
 	  vkFreeDescriptorSets> {
 	descriptor_set_type() = default;
@@ -69,9 +69,9 @@ VCC_LIBRARY std::vector<descriptor_set_type> create(
 		vcc::descriptor_set_layout::descriptor_set_layout_type>> &setLayouts);
 
 struct copy {
-	type::supplier<descriptor_set_type> src_set;
+	descriptor_set_type &src_set;
 	uint32_t src_binding, src_array_element;
-	type::supplier<descriptor_set_type> dst_set;
+	descriptor_set_type &dst_set;
 	uint32_t dst_binding, dst_array_element, descriptor_count;
 };
 
@@ -104,7 +104,7 @@ VCC_LIBRARY buffer_info_data_type buffer_info(
 	const type::supplier<input_buffer::input_buffer_type> &buffer);
 
 struct write_image {
-	type::supplier<descriptor_set_type> dst_set;
+	descriptor_set_type &dst_set;
 	uint32_t dst_binding, dst_array_element;
 	// Must be any of the following only
 	// VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_
@@ -115,7 +115,7 @@ struct write_image {
 };
 
 struct write_buffer_type {
-	type::supplier<descriptor_set_type> dst_set;
+	descriptor_set_type &dst_set;
 	uint32_t dst_binding, dst_array_element;
 	// Must be any of the following only
 	// VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_
@@ -126,7 +126,7 @@ struct write_buffer_type {
 };
 
 inline write_buffer_type write_buffer(
-		const type::supplier<descriptor_set_type> &dst_set,
+		descriptor_set_type &dst_set,
 		uint32_t dst_binding, uint32_t dst_array_element,
 		VkDescriptorType descriptor_type,
 		const std::vector<buffer_info_type> &buffers) {
@@ -135,7 +135,7 @@ inline write_buffer_type write_buffer(
 }
 
 struct write_buffer_data_type {
-	type::supplier<descriptor_set_type> dst_set;
+	descriptor_set_type &dst_set;
 	uint32_t dst_binding, dst_array_element;
 	// Must be any of the following
 	// VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_
@@ -146,7 +146,7 @@ struct write_buffer_data_type {
 };
 
 inline write_buffer_data_type write_buffer(
-	const type::supplier<descriptor_set_type> &dst_set,
+	descriptor_set_type &dst_set,
 	uint32_t dst_binding, uint32_t dst_array_element,
 	VkDescriptorType descriptor_type,
 	const std::vector<buffer_info_data_type> &buffers) {
@@ -155,7 +155,7 @@ inline write_buffer_data_type write_buffer(
 }
 
 struct write_buffer_view_type {
-	type::supplier<descriptor_set_type> dst_set;
+	descriptor_set_type &dst_set;
 	uint32_t dst_binding, dst_array_element;
 	// Must be any of the following only
 	// VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER or VK_DESCRIPTOR_
@@ -165,12 +165,11 @@ struct write_buffer_view_type {
 };
 
 inline write_buffer_view_type write_buffer_view(
-		type::supplier<descriptor_set_type> &&dst_set,
+		descriptor_set_type &dst_set,
 		uint32_t dst_binding, uint32_t dst_array_element,
 		VkDescriptorType descriptor_type,
 		const std::vector<type::supplier<buffer_view::buffer_view_type>> &buffers) {
-	return write_buffer_view_type{
-		std::forward<type::supplier<descriptor_set_type>>(dst_set),
+	return write_buffer_view_type{ dst_set,
 		dst_binding, dst_array_element, descriptor_type, buffers };
 }
 
@@ -211,7 +210,7 @@ void update(device::device_type &device, const ArgsT &... args) {
 	util::internal::pass((internal::add(storage, args), 1)...);
 	const std::set<std::mutex *> mutexes(
 		util::set_from_variadic_movables<std::mutex *>(
-			&vcc::internal::get_mutex(*args.dst_set)...));
+			&vcc::internal::get_mutex(args.dst_set)...));
 	std::vector<std::unique_lock<std::mutex>> deferred_locks;
 	deferred_locks.reserve(mutexes.size());
 	std::transform(mutexes.begin(), mutexes.end(),

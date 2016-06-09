@@ -356,9 +356,9 @@ int main(int argc, const char **argv) {
 	const VkFormat normal_image_format(vcc::image::get_format(normal_image));
 
 	vcc::descriptor_set::update(device,
-		vcc::descriptor_set::write_buffer(std::ref(desc_set), 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		vcc::descriptor_set::write_buffer(desc_set, 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		{ vcc::descriptor_set::buffer_info(std::ref(matrix_uniform_buffer)) }),
-		vcc::descriptor_set::write_image{ std::ref(desc_set), 1, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		vcc::descriptor_set::write_image{ desc_set, 1, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		{
 			vcc::descriptor_set::image_info{
 				std::ref(sampler),
@@ -368,7 +368,7 @@ int main(int argc, const char **argv) {
 		} });
 	// TODO(gardell): Merge with above, there's a deadlock since desc_set is locked twice.
 	vcc::descriptor_set::update(device,
-		vcc::descriptor_set::write_image{ std::ref(desc_set), 2, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		vcc::descriptor_set::write_image{ desc_set, 2, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		{
 			vcc::descriptor_set::image_info{
 				std::ref(normal_sampler),

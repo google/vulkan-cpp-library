@@ -59,22 +59,22 @@ namespace internal {
 
 void add(update_storage &storage, const copy &c) {
 	VkCopyDescriptorSet set = {VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET, NULL};
-	set.srcSet = vcc::internal::get_instance(*c.src_set);
+	set.srcSet = vcc::internal::get_instance(c.src_set);
 	set.srcBinding = c.src_binding;
 	set.srcArrayElement = c.src_array_element;
-	set.dstSet = vcc::internal::get_instance(*c.dst_set);
+	set.dstSet = vcc::internal::get_instance(c.dst_set);
 	set.dstBinding = c.dst_binding;
 	set.dstArrayElement = c.dst_array_element;
 	set.descriptorCount = c.descriptor_count;
 	storage.copy_sets.push_back(set);
 	for (uint32_t i = 0; i < c.descriptor_count; ++i) {
-		c.dst_set->references.clone(std::pair<uint32_t, uint32_t>{ c.dst_binding, uint32_t(c.dst_array_element + i) }, c.src_set->references);
+		c.dst_set.references.clone(std::pair<uint32_t, uint32_t>{ c.dst_binding, uint32_t(c.dst_array_element + i) }, c.src_set.references);
 	}
 }
 
 void add(update_storage &storage, const write_image &write) {
 	VkWriteDescriptorSet set = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, NULL};
-	set.dstSet = vcc::internal::get_instance(*write.dst_set);
+	set.dstSet = vcc::internal::get_instance(write.dst_set);
 	set.dstBinding = write.dst_binding;
 	set.dstArrayElement = write.dst_array_element;
 	set.descriptorCount = (uint32_t) write.images.size();
@@ -90,7 +90,7 @@ void add(update_storage &storage, const write_image &write) {
 	storage.image_infos.push_back(std::move(image_infos));
 	storage.write_sets.push_back(set);
 	for (uint32_t i = 0; i < write.images.size(); ++i) {
-		write.dst_set->references.put(std::pair<uint32_t, uint32_t>{
+		write.dst_set.references.put(std::pair<uint32_t, uint32_t>{
 			write.dst_binding, uint32_t(write.dst_array_element + i) },
 			write.images[i].sampler, write.images[i].image_view);
 	}
@@ -98,7 +98,7 @@ void add(update_storage &storage, const write_image &write) {
 
 void add(update_storage &storage, const write_buffer_type &write) {
 	VkWriteDescriptorSet set = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, NULL};
-	set.dstSet = vcc::internal::get_instance(*write.dst_set);
+	set.dstSet = vcc::internal::get_instance(write.dst_set);
 	set.dstBinding = write.dst_binding;
 	set.dstArrayElement = write.dst_array_element;
 	set.descriptorCount = (uint32_t) write.buffers.size();
@@ -112,7 +112,7 @@ void add(update_storage &storage, const write_buffer_type &write) {
 	storage.buffer_infos.push_back(std::move(buffer_infos));
 	storage.write_sets.push_back(set);
 	for (uint32_t i = 0; i < write.buffers.size(); ++i) {
-		write.dst_set->references.put(
+		write.dst_set.references.put(
 			std::make_pair(write.dst_binding, uint32_t(write.dst_array_element + i)),
 			write.buffers[i].buffer);
 	}
@@ -127,7 +127,7 @@ void add(update_storage &storage, const write_buffer_data_type &wbdt) {
 			std::ref(input_buffer::internal::get_buffer(*buffer.buffer)),
 			buffer.offset, buffer.range });
 		const type::supplier<input_buffer::input_buffer_type> &buf(buffer.buffer);
-		wbdt.dst_set->pre_execute_callbacks.put(
+		wbdt.dst_set.pre_execute_callbacks.put(
 			std::make_pair(wbdt.dst_binding, uint32_t(wbdt.dst_array_element + i)),
 			[buf](queue::queue_type &queue) {input_buffer::flush(queue, *buf); });
 	}
@@ -138,7 +138,7 @@ void add(update_storage &storage, const write_buffer_data_type &wbdt) {
 
 void add(update_storage &storage, const write_buffer_view_type &write) {
 	VkWriteDescriptorSet set = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, NULL};
-	set.dstSet = vcc::internal::get_instance(*write.dst_set);
+	set.dstSet = vcc::internal::get_instance(write.dst_set);
 	set.dstBinding = write.dst_binding;
 	set.dstArrayElement = write.dst_array_element;
 	set.descriptorCount = (uint32_t) write.buffers.size();
@@ -152,7 +152,7 @@ void add(update_storage &storage, const write_buffer_view_type &write) {
 	storage.buffer_view.push_back(std::move(buffer_views));
 	storage.write_sets.push_back(set);
 	for (uint32_t i = 0; i < write.buffers.size(); ++i) {
-		write.dst_set->references.put(std::make_pair(write.dst_binding, uint32_t(write.dst_array_element + i)),
+		write.dst_set.references.put(std::make_pair(write.dst_binding, uint32_t(write.dst_array_element + i)),
 			write.buffers[i]);
 	}
 }

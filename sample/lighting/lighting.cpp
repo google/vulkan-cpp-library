@@ -168,9 +168,9 @@ int main(int argc, const char **argv) {
 		{ std::ref(desc_layout) }).front()));
 
 	vcc::descriptor_set::update(device,
-		vcc::descriptor_set::write_buffer(std::ref(desc_set), 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		vcc::descriptor_set::write_buffer(desc_set, 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		{ vcc::descriptor_set::buffer_info(std::ref(matrix_uniform_buffer)) }),
-		vcc::descriptor_set::write_buffer(std::ref(desc_set), 1, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		vcc::descriptor_set::write_buffer(desc_set, 1, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		{ vcc::descriptor_set::buffer_info(std::ref(light_uniform_buffer)) }));
 
 	vcc::queue::queue_type queue(vcc::queue::get_graphics_queue(

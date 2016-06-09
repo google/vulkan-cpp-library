@@ -90,11 +90,11 @@ TEST(ComputeShaderIntegrationTest, ComputeShaderIntegrationTest1) {
 			output_buffer));
 
 	vcc::descriptor_set::update(device,
-		vcc::descriptor_set::write_buffer(std::ref(desc_set), 0, 0,
+		vcc::descriptor_set::write_buffer(desc_set, 0, 0,
 			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			{ vcc::descriptor_set::buffer_info(std::ref(input_buffer)) }));
 	vcc::descriptor_set::update(device,
-		vcc::descriptor_set::write_buffer(std::ref(desc_set), 1, 0,
+		vcc::descriptor_set::write_buffer(desc_set, 1, 0,
 			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			{ vcc::descriptor_set::buffer_info(std::ref(output_buffer), 0,
 				VK_WHOLE_SIZE) }));

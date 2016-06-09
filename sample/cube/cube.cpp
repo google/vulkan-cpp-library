@@ -235,10 +235,10 @@ int main(int argc, const char **argv) {
 			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE, VK_FALSE));
 
 		vcc::descriptor_set::update(device,
-			vcc::descriptor_set::write_buffer(std::ref(desc_set), 0, 0,
+			vcc::descriptor_set::write_buffer(desc_set, 0, 0,
 				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				{ vcc::descriptor_set::buffer_info(std::ref(matrix_uniform_buffer)) }),
-			vcc::descriptor_set::write_image{ std::ref(desc_set), 1, 0,
+			vcc::descriptor_set::write_image{ desc_set, 1, 0,
 				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				{
 					vcc::descriptor_set::image_info{ std::move(sampler),
