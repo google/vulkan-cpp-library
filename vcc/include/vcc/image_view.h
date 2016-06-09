@@ -35,6 +35,7 @@ struct image_view_type
 		const type::supplier<image::image_type> &image,
 		const VkImageSubresourceRange &subresourceRange);
 
+	image_view_type() = default;
 	image_view_type(const image_view_type &) = delete;
 	image_view_type(image_view_type &&copy) = default;
 	image_view_type& operator=(const image_view_type&) = delete;
