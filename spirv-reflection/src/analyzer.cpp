@@ -239,6 +239,12 @@ void parse_primitive(const primitive_type &primitive, const intermediate_type &i
 	}
 }
 
+template<typename MapT, typename KeyT, typename ValueT>
+ValueT get_value_or(const MapT &map, const KeyT &key, ValueT def) {
+	typename MapT::const_iterator it(map.find(key));
+	return it != map.end() ? it->second : def;
+}
+
 void parse_type(identifier_type type_id, const intermediate_type &intermediate,
 		module_type &module) {
 	const auto struct_it(intermediate.structs.find(type_id));
@@ -248,10 +254,15 @@ void parse_type(identifier_type type_id, const intermediate_type &intermediate,
 		if (name_it != intermediate.names.end()) {
 			struct_.name = name_it->second.name;
 		}
+		const auto member_offsets_it(intermediate.member_offsets.find(
+			struct_it->first));
 		for (uint32_t i = 0; i < uint32_t(struct_it->second.member_ids.size()); ++i) {
+			uint32_t offset(member_offsets_it != intermediate.member_offsets.end()
+				? get_value_or(member_offsets_it->second.offsets, i, 0) : 0);
+
 			struct_.members.push_back(member_type{struct_it->second.member_ids[i],
 				intermediate.member_names.at(struct_it->first).names.at(i),
-				intermediate.member_offsets.at(struct_it->first).offsets.at(i)});
+				offset });
 		}
 		module.struct_types.emplace(struct_it->first, struct_);
 	} else {
