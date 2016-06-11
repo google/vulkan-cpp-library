@@ -47,7 +47,7 @@ pipeline_layout_type create(const type::supplier<device::device_type> &device,
 	create.pPushConstantRanges = push_constant_ranges.empty() ? NULL : &push_constant_ranges.front();
 	VkPipelineLayout pipeline_layout;
 	VKCHECK(vkCreatePipelineLayout(vcc::internal::get_instance(*device), &create, NULL, &pipeline_layout));
-	return pipeline_layout_type(pipeline_layout, device);
+	return pipeline_layout_type(pipeline_layout, device, set_layouts);
 }
 
 namespace internal {

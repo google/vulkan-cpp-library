@@ -54,10 +54,14 @@ struct pipeline_layout_type
 	pipeline_layout_type &operator=(pipeline_layout_type &&) = default;
 
 private:
-	pipeline_layout_type(VkPipelineLayout instance, const type::supplier<device::device_type> &parent)
+	pipeline_layout_type(VkPipelineLayout instance,
+		const type::supplier<device::device_type> &parent,
+		const std::vector<type::supplier<vcc::descriptor_set_layout::descriptor_set_layout_type>> &set_layouts)
 		: vcc::internal::movable_destructible_with_parent<VkPipelineLayout,
 				device::device_type, vkDestroyPipelineLayout>(
-			instance, type::supplier<device::device_type>(parent)) {}
+			instance, type::supplier<device::device_type>(parent)),
+			set_layouts(set_layouts) {}
+	std::vector<type::supplier<vcc::descriptor_set_layout::descriptor_set_layout_type>> set_layouts;
 	vcc::internal::hook_container_type<queue::queue_type &> pre_execute_callbacks;
 };
 
