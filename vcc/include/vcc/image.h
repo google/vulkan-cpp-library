@@ -97,6 +97,9 @@ inline uint32_t get_array_layers(const image_type &image) {
 	return image.arrayLayers;
 }
 
+VCC_LIBRARY VkSubresourceLayout get_subresource_layout(image_type &image,
+	const VkImageSubresource &subresource);
+
 }  // namespace image
 }  // namespace vcc
 

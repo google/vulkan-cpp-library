@@ -52,5 +52,15 @@ image_type create(const type::supplier<device::device_type> &device,
 		arrayLayers);
 }
 
+VkSubresourceLayout get_subresource_layout(image_type &image,
+		const VkImageSubresource &subresource) {
+	VkSubresourceLayout layout;
+	vkGetImageSubresourceLayout(
+		internal::get_instance(*internal::get_parent(image)),
+		internal::get_instance(image),
+		&subresource, &layout);
+	return layout;
+}
+
 }  // namespace image
 }  // namespace vcc
