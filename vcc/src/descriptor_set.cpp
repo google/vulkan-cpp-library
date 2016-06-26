@@ -83,7 +83,8 @@ void add(update_storage &storage, const write_image &write) {
 	image_infos.reserve(write.images.size());
 	for (const image_info &info : write.images) {
 		image_infos.push_back(VkDescriptorImageInfo{
-			vcc::internal::get_instance(*info.sampler),
+			info.sampler
+				? vcc::internal::get_instance(*info.sampler) : VK_NULL_HANDLE,
 			vcc::internal::get_instance(*info.image_view), info.image_layout});
 	}
 	set.pImageInfo = image_infos.data();
