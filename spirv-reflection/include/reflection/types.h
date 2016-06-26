@@ -60,6 +60,7 @@ struct image_type {
 	bool multisampled;
 };
 
+// TODO(gardell): Possibly rename since its used with VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
 struct sampled_image_type {
 	identifier_type sampler_id, image_id; // sampler_id is OpTypeSampler, image_id is OpTypeImage.
 };

@@ -55,7 +55,8 @@ module_type parse(StreamT &&stream) {
  * Get all the variables references by a given function, this includes searching through
  * variables references by intermediate functions.
  */
-std::vector<variable_type> variable_references(const module_type &module, const std::string &name);
+std::vector<std::reference_wrapper<const variable_type>> variable_references(
+	const module_type &module, const std::string &name);
 
 }  // namespace spirv
 

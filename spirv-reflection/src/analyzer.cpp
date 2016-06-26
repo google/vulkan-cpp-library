@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <algorithm>
 #include <reflection/analyzer.h>
 #include <reflection/internal/argument_parser.h>
 #include <reflection/internal/intermediate_types.h>
@@ -404,4 +405,25 @@ module_type parse(std::istream &stream) {
 }
 
 }  // namespace internal
+
+std::vector<std::reference_wrapper<const variable_type>> variable_references(
+		const module_type &module, const std::string &name) {
+	auto it(std::find_if(module.entry_points.begin(), module.entry_points.end(),
+		[&name](const entry_point_type &entry_point) {
+		return entry_point.name == name;
+	}));
+	if (it == module.entry_points.end()) {
+		std::stringstream ss;
+		ss << "Unable to locate entry point named \"" << name << "\"";
+		throw std::runtime_error(ss.str());
+	}
+	const entry_point_type &entry_point(*it);
+	std::vector<std::reference_wrapper<const variable_type>> references;
+	references.reserve(entry_point.target_ids.size());
+	for (identifier_type id : entry_point.target_ids) {
+		references.push_back(std::ref(module.variables.at(id)));
+	}
+	return std::move(references);
+}
+
 }  // namespace spirv
