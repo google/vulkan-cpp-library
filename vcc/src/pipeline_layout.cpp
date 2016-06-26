@@ -23,13 +23,6 @@
 
 namespace vcc {
 namespace pipeline_layout {
-namespace internal {
-
-vcc::internal::hook_container_type<queue::queue_type &> &get_pre_execute_callbacks(pipeline_layout_type &layout) {
-	return layout.pre_execute_callbacks;
-}
-
-}  // namespace internal
 
 pipeline_layout_type create(const type::supplier<device::device_type> &device,
 		const std::vector<type::supplier<vcc::descriptor_set_layout::descriptor_set_layout_type>> &set_layouts,

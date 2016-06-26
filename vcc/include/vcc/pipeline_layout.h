@@ -30,22 +30,35 @@ struct queue_type;
 
 namespace pipeline_layout {
 
-struct pipeline_layout_type;
-
 namespace internal {
-VCC_LIBRARY vcc::internal::hook_container_type<queue::queue_type &>
-	&get_pre_execute_callbacks(pipeline_layout_type &);
+
+template<typename PipelineLayoutT>
+auto get_pre_execute_callbacks(PipelineLayoutT &layout)
+		->decltype(layout.pre_execute_callbacks)& {
+	return layout.pre_execute_callbacks;
+}
+
+template<typename PipelineLayoutT>
+auto get_set_layouts(const PipelineLayoutT &pipeline)
+		->const decltype(pipeline.set_layouts)& {
+	return pipeline.set_layouts;
+}
+
 }  // namespace internal
 
 struct pipeline_layout_type
 	: vcc::internal::movable_destructible_with_parent<VkPipelineLayout,
 		device::device_type, vkDestroyPipelineLayout> {
-	friend vcc::internal::hook_container_type<queue::queue_type &>
-		&internal::get_pre_execute_callbacks(pipeline_layout_type &);
+	template<typename PipelineLayoutT>
+	friend auto internal::get_pre_execute_callbacks(PipelineLayoutT &layout)
+		->decltype(layout.pre_execute_callbacks)&;
 	friend VCC_LIBRARY pipeline_layout_type create(
 		const type::supplier<device::device_type> &device,
 		const std::vector<type::supplier<vcc::descriptor_set_layout::descriptor_set_layout_type>> &set_layouts,
 		const std::vector<VkPushConstantRange> &push_constant_ranges);
+	template<typename PipelineLayoutT>
+	friend auto internal::get_set_layouts(const PipelineLayoutT &pipeline)
+		->const decltype(pipeline->set_layouts)&;
 
 	pipeline_layout_type() = default;
 	pipeline_layout_type(const pipeline_layout_type &) = delete;
@@ -71,10 +84,10 @@ VCC_LIBRARY pipeline_layout_type create(const type::supplier<device::device_type
 
 namespace internal {
 
-	VCC_LIBRARY void flush(const type::supplier<type::serialize_type> &constants,
-		VkPipelineLayout pipeline_layout,
-		const std::vector<VkPushConstantRange> &push_constant_ranges,
-		queue::queue_type &queue);
+VCC_LIBRARY void flush(const type::supplier<type::serialize_type> &constants,
+	VkPipelineLayout pipeline_layout,
+	const std::vector<VkPushConstantRange> &push_constant_ranges,
+	queue::queue_type &queue);
 
 }  // namespace internal
 
