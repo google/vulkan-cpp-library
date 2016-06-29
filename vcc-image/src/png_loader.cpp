@@ -117,8 +117,8 @@ image::image_type png_loader_type::load(
 		usage, sharingMode, queueFamilyIndices, VK_IMAGE_LAYOUT_UNDEFINED));
 	memory::bind(device, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, image);
 	const std::size_t bpp(bytes_per_pixel(format));
-	copy_to_image(*queue, device::get_physical_device(*device), format,
-		VK_IMAGE_ASPECT_COLOR_BIT, VkExtent2D{ extent.width, extent.height },
+	copy_to_linear_image(format, VK_IMAGE_ASPECT_COLOR_BIT,
+		VkExtent2D{ extent.width, extent.height },
 		(uint8_t *)data.c_str(), bpp, bpp * extent.width, image);
 	return std::move(image);
 }

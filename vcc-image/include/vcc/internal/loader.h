@@ -64,16 +64,6 @@ struct gli_loader_type : public loader_type {
 		std::istream &stream);
 };
 
-/*
-* Copy to the mipmap level 0, array 0 of an image.
-* According to Vulkan specs, the base requirement of VK_IMAGE_TILING_LINEAR on page 207
-* indicates we can't expect much more of the linear layout.
-*/
-void copy_to_image(queue::queue_type &queue, VkPhysicalDevice physical_device,
-	VkFormat format, VkImageAspectFlags aspect_mask, VkExtent2D extent,
-	const void *source, std::size_t block_size, std::size_t row_pitch,
-	image::image_type &target_image);
-
 uint32_t bytes_per_pixel(VkFormat format);
 
 }  // namespace internal

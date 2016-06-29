@@ -28,35 +28,6 @@ const char *to_string(VkFormat format);
 
 uint32_t bytes_per_pixel(VkFormat format);
 
-/*
-* Copy to the mipmap level 0, array 0 of an image.
-* According to Vulkan specs, the base requirement of VK_IMAGE_TILING_LINEAR on page 207
-* indicates we can't expect much more of the linear layout.
-*/
-void copy_to_image(queue::queue_type &queue, VkPhysicalDevice physical_device,
-		VkFormat format, VkImageAspectFlags aspect_mask, VkExtent2D extent,
-		const void *source, std::size_t block_size, std::size_t row_pitch,
-		image::image_type &target_image) {
-	const memory::map_type mapped(memory::map(vcc::internal::get_memory(target_image)));
-	VkSubresourceLayout layout;
-	VkImageSubresource resource{ aspect_mask, 0, 0 };
-	VKTRACE(vkGetImageSubresourceLayout(vcc::internal::get_instance(*vcc::internal::get_parent(queue)),
-	vcc::internal::get_instance(target_image), &resource, &layout));
-	uint8_t *destination = (uint8_t *)mapped.data
-		+ layout.offset;
-	uint8_t *destination_row = destination;
-	const uint8_t *source_row = (const uint8_t *)source;
-	for (uint32_t y = 0; y < extent.height; ++y) {
-		for (uint32_t x = 0; x < extent.width; ++x) {
-			for (uint32_t i = 0; i < block_size; ++i) {
-				destination_row[x * block_size + i] = source_row[x * block_size + i];
-			}
-		}
-		destination_row += layout.rowPitch;
-		source_row += row_pitch;
-	}
-}
-
 std::string dump_format_feature_flags(VkFormatFeatureFlags flags);
 std::string dump_format_properties(const VkFormatProperties &properties);
 

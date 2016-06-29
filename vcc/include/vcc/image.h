@@ -30,7 +30,8 @@ struct memory_type;
 
 namespace swapchain {
 struct swapchain_type;
-VCC_LIBRARY std::vector<image::image_type> get_images(swapchain_type &swapchain);
+VCC_LIBRARY std::vector<image::image_type> get_images(
+	swapchain_type &swapchain);
 }  // namespace memory
 
 namespace image {
@@ -99,6 +100,14 @@ inline uint32_t get_array_layers(const image_type &image) {
 
 VCC_LIBRARY VkSubresourceLayout get_subresource_layout(image_type &image,
 	const VkImageSubresource &subresource);
+
+/*
+ * Copy to the mipmap level 0, array 0 of an VK_IMAGE_TILING_LINEAR image.
+ */
+VCC_LIBRARY void copy_to_linear_image(VkFormat format,
+	VkImageAspectFlags aspect_mask, VkExtent2D extent, const void *source,
+	std::size_t block_size, std::size_t row_pitch,
+	image::image_type &target_image);
 
 }  // namespace image
 }  // namespace vcc

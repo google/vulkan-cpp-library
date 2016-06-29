@@ -14,6 +14,7 @@
 * limitations under the License.
 */
 #include <vcc/image.h>
+#include <vcc/memory.h>
 
 namespace vcc {
 namespace image {
@@ -60,6 +61,28 @@ VkSubresourceLayout get_subresource_layout(image_type &image,
 		internal::get_instance(image),
 		&subresource, &layout);
 	return layout;
+}
+
+VCC_LIBRARY void copy_to_linear_image(VkFormat format,
+		VkImageAspectFlags aspect_mask, VkExtent2D extent, const void *source,
+		std::size_t block_size, std::size_t row_pitch,
+		image::image_type &target_image) {
+	const memory::map_type mapped(memory::map(internal::get_memory(target_image)));
+	VkSubresourceLayout layout(get_subresource_layout(target_image,
+		{ aspect_mask, 0, 0 }));
+	uint8_t *destination = (uint8_t *)mapped.data
+		+ layout.offset;
+	uint8_t *destination_row = destination;
+	const uint8_t *source_row = (const uint8_t *)source;
+	for (uint32_t y = 0; y < extent.height; ++y) {
+		for (uint32_t x = 0; x < extent.width; ++x) {
+			for (uint32_t i = 0; i < block_size; ++i) {
+				destination_row[x * block_size + i] = source_row[x * block_size + i];
+			}
+		}
+		destination_row += layout.rowPitch;
+		source_row += row_pitch;
+	}
 }
 
 }  // namespace image

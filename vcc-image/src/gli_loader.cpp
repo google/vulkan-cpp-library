@@ -106,7 +106,7 @@ image::image_type gli_loader_type::load(
 						gli::is_compressed(texture.format())
 						? compressed_extent(texture) : extent);
 					const std::size_t block_size(gli::block_size(texture.format()));
-					copy_to_image(*queue, physical_device, format, aspect_mask,
+					copy_to_linear_image(format, aspect_mask,
 						VkExtent2D{ uint32_t(copy_extent.x), uint32_t(copy_extent.y) },
 						texture.data(layer, face, level), block_size,
 						block_size * copy_extent.x, staging_image);
