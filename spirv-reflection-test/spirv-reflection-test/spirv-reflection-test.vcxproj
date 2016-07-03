@@ -94,7 +94,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(GoogleTestDir)include;$(SolutionDir)spirv-reflection\include;$(VulkanSdk)spirv-tools\include\spirv-tools;$(VulkanSdk)spirv-tools\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(GoogleTestDir)include;$(SolutionDir)spirv-reflection\include;$(VulkanSdk)spirv-tools\include\;$(VulkanSdk)spirv-tools\external\spirv-headers\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -111,7 +111,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(GoogleTestDir)include;$(SolutionDir)spirv-reflection\include;$(VulkanSdk)spirv-tools\include\spirv-tools;$(VulkanSdk)spirv-tools\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(GoogleTestDir)include;$(SolutionDir)spirv-reflection\include;$(VulkanSdk)spirv-tools\include\;$(VulkanSdk)spirv-tools\external\spirv-headers\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,7 +139,7 @@ $(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)specialization_constan
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(GoogleTestDir)include;$(SolutionDir)spirv-reflection\include;$(VulkanSdk)spirv-tools\include\spirv-tools;$(VulkanSdk)spirv-tools\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(GoogleTestDir)include;$(SolutionDir)spirv-reflection\include;$(VulkanSdk)spirv-tools\include\;$(VulkanSdk)spirv-tools\external\spirv-headers\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -160,7 +160,7 @@ $(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)specialization_constan
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(GoogleTestDir)include;$(SolutionDir)spirv-reflection\include;$(VulkanSdk)spirv-tools\include\spirv-tools;$(VulkanSdk)spirv-tools\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(GoogleTestDir)include;$(SolutionDir)spirv-reflection\include;$(VulkanSdk)spirv-tools\include\;$(VulkanSdk)spirv-tools\external\spirv-headers\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

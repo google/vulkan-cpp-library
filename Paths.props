@@ -2,7 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
-    <VulkanSdk>C:\VulkanSDK\1.0.13.0\</VulkanSdk>
+    <VulkanSdk>C:\VulkanSDK\1.0.17.0\</VulkanSdk>
     <GoogleTestDir>C:\Users\Johan Gardell\Documents\programming\googletest\googletest\</GoogleTestDir>
     <PngDir>C:\Users\Johan Gardell\Downloads\lpng1621\lpng1621\projects\vstudio\</PngDir>
     <GlmDir>C:\Users\Johan Gardell\Documents\programming\glm\</GlmDir>
