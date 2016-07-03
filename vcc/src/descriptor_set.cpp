@@ -82,10 +82,12 @@ void add(update_storage &storage, const write_image &write) {
 	std::vector<VkDescriptorImageInfo> image_infos;
 	image_infos.reserve(write.images.size());
 	for (const image_info &info : write.images) {
+		const VkSampler instance(info.sampler
+				? (VkSampler) vcc::internal::get_instance(*info.sampler)
+				: VK_NULL_HANDLE);
 		image_infos.push_back(VkDescriptorImageInfo{
-			info.sampler
-				? vcc::internal::get_instance(*info.sampler) : VK_NULL_HANDLE,
-			vcc::internal::get_instance(*info.image_view), info.image_layout});
+			instance, vcc::internal::get_instance(*info.image_view),
+			info.image_layout});
 	}
 	set.pImageInfo = image_infos.data();
 	storage.image_infos.push_back(std::move(image_infos));

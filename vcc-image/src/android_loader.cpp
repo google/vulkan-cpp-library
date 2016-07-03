@@ -135,9 +135,9 @@ image::image_type create(
 		format, extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR,
 		usage, sharingMode, queueFamilyIndices, VK_IMAGE_LAYOUT_UNDEFINED));
 	memory::bind(device, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, image);
-	internal::copy_to_image(*queue, device::get_physical_device(*device), format,
-		VK_IMAGE_ASPECT_COLOR_BIT, VkExtent2D{ extent.width, extent.height },
-		(uint8_t *) addrPtr, internal::bytes_per_pixel(format), info.stride, image);
+	copy_to_linear_image(format, VK_IMAGE_ASPECT_COLOR_BIT,
+		VkExtent2D{ extent.width, extent.height }, (uint8_t *) addrPtr,
+		internal::bytes_per_pixel(format), info.stride, image);
 	return std::move(image);
 }
 
