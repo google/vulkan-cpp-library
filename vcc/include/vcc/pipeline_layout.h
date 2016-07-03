@@ -58,7 +58,7 @@ struct pipeline_layout_type
 		const std::vector<VkPushConstantRange> &push_constant_ranges);
 	template<typename PipelineLayoutT>
 	friend auto internal::get_set_layouts(const PipelineLayoutT &pipeline)
-		->const decltype(pipeline->set_layouts)&;
+		->const decltype(pipeline.set_layouts)&;
 
 	pipeline_layout_type() = default;
 	pipeline_layout_type(const pipeline_layout_type &) = delete;

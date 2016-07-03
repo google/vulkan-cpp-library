@@ -27,15 +27,25 @@ class view_type;
 
 namespace internal {
 
-template<typename T, typename ContainerT>
-auto make_view(T value)->view_type<typename ContainerT::value_type>;
+template<typename T>
+struct view_lookup_supplier_container_type {
+private:
+	typedef typename supplier_lookup_type<T>::type supplier_value_type;
+public:
+	typedef typename supplier_value_type::value_type type;
+};
 
 }  // namespace internal
 
+template<typename ContainerT>
+view_type<typename internal::view_lookup_supplier_container_type<ContainerT>
+	::type> make_view(ContainerT value);
+
 template<typename T>
 class view_type {
-	template<typename U, typename ContainerT>
-	friend auto internal::make_view(U value)->view_type<typename ContainerT::value_type>;
+	template<typename ContainerT>
+	friend view_type<typename internal::view_lookup_supplier_container_type<ContainerT>
+		::type> make_view(ContainerT value);
 
 private:
 	struct read_instance_type {
@@ -151,21 +161,13 @@ public:
 	}
 };
 
-namespace internal {
-
-template<typename T, typename ContainerT>
-auto make_view(T container)->view_type<typename ContainerT::value_type> {
-	return view_type<typename ContainerT::value_type>(make_supplier(
-		std::forward<T>(container)));
-}
-
-}  // namespace internal
-
-template<typename T>
-auto make_view(T value)->decltype(internal::make_view<T, typename decltype(
-		make_supplier(std::forward<T>(value)))::value_type>(value)) {
-	typedef decltype(make_supplier(std::forward<T>(value))) supplier_type;
-	return internal::make_view<T, typename supplier_type::value_type>(value);
+template<typename ContainerT>
+view_type<typename internal::view_lookup_supplier_container_type<ContainerT>
+		::type> make_view(ContainerT value) {
+	typedef typename internal::view_lookup_supplier_container_type<ContainerT>
+		::type value_type;
+	return view_type<value_type>(type::make_supplier(
+		std::forward<ContainerT>(value)));
 }
 
 }  // namespace type

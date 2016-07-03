@@ -79,38 +79,56 @@ private:
 	function_type function;
 };
 
+namespace internal {
+
 template<typename T>
-supplier<T> make_supplier(std::shared_ptr<T> &&s) {
-	return supplier<T>(std::forward<std::shared_ptr<T>>(s));
-}
-template<typename T>
-supplier<T> make_supplier(std::shared_ptr<T> &s) {
-	return supplier<T>(s);
-}
-template<typename T>
-supplier<T> make_supplier(const std::shared_ptr<T> &s) {
-	return supplier<T>(s);
-}
-template<typename T>
-supplier<T> make_supplier(std::unique_ptr<T> &&s) {
-	return supplier<T>(s);
-}
-template<typename T>
-supplier<T> make_supplier(std::reference_wrapper<T> &&s) {
-	return supplier<T>(s);
-}
-template<typename T>
-supplier<T> make_supplier(std::reference_wrapper<T> &s) {
-	return supplier<T>(s);
-}
-template<typename T>
-supplier<T> make_supplier(const std::reference_wrapper<T> &s) {
-	return supplier<T>(s);
-}
-template<typename T>
-supplier<T> make_supplier(T &&instance) {
+struct supplier_lookup_type {
 	typedef typename std::remove_reference<T>::type type;
-	return supplier<type>(std::forward<T>(instance));
+};
+
+template<typename T>
+struct supplier_lookup_type<std::shared_ptr<T>> {
+	typedef T type;
+};
+template<typename T>
+struct supplier_lookup_type<const std::shared_ptr<T>> {
+	typedef T type;
+};
+
+template<typename T>
+struct supplier_lookup_type<std::unique_ptr<T>> {
+	typedef T type;
+};
+
+template<typename T>
+struct supplier_lookup_type<std::reference_wrapper<T>> {
+	typedef T type;
+};
+
+template<typename T>
+struct supplier_lookup_type<const std::reference_wrapper<T>> {
+	typedef T type;
+};
+
+}  // namespace internal
+
+template<typename T>
+supplier<typename internal::supplier_lookup_type<T>::type> make_supplier(
+		const T &instance) {
+	return supplier<typename internal::supplier_lookup_type<T>::type>(
+		instance);
+}
+template<typename T>
+supplier<typename internal::supplier_lookup_type<T>::type> make_supplier(
+		T &instance) {
+	return supplier<typename internal::supplier_lookup_type<T>::type>(
+		instance);
+}
+template<typename T>
+supplier<typename internal::supplier_lookup_type<T>::type> make_supplier(
+		T &&instance) {
+	return supplier<typename internal::supplier_lookup_type<T>::type>(
+		std::forward<T>(instance));
 }
 
 }

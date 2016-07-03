@@ -286,27 +286,23 @@ private:
 
 namespace internal {
 
-template<typename ContainerT, typename Container1T, typename Container2T>
-auto make_merge(Container1T container1, Container2T container2)
-		->merge_type<typename ContainerT::value_type> {
-	return merge_type<typename ContainerT::value_type>(
-		type::make_supplier(container1), type::make_supplier(container2));
-}
+template<typename T>
+struct merge_lookup_supplier_container_type {
+private:
+	typedef typename supplier_lookup_type<T>::type supplier_value_type;
+public:
+	typedef typename supplier_value_type::value_type type;
+};
 
 }  // namespace internal
 
 template<typename Container1T, typename Container2T>
-auto make_merge(Container1T container1, Container2T container2)->
-		decltype(internal::make_merge<
-			typename decltype(type::make_supplier(container1))::value_type,
-			Container1T, Container2T>(
-				std::forward<Container1T>(container1),
-				std::forward<Container1T>(container2))) {
-	return internal::make_merge<
-			typename decltype(type::make_supplier(container1))::value_type,
-			Container1T, Container2T>(
-		std::forward<Container1T>(container1),
-		std::forward<Container1T>(container2));
+merge_type<typename internal::merge_lookup_supplier_container_type<Container1T>
+		::type> make_merge(Container1T container1, Container2T container2) {
+	return merge_type<typename internal::merge_lookup_supplier_container_type<
+			Container1T>::type>(
+				make_supplier(std::forward<Container1T>(container1)),
+				make_supplier(std::forward<Container2T>(container2)));
 }
 
 template<typename T>

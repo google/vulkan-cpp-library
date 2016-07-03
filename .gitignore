@@ -10,3 +10,4 @@ Release/**
 *.opensdf
 *.sdf
 *.suo
+vulkan-cpp.VC.*
