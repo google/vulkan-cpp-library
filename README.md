@@ -17,9 +17,12 @@ buffer_type vertex_buffer(create(interleaved_std140, ...,
   std::ref(vertices), std::ref(texcoords), std::ref(normals)));
 ```
 
-The above `vertices`, `normals` and `texcoords` can be updated at any time, using the following syntax:
+The above `vertices`, `normals` and `texcoords` can be read or written to at any time, using the following syntax:
 ```C++
-mutated_vec3_array m = mutate(vertices);
+readable_vec3_array r = read(vertices);
+// read r[0]
+
+writable_vec3_array m = write(vertices);
 m[0] = 1.f;
 ```
 
@@ -28,9 +31,11 @@ Submitting a command buffer which depend on the buffer will cause a flush of sai
 queue::submit(queue, {}, command_buffers, {});
 ```
 
-The `mutated_vec3_array` is a movable only lock of the underlying array. The `mutated_*_array` provides a full `std::vector` like interface where `*_array` provides a read-only interface.
+Locking the array with the writable_*_array types will increase its reference count when it goes out of scope. Locking the array with readable_*_array makes sure no concurrent read/write occurs.
+The `writable_*_array` provides a full `std::vector` like interface where `readable_*_array` provides a read-only `const std::vector` like interface.
 
 *Because the data is strongly typed, there are a lot of opportunities for type checking, especially against SPIR-V. This is in the works!*
+The library includes the spirv-reflection project. It parses SPIR-V and extracts uniforms, inputs and outputs. The library will be used to do runtime validation on SPIR-V assembly against the C++ declared arrays. This is currently being worked on.
 
 ### Memory management
 All Vulkan objects are encapsulated and hidden in C++ classes. These are movable only and destroy the underlying Vulkan objects when they go out of scope.
@@ -43,6 +48,11 @@ will keep a reference to the object, where functions taking a reference will use
 The library is thread-safe as required by the Vulkan specification, `2.5 Threading Behavior`, `Externally Synchronized Parameters`, `Externally Synchronized Parameter Lists`.
 Notice that `Implicit Externally Synchronized Parameters` is not included.
 
+### OpenVR
+Samples include an OpenVR example. This simple demo renders the models of the connected devices like trackers and controllers. It supports lazy loading and recompiles the command buffers when any new devices are added or removed.
+
+Notice that as of writing this, OpenVR does not support Vulkan. This sample is using GL_NV_draw_vulkan_image to blit Vulkan images to OpenGL.
+
 ### Xlib/xcb
 In the works.
 
@@ -53,7 +63,7 @@ Install the latest Android SDK and NDK, the pre-release of Android N (API level 
 Unit and integration tests are not supported.
 
 To compile and install the library and samples, run:
-ANDROID_NDK_HOME=/<your-path>/android-ndk-r11c/ ANDROID_HOME=/<your-path>/android-sdk-linux/ ./gradlew installDebug
+ANDROID_NDK_HOME=/#your-path#/android-ndk-r11c/ ANDROID_HOME=/#your-path#/android-sdk-linux/ ./gradlew installDebug
 
 
 ### Visual Studio 2015
@@ -61,9 +71,10 @@ Only 2015 is supported. The C++11 support in previous versions is not sufficient
 * Open the vulkan-cpp.sln,
 * click "Property Manager" (next to "Solution Explorer", bottom left corner),
 * Expand any of the projects and configurations,
-* right-click on Microsoft.Cpp.Win32.user or Microsoft.Cpp.x64.user and select properties.
+* right-click on Paths and select properties.
 * Under Common Properties > User Macros,
 * edit the VulkanSdk, GoogleTestDir, PngDir, GlmDir and GliDir to point to the locations of the respective libraries.
+* The FreeGlutDir, OpenVrDir, GlewDir are only needed to build the openvr sample.
 * The project should now compile. Win32 and x64 in Release and Debug configurations are setup.
 
 ## Acknowledgements
