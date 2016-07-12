@@ -6,7 +6,7 @@ The goal is to be able to quickly write Vulkan code that is type safe, readable 
 ### Resource management
 
 Buffer content is typed, referenced and revision counted. Push and specialization constants are typed. The library synchronizes your buffers between client and host lazily,
-layouts data according to std140, std430, interleaved or linear depending on your need.
+layouts data according to `std140`, `std430`, `interleaved` or `linear` depending on your need.
 
 ```C++
 vec3_array vertices;
@@ -31,7 +31,7 @@ Submitting a command buffer which depend on the buffer will cause a flush of sai
 queue::submit(queue, {}, command_buffers, {});
 ```
 
-Locking the array with the writable_*_array types will increase its reference count when it goes out of scope. Locking the array with readable_*_array makes sure no concurrent read/write occurs.
+Locking the array with the `writable_*_array` types will increase its reference count when it goes out of scope. Locking the array with `readable_*_array` makes sure no concurrent read/write occurs.
 The `writable_*_array` provides a full `std::vector` like interface where `readable_*_array` provides a read-only `const std::vector` like interface.
 
 *Because the data is strongly typed, there are a lot of opportunities for type checking, especially against SPIR-V. This is in the works!*
@@ -51,7 +51,7 @@ Notice that `Implicit Externally Synchronized Parameters` is not included.
 ### OpenVR
 Samples include an OpenVR example. This simple demo renders the models of the connected devices like trackers and controllers. It supports lazy loading and recompiles the command buffers when any new devices are added or removed.
 
-Notice that as of writing this, OpenVR does not support Vulkan. This sample is using GL_NV_draw_vulkan_image to blit Vulkan images to OpenGL.
+Notice that as of writing this, OpenVR does not support Vulkan. This sample is using `GL_NV_draw_vulkan_image` to blit Vulkan images to OpenGL.
 
 ### Xlib/xcb
 In the works.
@@ -63,19 +63,19 @@ Install the latest Android SDK and NDK, the pre-release of Android N (API level 
 Unit and integration tests are not supported.
 
 To compile and install the library and samples, run:
-ANDROID_NDK_HOME=/#your-path#/android-ndk-r11c/ ANDROID_HOME=/#your-path#/android-sdk-linux/ ./gradlew installDebug
+`ANDROID_NDK_HOME=/#your-path#/android-ndk-r11c/ ANDROID_HOME=/#your-path#/android-sdk-linux/ ./gradlew installDebug`
 
 
 ### Visual Studio 2015
 Only 2015 is supported. The C++11 support in previous versions is not sufficient.
-* Open the vulkan-cpp.sln,
-* click "Property Manager" (next to "Solution Explorer", bottom left corner),
+* Open the `vulkan-cpp.sln`,
+* click `Property Manager` (next to `Solution Explorer`, bottom left corner),
 * Expand any of the projects and configurations,
-* right-click on Paths and select properties.
-* Under Common Properties > User Macros,
-* edit the VulkanSdk, GoogleTestDir, PngDir, GlmDir and GliDir to point to the locations of the respective libraries.
-* The FreeGlutDir, OpenVrDir, GlewDir are only needed to build the openvr sample.
-* The project should now compile. Win32 and x64 in Release and Debug configurations are setup.
+* right-click on `Paths` and select properties.
+* Under `Common Properties` > `User Macros`,
+* edit the `VulkanSdk`, `GoogleTestDir`, `PngDir`, `GlmDir` and `GliDir` to point to the locations of the respective libraries.
+* The `FreeGlutDir`, `OpenVrDir`, `GlewDir` are only needed to build the openvr sample.
+* The project should now compile. `Win32` and `x64` in `Release` and `Debug` configurations are setup.
 
 ## Acknowledgements
 * This library optionally uses [OpenGL Mathematics, glm.](http://glm.g-truc.net/0.9.7/index.html)
