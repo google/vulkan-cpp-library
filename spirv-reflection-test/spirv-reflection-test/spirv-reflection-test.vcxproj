@@ -99,8 +99,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(Configuration);$(GoogleTestDir)msvc\gtest\$(Configuration);$(VulkanSdk)spirv-tools\buildPS\source\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>gtestd.lib;gtest_maind.lib;types.lib;SPIRV-Tools.lib;spirv-reflection.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)$(Configuration);$(GoogleTestDir)msvc\gtest-md\$(Configuration);$(VulkanSdk)spirv-tools\buildPS\source\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>gtestd.lib;gtest_main-mdd.lib;types.lib;SPIRV-Tools.lib;spirv-reflection.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -117,7 +117,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)x64\$(Configuration);$(GoogleTestDir)msvc\x64\$(Configuration);$(SolutionDir)\x64\$(Configuration);$(VulkanSdk)spirv-tools\build\source\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>gtestd.lib;gtest_maind.lib;types.lib;SPIRV-Tools.lib;spirv-reflection.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>gtestd.lib;gtest_main-mdd.lib;types.lib;SPIRV-Tools.lib;spirv-reflection.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
       <Command>$(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)input_test1.spv" "$(ProjectDir)..\src\input_test1.vert"
@@ -146,8 +146,8 @@ $(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)specialization_constan
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>gtest.lib;gtest_main.lib;types.lib;SPIRV-Tools.lib;spirv-reflection.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(Configuration);$(GoogleTestDir)msvc\gtest\$(Configuration);$(VulkanSdk)spirv-tools\buildPS\source\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>gtest.lib;gtest_main-md.lib;types.lib;SPIRV-Tools.lib;spirv-reflection.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)$(Configuration);$(GoogleTestDir)msvc\gtest-md\$(Configuration);$(VulkanSdk)spirv-tools\buildPS\source\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -167,8 +167,8 @@ $(VulkanSdk)Bin\glslangValidator.exe -V -o "$(SolutionDir)specialization_constan
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)\x64\$(Configuration);$(GoogleTestDir)msvc\x64\$(Configuration);$(SolutionDir)x64\$(Configuration);$(VulkanSdk)spirv-tools\build\source\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>gtest.lib;gtest_main.lib;types.lib;SPIRV-Tools.lib;spirv-reflection.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)x64\$(Configuration);$(GoogleTestDir)msvc\x64\$(Configuration);$(VulkanSdk)spirv-tools\build\source\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>gtest.lib;gtest_main-md.lib;types.lib;SPIRV-Tools.lib;spirv-reflection.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
