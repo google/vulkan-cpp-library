@@ -508,7 +508,7 @@ int main(int argc, const char **argv) {
 					},
 					VK_SUBPASS_CONTENTS_INLINE,
 					vcc::command::bind_pipeline{ VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
-					vcc::command::bind_vertex_buffers({ std::ref(vertex_buffer) }, { 0, 0 }),
+					vcc::command::bind_vertex_buffers(0, { std::ref(vertex_buffer) }, { 0, 0 }),
 					vcc::command::bind_index_data_buffer(std::ref(index_buffer), 0, VK_INDEX_TYPE_UINT16),
 					vcc::command::bind_descriptor_sets{ VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline_layout), 0,{ std::ref(desc_set) },{} },
 					vcc::command::set_viewport{ 0,{ VkViewport{ 0.f, 0.f, float(extent.width), float(extent.height), 0.f, 1.f } } },

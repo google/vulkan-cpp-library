@@ -415,7 +415,7 @@ int main(int argc, const char **argv) {
 						VK_SUBPASS_CONTENTS_INLINE,
 						vcc::command::bind_pipeline{
 							VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
-						vcc::command::bind_vertex_buffers(
+						vcc::command::bind_vertex_buffers(0,
 							{ std::ref(vertex_buffer) }, { 0, 0 }),
 						vcc::command::bind_index_data_buffer(
 							std::ref(index_buffer), 0, VK_INDEX_TYPE_UINT16),

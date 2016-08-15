@@ -229,7 +229,7 @@ instance_type load_instance(vcc::device::device_type &device,
 		{ std::move(desc_set) },{} },
 		vcc::command::set_scissor{
 		0,{ { { 0, 0 }, extent } } },
-		vcc::command::bind_vertex_buffers(
+		vcc::command::bind_vertex_buffers(0,
 	{ model->vertex_buffer }, { 0, 0 }),
 		vcc::command::bind_index_data_buffer(
 			model->index_buffer, 0, VK_INDEX_TYPE_UINT16),

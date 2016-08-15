@@ -132,7 +132,7 @@ void cmd(cmd_args &args, const bind_vertex_buffers_type &bvb) {
 		//offsets.push_back(bvb.buffers[i]->offset + bvb.offsets[i]);
 	}
 	VKTRACE(vkCmdBindVertexBuffers(
-		vcc::internal::get_instance(args.buffer.get()), 0,
+		vcc::internal::get_instance(args.buffer.get()), bvb.first_binding,
 		(uint32_t)bvb.buffers.size(), buffers.data(), offsets.data()));
 }
 
@@ -413,7 +413,8 @@ void cmd(cmd_args &args, const bind_vertex_data_buffers_type&bvdb) {
 		args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
 		buffers.push_back(std::ref(input_buffer::internal::get_buffer(*buffer)));
 	}
-	cmd(args, bind_vertex_buffers_type{ std::move(buffers), bvdb.offsets });
+	cmd(args, bind_vertex_buffers_type{ bvdb.first_binding, std::move(buffers),
+		bvdb.offsets });
 }
 
 void cmd(cmd_args &args, const draw_indirect_data_type&did) {

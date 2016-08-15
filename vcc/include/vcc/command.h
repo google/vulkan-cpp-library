@@ -107,25 +107,28 @@ inline bind_index_data_buffer_type bind_index_data_buffer(
 }
 
 struct bind_vertex_buffers_type {
+	uint32_t first_binding;
 	std::vector<type::supplier<buffer::buffer_type>> buffers;
 	std::vector<VkDeviceSize> offsets;
 };
 
-inline bind_vertex_buffers_type bind_vertex_buffers(uint32_t firstBinding,
+inline bind_vertex_buffers_type bind_vertex_buffers(uint32_t first_binding,
 	const std::vector<type::supplier<buffer::buffer_type>> &buffers,
 	const std::vector<VkDeviceSize> &offsets) {
-	return bind_vertex_buffers_type{ buffers, offsets };
+	return bind_vertex_buffers_type{ first_binding, buffers, offsets };
 }
 
 struct bind_vertex_data_buffers_type {
+	uint32_t first_binding;
 	std::vector<type::supplier<input_buffer::input_buffer_type>> buffers;
 	std::vector<VkDeviceSize> offsets;
 };
 
 inline bind_vertex_data_buffers_type bind_vertex_buffers(
+	uint32_t first_binding,
 	const std::vector<type::supplier<input_buffer::input_buffer_type>> &buffers,
 	const std::vector<VkDeviceSize> &offsets) {
-	return bind_vertex_data_buffers_type{ buffers, offsets };
+	return bind_vertex_data_buffers_type{ first_binding, buffers, offsets };
 }
 
 struct draw {
