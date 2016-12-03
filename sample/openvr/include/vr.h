@@ -42,7 +42,7 @@ public:
 	typedef std::function<void(const std::array<glm::mat4x3, vr::k_unMaxTrackedDeviceCount> &)>
 		draw_callback_type;
 
-	vr_type(const char *window_title, uint32_t window_width,
+	vr_type(int &argc, char **argv, const char *window_title, uint32_t window_width,
 		uint32_t window_height,
 		const type::supplier<vcc::queue::queue_type> &queue);
 	~vr_type();

@@ -56,9 +56,6 @@ const bool validate = true;
 #if defined(__ANDROID__) || defined(ANDROID)
 void android_main(struct android_app* state) {
 	app_dummy();
-#elif defined(WIN32)
-int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-	LPSTR lpCmdLine, int nCmdShow) {
 #else
 int main(int argc, const char **argv) {
 #endif
@@ -71,6 +68,8 @@ int main(int argc, const char **argv) {
 			VK_KHR_WIN32_SURFACE_EXTENSION_NAME
 #elif defined(__ANDROID__)
 			VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+#else
+			VK_KHR_XCB_SURFACE_EXTENSION_NAME
 #endif // __ANDROID__
 		};
 		assert(vcc::enumerate::contains_all(
@@ -175,11 +174,19 @@ int main(int argc, const char **argv) {
 
 	vcc::queue::queue_type queue(vcc::queue::get_graphics_queue(
 		std::ref(device)));
+#if defined(VK_USE_PLATFORM_XCB_KHR)
+	const std::unique_ptr<xcb_connection_t, decltype(&xcb_disconnect)> connection_ptr(
+    xcb_connect(nullptr,nullptr), &xcb_disconnect);
+  auto connection(connection_ptr.get());
+  assert(!xcb_connection_has_error(connection));
+#endif // VK_USE_PLATFORM_XCB_KHR
 	vcc::window::window_type window(vcc::window::create(
 #ifdef WIN32
-		hInstance,
+		GetModuleHandle(NULL),
 #elif defined(__ANDROID__) || defined(ANDROID)
 		state,
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+		connection,
 #endif // __ANDROID__
 		std::ref(instance), std::ref(device), std::ref(queue),
 		VkExtent2D{ 500, 500 }, VK_FORMAT_A8B8G8R8_UINT_PACK32,
@@ -221,7 +228,7 @@ int main(int argc, const char **argv) {
 #if defined(__ANDROID__) || defined(ANDROID)
 			android::asset_istream(state->activity->assetManager, "lighting-vert.spv")
 #else
-			std::ifstream("../../../lighting-vert.spv",
+			std::ifstream("lighting-vert.spv",
 				std::ios_base::binary | std::ios_base::in)
 #endif  // __ ANDROID__
 			));
@@ -230,7 +237,7 @@ int main(int argc, const char **argv) {
 #if defined(__ANDROID__) || defined(ANDROID)
 			android::asset_istream(state->activity->assetManager, "lighting-frag.spv")
 #else
-			std::ifstream("../../../lighting-frag.spv",
+			std::ifstream("lighting-frag.spv",
 				std::ios_base::binary | std::ios_base::in)
 #endif  // __ ANDROID__
 			));

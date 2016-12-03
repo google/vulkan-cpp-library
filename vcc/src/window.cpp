@@ -96,131 +96,136 @@ const char *class_name = "vcc-vulkan";
 namespace internal {
 
 window_data_type::~window_data_type() {
-	render_thread.join();
 #ifdef _WIN32
 	DestroyWindow(window);
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+  xcb_destroy_window(connection, window);
 #endif // _WIN32
 }
 
 } // namespace internal
 
 void resize(internal::window_data_type &data, VkExtent2D extent) {
-	{
-		// Check the surface capabilities and formats
-		const VkPhysicalDevice physical_device(device::get_physical_device(*data.device));
-		const VkSurfaceCapabilitiesKHR surfCapabilities(vcc::surface::physical_device_capabilities(physical_device, data.surface));
+	// Check the surface capabilities and formats
+	const VkPhysicalDevice physical_device(device::get_physical_device(*data.device));
+	const VkSurfaceCapabilitiesKHR surfCapabilities(vcc::surface::physical_device_capabilities(physical_device, data.surface));
 
-		// width and height are either both -1, or both not -1.
-		data.extent = surfCapabilities.currentExtent.width == -1 ? extent : surfCapabilities.currentExtent;
+	// width and height are either both -1, or both not -1.
+	data.extent = surfCapabilities.currentExtent.width == -1 ? extent : surfCapabilities.currentExtent;
 
-		// If mailbox mode is available, use it, as is the lowest-latency non-
-		// tearing mode.  If not, try IMMEDIATE which will usually be available,
-		// and is fastest (though it tears).  If not, fall back to FIFO which is
-		// always available.
-		const std::vector<VkPresentModeKHR> presentModes(vcc::surface::physical_device_present_modes(physical_device, data.surface));
-		VkPresentModeKHR swapchainPresentMode(*std::max_element(presentModes.begin(), presentModes.end(), [](VkPresentModeKHR mode1, VkPresentModeKHR mode2) {
-			if (mode1 != mode2) {
-				switch (mode2) {
-				case VK_PRESENT_MODE_MAILBOX_KHR:
-					return true;
-				case VK_PRESENT_MODE_IMMEDIATE_KHR:
-					return mode1 != VK_PRESENT_MODE_MAILBOX_KHR;
-				case VK_PRESENT_MODE_FIFO_KHR:
-					return mode1 != VK_PRESENT_MODE_MAILBOX_KHR && mode1 != VK_PRESENT_MODE_IMMEDIATE_KHR;
-				}
+	// If mailbox mode is available, use it, as is the lowest-latency non-
+	// tearing mode.  If not, try IMMEDIATE which will usually be available,
+	// and is fastest (though it tears).  If not, fall back to FIFO which is
+	// always available.
+	const std::vector<VkPresentModeKHR> presentModes(vcc::surface::physical_device_present_modes(physical_device, data.surface));
+	VkPresentModeKHR swapchainPresentMode(*std::max_element(presentModes.begin(), presentModes.end(), [](VkPresentModeKHR mode1, VkPresentModeKHR mode2) {
+		if (mode1 != mode2) {
+			switch (mode2) {
+			case VK_PRESENT_MODE_MAILBOX_KHR:
+				return true;
+			case VK_PRESENT_MODE_IMMEDIATE_KHR:
+				return mode1 != VK_PRESENT_MODE_MAILBOX_KHR;
+			case VK_PRESENT_MODE_FIFO_KHR:
+				return mode1 != VK_PRESENT_MODE_MAILBOX_KHR && mode1 != VK_PRESENT_MODE_IMMEDIATE_KHR;
 			}
-			return false;
-		}));
-
-		// Determine the number of VkImage's to use in the swap chain (we desire to
-		// own only 1 image at a time, besides the images being displayed and
-		// queued for display):
-		uint32_t desiredNumberOfSwapchainImages = surfCapabilities.minImageCount + 1;
-		if (surfCapabilities.maxImageCount > 0) {
-			// Application might have to settle for fewer images than desired:
-			desiredNumberOfSwapchainImages = std::min(surfCapabilities.maxImageCount, desiredNumberOfSwapchainImages);
 		}
-		const VkSurfaceTransformFlagBitsKHR preTransform(surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : surfCapabilities.currentTransform);
-		data.swapchain_images.clear();
-		data.swapchain = vcc::swapchain::create(type::supplier<device::device_type>(data.device),
-			vcc::swapchain::create_info_type{ std::ref(data.surface), desiredNumberOfSwapchainImages, data.format, data.color_space, data.extent,
-				1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE,{}, preTransform, 0, swapchainPresentMode, VK_TRUE, std::ref(data.swapchain) });
-		std::vector<vcc::image::image_type> swapchain_images(vcc::swapchain::get_images(data.swapchain));
-		data.swapchain_images.reserve(swapchain_images.size());
+		return false;
+	}));
 
-		for (vcc::image::image_type &si : swapchain_images) {
-			std::shared_ptr<vcc::image::image_type> swapchain_image(
-				std::make_shared<vcc::image::image_type>(std::move(si)));
-			// Render loop will expect image to have been used before and in VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-			// layout and will change to COLOR_ATTACHMENT_OPTIMAL, so init the image to that state
-			vcc::command_buffer::command_buffer_type command_buffer(std::move(vcc::command_buffer::allocate(type::supplier<device::device_type>(data.device), std::ref(data.cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-			vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
-				vcc::command::pipeline_barrier(
-					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
-					{
-						vcc::command::image_memory_barrier{ 0, 0,
-							VK_IMAGE_LAYOUT_UNDEFINED,
-							VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-							VK_QUEUE_FAMILY_IGNORED,
-							queue::get_family_index(data.present_queue),
-							swapchain_image,
-							{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
-						}
-					}));
-			vcc::queue::submit(data.present_queue, {}, { std::reference_wrapper<vcc::command_buffer::command_buffer_type>(command_buffer) }, {});
-
-			vcc::image_view::image_view_type view(vcc::image_view::create(
-				swapchain_image, VK_IMAGE_VIEW_TYPE_2D, data.format,
-				{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G,
-					VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
-				{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }));
-
-			vcc::command_buffer::command_buffer_type pre_draw_command(std::move(
-				vcc::command_buffer::allocate(data.device, std::ref(data.cmd_pool),
-					VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-			vcc::command_buffer::compile(pre_draw_command, 0, VK_FALSE, 0, 0,
-				vcc::command::pipeline_barrier(
-					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, {}, {},
-					{
-						vcc::command::image_memory_barrier{ 0,
-							VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
-							| VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-							VK_IMAGE_LAYOUT_UNDEFINED,
-							VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-							queue::get_family_index(data.present_queue),
-							queue::get_family_index(*data.graphics_queue),
-							swapchain_image,
-							{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
-						}
-					}));
-
-			vcc::command_buffer::command_buffer_type post_draw_command(std::move(
-				vcc::command_buffer::allocate(data.device, std::ref(data.cmd_pool),
-					VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-			vcc::command_buffer::compile(post_draw_command, 0, VK_FALSE, 0, 0,
-				vcc::command::pipeline_barrier(
-					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-					VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, {}, {},
-					{
-						vcc::command::image_memory_barrier{
-							VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-							0,
-							VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-							VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-							queue::get_family_index(*data.graphics_queue),
-							queue::get_family_index(data.present_queue),
-							swapchain_image,
-							{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } }
-					}));
-
-			data.swapchain_images.push_back(swapchain_type(swapchain_image,
-				std::move(view), std::move(pre_draw_command),
-				std::move(post_draw_command)));
-		}
-		data.resize_callback(data.extent, data.format, data.swapchain_images);
+	// Determine the number of VkImage's to use in the swap chain (we desire to
+	// own only 1 image at a time, besides the images being displayed and
+	// queued for display):
+	uint32_t desiredNumberOfSwapchainImages = surfCapabilities.minImageCount + 1;
+	if (surfCapabilities.maxImageCount > 0) {
+		// Application might have to settle for fewer images than desired:
+		desiredNumberOfSwapchainImages = std::min(surfCapabilities.maxImageCount, desiredNumberOfSwapchainImages);
 	}
+	const VkSurfaceTransformFlagBitsKHR preTransform(
+	  surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
+	    ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : surfCapabilities.currentTransform);
+	data.swapchain_images.clear();
+	data.swapchain = vcc::swapchain::create(data.device,
+		vcc::swapchain::create_info_type{ std::ref(data.surface), desiredNumberOfSwapchainImages,
+		  data.format, data.color_space, data.extent,
+			1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE,{}, preTransform, 0,
+			swapchainPresentMode, VK_TRUE, std::ref(data.swapchain) });
+	std::vector<vcc::image::image_type> swapchain_images(vcc::swapchain::get_images(data.swapchain));
+	data.swapchain_images.reserve(swapchain_images.size());
+	for (vcc::image::image_type &si : swapchain_images) {
+		std::shared_ptr<vcc::image::image_type> swapchain_image(
+			std::make_shared<vcc::image::image_type>(std::move(si)));
+
+		// Render loop will expect image to have been used before and in VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+		// layout and will change to COLOR_ATTACHMENT_OPTIMAL, so init the image to that state
+		vcc::command_buffer::command_buffer_type command_buffer(std::move(
+		  vcc::command_buffer::allocate(type::supplier<device::device_type>(data.device),
+		    std::ref(data.cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
+		vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
+			vcc::command::pipeline_barrier(
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
+				{
+					vcc::command::image_memory_barrier{ 0, 0,
+						VK_IMAGE_LAYOUT_UNDEFINED,
+						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+						VK_QUEUE_FAMILY_IGNORED,
+						queue::get_family_index(data.present_queue),
+						swapchain_image,
+						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+					}
+				}));
+		vcc::queue::submit(data.present_queue, {}, { std::ref(command_buffer) }, {});
+
+		vcc::image_view::image_view_type view(vcc::image_view::create(
+			swapchain_image, VK_IMAGE_VIEW_TYPE_2D, data.format,
+			{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G,
+				VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
+			{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }));
+
+		vcc::command_buffer::command_buffer_type pre_draw_command(std::move(
+			vcc::command_buffer::allocate(data.device, std::ref(data.cmd_pool),
+				VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
+		vcc::command_buffer::compile(pre_draw_command, 0, VK_FALSE, 0, 0,
+			vcc::command::pipeline_barrier(
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, {}, {},
+				{
+					vcc::command::image_memory_barrier{ 0,
+						VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
+						| VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+						VK_IMAGE_LAYOUT_UNDEFINED,
+						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+						queue::get_family_index(data.present_queue),
+						queue::get_family_index(*data.graphics_queue),
+						swapchain_image,
+						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+					}
+				}));
+
+		vcc::command_buffer::command_buffer_type post_draw_command(std::move(
+			vcc::command_buffer::allocate(data.device, std::ref(data.cmd_pool),
+				VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
+		vcc::command_buffer::compile(post_draw_command, 0, VK_FALSE, 0, 0,
+			vcc::command::pipeline_barrier(
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, {}, {},
+				{
+					vcc::command::image_memory_barrier{
+						VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+						0,
+						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+						queue::get_family_index(*data.graphics_queue),
+						queue::get_family_index(data.present_queue),
+						swapchain_image,
+						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } }
+				}));
+
+		data.swapchain_images.push_back(swapchain_type(swapchain_image,
+			std::move(view), std::move(pre_draw_command),
+			std::move(post_draw_command)));
+	}
+	data.resize_callback(data.extent, data.format, data.swapchain_images);
 }
 
 namespace internal {
@@ -228,11 +233,13 @@ namespace internal {
 void window_data_type::draw() {
 	VkResult err;
 	uint32_t current_buffer;
-	vcc::semaphore::semaphore_type present_complete_semaphore;
+	// TODO(gardell): Preallocate all semaphores.
+	vcc::semaphore::semaphore_type image_acquired_semaphore;
+	vcc::semaphore::semaphore_type present_semaphore(vcc::semaphore::create(device));
 	do {
-		present_complete_semaphore = vcc::semaphore::create(device);
+		image_acquired_semaphore = vcc::semaphore::create(device);
 		std::tie(err, current_buffer) = vcc::swapchain::acquire_next_image(
-			swapchain, present_complete_semaphore);
+			swapchain, image_acquired_semaphore);
 		switch (err) {
 		case VK_ERROR_OUT_OF_DATE_KHR:
 			// swapchain is out of date (e.g. the window was resized) and
@@ -254,17 +261,23 @@ void window_data_type::draw() {
 	} while (err == VK_ERROR_OUT_OF_DATE_KHR);
 	// Assume the command buffer has been run on current_buffer before so
 	// we need to set the image layout back to COLOR_ATTACHMENT_OPTIMAL
-	vcc::queue::submit(*graphics_queue, {},
+	vcc::queue::submit(*graphics_queue,
+	  { vcc::queue::wait_semaphore{ std::ref(image_acquired_semaphore),
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } },
 		{ std::ref(get_pre_draw_command(swapchain_images[current_buffer])) }, {});
 
 	draw_callback(current_buffer);
 
-	vcc::queue::submit(present_queue,
-		{ vcc::queue::wait_semaphore{ std::ref(present_complete_semaphore) } },
-		{ std::ref(get_post_draw_command(swapchain_images[current_buffer])) },
-		{});
+  vcc::semaphore::semaphore_type draw_semaphore(vcc::semaphore::create(device));
+  vcc::queue::submit(*graphics_queue, {}, {}, { std::ref(draw_semaphore) });
 
-	err = vcc::queue::present(present_queue, {}, { std::ref(swapchain) },
+	vcc::queue::submit(present_queue,
+		{ vcc::queue::wait_semaphore{ std::ref(draw_semaphore),
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } },
+		{ std::ref(get_post_draw_command(swapchain_images[current_buffer])) },
+		{ std::ref(present_semaphore) });
+
+	err = vcc::queue::present(present_queue, { std::ref(present_semaphore) }, { std::ref(swapchain) },
 		{ current_buffer });
 	switch (err) {
 	case VK_ERROR_OUT_OF_DATE_KHR:
@@ -289,15 +302,17 @@ void initialize(internal::window_data_type &data,
 		HWND window
 #elif defined(__ANDROID__)
 		ANativeWindow *window
-#endif // __ANDROID__
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+  xcb_window_t window
+#endif
 		) {
 	data.surface = vcc::surface::create(data.instance,
-#ifdef _WIN32
+#if defined(_WIN32) || defined(VK_USE_PLATFORM_XCB_KHR)
 		data.connection,
 #endif // _WIN32
 		window);
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(VK_USE_PLATFORM_XCB_KHR)
 	data.window = window;
 #endif // _WIN32
 
@@ -459,11 +474,11 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
               data->render_thread.set_drawing(true);
             }
             break;
-        case APP_CMD_WINDOW_RESIZED:
-            vcc::window::resize(*data, VkExtent2D{
-              (uint32_t) ANativeWindow_getWidth(app->window),
-              (uint32_t) ANativeWindow_getHeight(app->window)});
-        	break;
+        case APP_CMD_WINDOW_RESIZED: {
+            VkExtent2D extent{ (uint32_t) ANativeWindow_getWidth(app->window),
+              (uint32_t) ANativeWindow_getHeight(app->window)};
+            data->render_thread.post([extent, &data]() { resize(*data, extent); });
+            } break;
         case APP_CMD_TERM_WINDOW:
             // The window is being hidden or closed, clean it up.
             break;
@@ -484,6 +499,8 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
 window_type create(
 #ifdef _WIN32
 	HINSTANCE hinstance,
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+	xcb_connection_t *connection,
 #elif defined(__ANDROID__)
 	android_app* state,
 #endif // __ANDROID__
@@ -495,6 +512,8 @@ window_type create(
 	std::unique_ptr<internal::window_data_type> data(new internal::window_data_type(
 #ifdef _WIN32
 		hinstance,
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+		connection,
 #elif defined(__ANDROID__)
 		state,
 #endif // _WIN32
@@ -535,7 +554,32 @@ window_type create(
 	state->userData = data.get();
 	state->onAppCmd = engine_handle_cmd;
 	state->onInputEvent = engine_handle_input;
-#endif // _WIN32
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+	xcb_screen_t *screen(xcb_setup_roots_iterator(xcb_get_setup(connection)).data);
+	data->window = xcb_generate_id(connection);
+	uint32_t value_list[] = { XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE
+		| XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_STRUCTURE_NOTIFY
+		| XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_BUTTON_MOTION
+		| XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS };
+	xcb_create_window(connection, screen->root_depth, data->window, screen->root, 100, 100,
+	  extent.width, extent.height, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual,
+	  XCB_CW_EVENT_MASK, value_list);
+	xcb_intern_atom_cookie_t cookie(xcb_intern_atom(connection, 1, 12, "WM_PROTOCOLS"));
+  auto reply(internal::window_data_type::atom_reply_t(
+      xcb_intern_atom_reply(connection, cookie, 0), free));
+
+  xcb_intern_atom_cookie_t cookie2(xcb_intern_atom(connection, 0, 16, "WM_DELETE_WINDOW"));
+	data->atom_wm_delete_window.reset(xcb_intern_atom_reply(connection, cookie2, 0));
+
+  xcb_change_property(connection, XCB_PROP_MODE_REPLACE, data->window, reply->atom, 4, 32, 1,
+      &data->atom_wm_delete_window->atom);
+
+	xcb_map_window(connection, data->window);
+	if (!xcb_flush(connection)) {
+	  throw vcc::vcc_exception("xcb_flush xcb_create_window xcb_map_window failed");
+  }
+  vcc::window::initialize(*data, data->window);
+#endif
 
 	return window_type{std::move(data)};
 }
@@ -546,7 +590,7 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 	window.data->resize_callback = resize_callback;
 	window.data->draw_callback = draw_callback;
 	window.data->input_callbacks = input_callbacks;
-	window.data->render_thread.start();
+	auto joinable(window.data->render_thread.start());
 #ifdef _WIN32
 	MSG msg;
 	for (;;) {
@@ -559,8 +603,57 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 			DispatchMessage(&msg);
 		}
 	}
-	window.data->render_thread.join();
 	return (int) msg.wParam;
+
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+
+  for (;;) {
+    std::unique_ptr<xcb_generic_event_t, decltype(&free)> event(
+      xcb_wait_for_event(window.data->connection), &free);
+      uint8_t event_code = event->response_type & 0x7f;
+      switch (event_code) {
+      case XCB_CONFIGURE_NOTIFY: {
+        const xcb_configure_notify_event_t *cfg =
+          (const xcb_configure_notify_event_t *) event.get();
+        const VkExtent2D extent{ cfg->width, cfg->height };
+        window.data->render_thread.post([extent, &window]() {
+          resize(*window.data, extent);
+        });
+        window.data->render_thread.set_drawing(true);
+        } break;
+      case XCB_CLIENT_MESSAGE: {
+          auto message = (xcb_client_message_event_t *) event.get();
+          if (message->data.data32[0] == window.data->atom_wm_delete_window->atom) {
+            vcc::device::wait_idle(*window.data->device);
+            return 0;
+          }
+        } break;
+      case XCB_BUTTON_PRESS: {
+        auto bp = (xcb_button_press_event_t *) event.get();
+        window.data->input_callbacks.mouse_down_callback(mouse_button_type(bp->detail - 1),
+            bp->event_x, bp->event_y);
+        } break;
+      case XCB_BUTTON_RELEASE: {
+        auto br = (xcb_button_release_event_t *) event.get();
+        window.data->input_callbacks.mouse_up_callback(mouse_button_type(br->detail - 1),
+            br->event_x, br->event_y);
+        } break;
+      case XCB_MOTION_NOTIFY: {
+        auto motion = (xcb_motion_notify_event_t *) event.get();
+        window.data->input_callbacks.mouse_move_callback(motion->event_x, motion->event_y);
+        } break;
+      case XCB_KEY_PRESS: {
+        auto kp = (xcb_key_press_event_t *) event.get();
+        // TODO(gardell): Translate button
+        window.data->input_callbacks.key_down_callback(keycode_type(kp->detail));
+        } break;
+      case XCB_KEY_RELEASE: {
+        auto kr = (xcb_key_release_event_t *) event.get();
+        // TODO(gardell): Translate button
+        window.data->input_callbacks.key_up_callback(keycode_type(kr->detail));
+        } break;
+      }
+  }
 
 #elif defined(__ANDROID__)
 	for (;;) {
@@ -575,12 +668,12 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 			}
 
 			if (window.data->state->destroyRequested != 0) {
-				window.data->render_thread.join();
 				return 0;
 			}
 		}
 	}
 #endif // __ANDROID__
+	return 0;
 }
 
 }  // namespace window

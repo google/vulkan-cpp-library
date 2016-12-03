@@ -130,6 +130,8 @@ int main(int argc, const char **argv) {
 			VK_KHR_WIN32_SURFACE_EXTENSION_NAME
 #elif defined(__ANDROID__)
 			VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+#else
+			VK_KHR_XCB_SURFACE_EXTENSION_NAME
 #endif // __ANDROID__
 		};
 		assert(vcc::enumerate::contains_all(
@@ -218,7 +220,7 @@ int main(int argc, const char **argv) {
 		auto image(vcc::image::create(std::ref(queue),
 			0, VK_IMAGE_USAGE_SAMPLED_BIT, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
 			VK_SHARING_MODE_EXCLUSIVE, {},
-			std::ifstream("../../../textures/png/PNG_transparency_demonstration_1.png",
+			std::ifstream("textures/png/PNG_transparency_demonstration_1.png",
 				std::ios_base::binary | std::ios_base::in)));
 #endif  // __ANDROID__
 
@@ -246,11 +248,19 @@ int main(int argc, const char **argv) {
 				} });
 	}
 
+#if defined(VK_USE_PLATFORM_XCB_KHR)
+	const std::unique_ptr<xcb_connection_t, decltype(&xcb_disconnect)> connection_ptr(
+    xcb_connect(nullptr,nullptr), &xcb_disconnect);
+  auto connection(connection_ptr.get());
+  assert(!xcb_connection_has_error(connection));
+#endif // VK_USE_PLATFORM_XCB_KHR
 	vcc::window::window_type window(vcc::window::create(
 #ifdef WIN32
 		GetModuleHandle(NULL),
 #elif defined(__ANDROID__) || defined(ANDROID)
 		state,
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+		connection,
 #endif // __ANDROID__
 		std::ref(instance), std::ref(device), std::ref(queue),
 		VkExtent2D{ 500, 500 }, VK_FORMAT_A8B8G8R8_UINT_PACK32, "Cube demo"));
@@ -283,7 +293,7 @@ int main(int argc, const char **argv) {
 #if defined(__ANDROID__) || defined(ANDROID)
 			android::asset_istream(state->activity->assetManager, "cube-vert.spv")
 #else
-			std::ifstream("../../../cube-vert.spv",
+			std::ifstream("cube-vert.spv",
 				std::ios_base::binary | std::ios_base::in)
 #endif  // __ ANDROID__
 			));
@@ -292,7 +302,7 @@ int main(int argc, const char **argv) {
 #if defined(__ANDROID__) || defined(ANDROID)
 			android::asset_istream(state->activity->assetManager, "cube-frag.spv")
 #else
-			std::ifstream("../../../cube-frag.spv",
+			std::ifstream("cube-frag.spv",
 				std::ios_base::binary | std::ios_base::in)
 #endif  // __ ANDROID__
 			));

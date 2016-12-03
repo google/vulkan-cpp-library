@@ -24,7 +24,7 @@ struct glut_object {
 	typedef void_callback_type idle_callback_type;
 	typedef std::function<void(int, int)> resize_callback_type;
 
-	glut_object(const char *title, int width, int height);
+	glut_object(int &argc, char **argv, const char *title, int width, int height);
 
 	int run(const draw_callback_type &draw_callback,
 		const idle_callback_type &idle_callback,

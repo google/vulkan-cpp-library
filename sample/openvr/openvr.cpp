@@ -230,7 +230,8 @@ instance_type load_instance(vcc::device::device_type &device,
 		vcc::command::set_scissor{
 		0,{ { { 0, 0 }, extent } } },
 		vcc::command::bind_vertex_buffers(0,
-	{ model->vertex_buffer }, { 0, 0 }),
+	std::vector<type::supplier<vcc::input_buffer::input_buffer_type>>{ model->vertex_buffer },
+	{ 0, 0 }),
 		vcc::command::bind_index_data_buffer(
 			model->index_buffer, 0, VK_INDEX_TYPE_UINT16),
 		vcc::command::set_viewport{ 0,{ viewports[0] } },
@@ -271,14 +272,24 @@ vcc::command_buffer::command_buffer_type recalculate_command_buffer(
 	return std::move(command_buffer);
 }
 
+#ifdef WIN32
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		LPSTR lpCmdLine, int nCmdShow) {
+		int argc = __argc;
+		char **argv = __argv;
+#else
+int main(int argc, char **argv) {
+#endif // WIN32
 
 	vcc::instance::instance_type instance;
 	{
 		const std::set<std::string> extensions = {
 			VK_KHR_SURFACE_EXTENSION_NAME,
+#ifdef WIN32
 			VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+#else
+      VK_KHR_XCB_SURFACE_EXTENSION_NAME
+#endif
 		};
 		assert(vcc::enumerate::contains_all(
 			vcc::enumerate::instance_extension_properties(""),
@@ -356,12 +367,12 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	vcc::shader_module::shader_module_type vert_shader_module(
 		vcc::shader_module::create(std::ref(device),
-			std::ifstream("../../../openvr-vert.spv",
+			std::ifstream("openvr-vert.spv",
 				std::ios_base::binary | std::ios_base::in)
 			));
 	vcc::shader_module::shader_module_type frag_shader_module(
 		vcc::shader_module::create(std::ref(device),
-			std::ifstream("../../../openvr-frag.spv",
+			std::ifstream("openvr-frag.spv",
 				std::ios_base::binary | std::ios_base::in)
 			));
 
@@ -417,7 +428,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	const glm::vec2 angle(1, 0);
 
-	vr_type vr_instance("OpenVR sample", 1024, 768, std::ref(queue));
+	vr_type vr_instance(argc, argv, "OpenVR sample", 1024, 768, std::ref(queue));
 	const VkExtent2D extent(vr_instance.get_recommended_render_target_size());
 
 	const float near_z(.1f), far_z(100);

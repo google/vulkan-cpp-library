@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 #include <cassert>
+#include <chrono>
 #include <sstream>
+#include <thread>
 #include <vcc/command.h>
 #include <vcc/internal/loader.h>
 #include <vcc/memory.h>
@@ -53,11 +55,11 @@ vr::IVRSystem *vr_type::init_hmd() {
 	return hmd;
 }
 
-vr_type::vr_type(const char *window_title, uint32_t window_width,
+vr_type::vr_type(int &argc, char **argv, const char *window_title, uint32_t window_width,
 		uint32_t window_height,
 		const type::supplier<vcc::queue::queue_type> &queue)
 	: hmd(init_hmd()), queue(queue),
-	  glut(window_title, window_width, window_height),
+	  glut(argc, argv, window_title, window_width, window_height),
 	  window_width(window_width), window_height(window_height),
 	  extent(get_recommended_render_target_size()) {
 
@@ -85,7 +87,7 @@ vr_type::vr_type(const char *window_title, uint32_t window_width,
 		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 		VK_SHARING_MODE_EXCLUSIVE, {}, VK_IMAGE_LAYOUT_UNDEFINED));
 	vcc::memory::bind(device, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		std::ref(image));
+		image);
 	image_view = vcc::image_view::create(std::ref(image),
 		{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 }
@@ -220,7 +222,7 @@ int vr_type::run(const draw_callback_type &draw_callback,
 			for (vr::TrackedDeviceIndex_t unDevice = 0;
 			unDevice < vr::k_unMaxTrackedDeviceCount; unDevice++) {
 				vr::VRControllerState_t state;
-				if (hmd->GetControllerState(unDevice, &state)) {
+				if (hmd->GetControllerState(unDevice, &state, sizeof(vr::VRControllerState_t))) {
 					//m_rbShowTrackedDevice[unDevice] = state.ulButtonPressed == 0;
 				}
 			}
@@ -278,7 +280,7 @@ vr_model vr_type::load_model(const char *model_name) const {
 	do {
 		error = render_models->LoadRenderModel_Async(model_name, &pModel);
 		// TODO(gardell): Is there no better way than to poll?
-		Sleep(1000);
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 	} while (error == vr::VRRenderModelError_Loading);
 	if (error != vr::VRRenderModelError_None) {
 		std::stringstream ss;
@@ -293,7 +295,7 @@ vr_model vr_type::load_model(const char *model_name) const {
 	do {
 		error = render_models->LoadTexture_Async(pModel->diffuseTextureId, &pTexture);
 		// TODO(gardell): Is there no better way than to poll?
-		Sleep(1000);
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 	} while (error == vr::VRRenderModelError_Loading);
 	if (error != vr::VRRenderModelError_None) {
 		std::stringstream ss;

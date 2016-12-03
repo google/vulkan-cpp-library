@@ -63,7 +63,7 @@ VkSubresourceLayout get_subresource_layout(image_type &image,
 	return layout;
 }
 
-VCC_LIBRARY void copy_to_linear_image(VkFormat format,
+void copy_to_linear_image(VkFormat format,
 		VkImageAspectFlags aspect_mask, VkExtent2D extent, const void *source,
 		std::size_t block_size, std::size_t row_pitch,
 		image::image_type &target_image) {

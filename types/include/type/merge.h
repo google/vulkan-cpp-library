@@ -47,15 +47,15 @@ template<typename T, typename Container1T, typename Container2T>
 struct read_merge_instance_type : public read_instance_type<T> {
 	read_merge_instance_type(const supplier<Container1T> &container1,
 		const supplier<Container2T> &container2)
-		: read_instance_type(container1->size() + container2->size(),
+		: read_instance_type<T>(container1->size() + container2->size(),
 			container1->size()),
 		container1(container1), container2(container2) {}
 
 	const T &get(std::size_t index) const {
-		assert(index < size);
-		return index < read_instance_type::container1_size
+		assert(index < read_instance_type<T>::size);
+		return index < read_instance_type<T>::container1_size
 			? (*container1)[index]
-			: (*container2)[index - read_instance_type::container1_size];
+			: (*container2)[index - read_instance_type<T>::container1_size];
 	}
 
 	const supplier<Container1T> container1;
@@ -67,7 +67,7 @@ struct merge_instance : public instance_type<T> {
 
 	merge_instance(const supplier<Container1T> &container1,
 		const supplier<Container2T> &container2)
-		: instance_type(container1->size() + container2->size(), container1->size()),
+		: instance_type<T>(container1->size() + container2->size(), container1->size()),
 		container1(container1), container2(container2),
 		revision1(REVISION_NONE), revision2(REVISION_NONE),
 		this_revision(1) {}
@@ -278,7 +278,7 @@ private:
 		: instance(merge.instance->read()) {}
 
 	revision_type get_revision() const {
-		return merge.instance->revision();
+		return instance->revision();
 	}
 
 	std::unique_ptr<internal::read_instance_type<T>> instance;

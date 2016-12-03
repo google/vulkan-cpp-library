@@ -52,14 +52,10 @@ std::string dump_physical_device_format_properties(VkPhysicalDevice physical_dev
 	return ss.str();
 }
 
-VCC_LIBRARY image::image_type create(
-	const type::supplier<vcc::queue::queue_type> &queue,
-	VkImageCreateFlags flags,
-	VkImageUsageFlags usage,
-	VkFormatFeatureFlags feature_flags,
-	VkSharingMode sharingMode,
-	const std::vector<uint32_t> &queueFamilyIndices,
-	std::istream &&stream) {
+image::image_type create(const type::supplier<vcc::queue::queue_type> &queue,
+	VkImageCreateFlags flags, VkImageUsageFlags usage,
+	VkFormatFeatureFlags feature_flags, VkSharingMode sharingMode,
+	const std::vector<uint32_t> &queueFamilyIndices, std::istream &&stream) {
 
 	for (const std::shared_ptr<internal::loader_type> &loader : internal::g_loaders) {
 		if (loader->can_load(stream)) {

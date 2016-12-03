@@ -94,13 +94,14 @@ type::supplier<memory_type> bind(
 	const VkMemoryRequirements memory_requirements[] = { internal::get_memory_requirements(args)... };
 	VkDeviceSize offsets[num_args];
 	offsets[0] = 0;
-	uint32_t memoryTypeBits(UINT_MAX);
+	uint32_t memoryTypeBits(memory_requirements[0].memoryTypeBits);
 	for (int i = 1; i < num_args; ++i) {
 		offsets[i] = offsets[i - 1] + memory_requirements[i - 1].size;
 		VkDeviceSize alignment(offsets[i] % memory_requirements[i].alignment);
 		if (alignment) {
 			offsets[i] += memory_requirements[i].alignment - alignment;
 		}
+		memoryTypeBits &= memory_requirements[i].memoryTypeBits;
 	}
 	const VkDeviceSize size = offsets[num_args - 1] + memory_requirements[num_args - 1].size;
 	if (!memoryTypeBits) {
