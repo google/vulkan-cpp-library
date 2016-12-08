@@ -46,7 +46,7 @@ template<typename... StorageType>
 shader_stage_type shader_stage(VkShaderStageFlagBits stage,
 	const type::supplier<shader_module::shader_module_type> &module,
 	const std::string &name,
-	const std::vector<VkSpecializationMapEntry> &map_entries = {},
+	const std::vector<VkSpecializationMapEntry> &map_entries,
 	StorageType... storages) {
 	type::serialize_type serialize(type::make_serialize(
 		type::memory_layout::linear, std::forward<StorageType>(storages)...));
@@ -148,7 +148,7 @@ struct pipeline_type
 	: internal::movable_destructible_with_parent<VkPipeline,
 		device::device_type, vkDestroyPipeline> {
 	friend pipeline_type create_graphics(const type::supplier<device::device_type> &device,
-		pipeline_cache::pipeline_cache_type &pipeline_cache,
+		const pipeline_cache::pipeline_cache_type &pipeline_cache,
 		VkPipelineCreateFlags flags,
 		const std::vector<shader_stage_type> &stages,
 		const vertex_input_state &vertexInputState,
@@ -166,9 +166,9 @@ struct pipeline_type
 		const type::supplier<pipeline::pipeline_type> &basePipelineHandle);
 	friend VCC_LIBRARY pipeline_type create_compute(
 		const type::supplier<device::device_type> &device,
-		pipeline_cache::pipeline_cache_type &pipeline_cache,
+		const pipeline_cache::pipeline_cache_type &pipeline_cache,
 		VkPipelineCreateFlags flags,
-		shader_stage_type &stage,
+		const shader_stage_type &stage,
 		const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
 		const type::supplier<pipeline::pipeline_type> &basePipelineHandle);
 
@@ -198,7 +198,7 @@ private:
 };
 
 VCC_LIBRARY pipeline_type create_graphics(const type::supplier<device::device_type> &device,
-	pipeline_cache::pipeline_cache_type &pipeline_cache,
+	const pipeline_cache::pipeline_cache_type &pipeline_cache,
 	VkPipelineCreateFlags flags,
 	const std::vector<shader_stage_type> &stages,
 	const vertex_input_state &vertexInputState,
@@ -217,7 +217,7 @@ VCC_LIBRARY pipeline_type create_graphics(const type::supplier<device::device_ty
 		type::supplier<pipeline::pipeline_type>());
 
 VCC_LIBRARY pipeline_type create_graphics(const type::supplier<device::device_type> &device,
-	pipeline_cache::pipeline_cache_type &pipeline_cache,
+	const pipeline_cache::pipeline_cache_type &pipeline_cache,
 	VkPipelineCreateFlags flags,
 	const std::vector<shader_stage_type> &stages,
 	const vertex_input_state &vertexInputState,
@@ -234,9 +234,9 @@ VCC_LIBRARY pipeline_type create_graphics(const type::supplier<device::device_ty
 	const type::supplier<pipeline::pipeline_type> &basePipelineHandle = type::supplier<pipeline::pipeline_type>());
 
 VCC_LIBRARY pipeline_type create_compute(const type::supplier<device::device_type> &device,
-	pipeline_cache::pipeline_cache_type &pipeline_cache,
+	const pipeline_cache::pipeline_cache_type &pipeline_cache,
 	VkPipelineCreateFlags flags,
-	shader_stage_type &stage,
+	const shader_stage_type &stage,
 	const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
 	const type::supplier<pipeline::pipeline_type> &basePipelineHandle = type::supplier<pipeline::pipeline_type>());
 

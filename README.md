@@ -1,13 +1,9 @@
 # vulkan-cpp
-
 Vulkan abstraction library using C++11 for memory, resource management, type and thread safety as well as system independency.
 The goal is to be able to quickly write Vulkan code that is type safe, readable and clearly states its purpose, instead of being overwhelmed by pointer arithmetics, memory alignment and the "Vulkan/OpenGL" black screen of death.
-
 ### Resource management
-
 Buffer content is typed, referenced and revision counted. Push and specialization constants are typed. The library synchronizes your buffers between client and host lazily,
 layouts data according to `std140`, `std430`, `interleaved` or `linear` depending on your need.
-
 ```C++
 vec3_array vertices;
 vec3_array normals;
@@ -16,7 +12,6 @@ vec2_array texcoords;
 buffer_type vertex_buffer(create(interleaved_std140, ...,
   std::ref(vertices), std::ref(texcoords), std::ref(normals)));
 ```
-
 The above `vertices`, `normals` and `texcoords` can be read or written to at any time, using the following syntax:
 ```C++
 readable_vec3_array r = read(vertices);
@@ -25,58 +20,42 @@ readable_vec3_array r = read(vertices);
 writable_vec3_array m = write(vertices);
 m[0] = 1.f;
 ```
-
 Submitting a command buffer which depend on the buffer will cause a flush of said buffer.
 ```C++
 queue::submit(queue, {}, command_buffers, {});
 ```
-
 Locking the array with the `writable_*_array` types will increase its reference count when it goes out of scope. Locking the array with `readable_*_array` makes sure no concurrent read/write occurs.
 The `writable_*_array` provides a full `std::vector` like interface where `readable_*_array` provides a read-only `const std::vector` like interface.
 
 *Because the data is strongly typed, there are a lot of opportunities for type checking, especially against SPIR-V. This is in the works!*
 The library includes the spirv-reflection project. It parses SPIR-V and extracts uniforms, inputs and outputs. The library will be used to do runtime validation on SPIR-V assembly against the C++ declared arrays. This is currently being worked on.
-
 ### Memory management
 All Vulkan objects are encapsulated and hidden in C++ classes. These are movable only and destroy the underlying Vulkan objects when they go out of scope.
 
 This makes memory management as easy as is expected with C++, simply move your object to a safe place and use `std::ref` whenever another object
 needs to keep a reference, or, move your object into a `std::shared_ptr` for reference counting. All functions that take a `supplier<T>` in this library
 will keep a reference to the object, where functions taking a reference will use the argument only for the scope of the function. `supplier<T>` has overloads for rvalue references (takes ownership), `std::shared_ptr` `std::unique_ptr`, `std::reference_wrapper` (`std::ref`) and `function<T&()>`.
-
 ### Multithreading
 The library is thread-safe as required by the Vulkan specification, `2.5 Threading Behavior`, `Externally Synchronized Parameters`, `Externally Synchronized Parameter Lists`.
 Notice that `Implicit Externally Synchronized Parameters` is not included.
-
 ### OpenVR
 Samples include an OpenVR example. This simple demo renders the models of the connected devices like trackers and controllers. It supports lazy loading and recompiles the command buffers when any new devices are added or removed.
 
 Notice that as of writing this, OpenVR does not support Vulkan. This sample is using `GL_NV_draw_vulkan_image` to blit Vulkan images to OpenGL.
+##Install
+###Linux/XCB
+`cmake .` downloads all the dependencies needed. `cmake --build .` compiles the libraries and samples.
+###Android
+Install `Android Studio` and the `NDK`. `SDK 24` is required. Import the root project directory. Initial building and synchronizing will take a very long time, as it will download the dependency projects needed.
 
-### Xlib/xcb
-In the works.
-
-## Install
-
-### Android
-Install the latest Android SDK and NDK, the pre-release of Android N (API level 24) is required.
-Unit and integration tests are not supported.
-
+**Note:** Textures are copied to the `assets/` and `res/` folders of the respective projects. However, `*.spv` compiled shaders are not generated. These must be copied to the `assets/` folder. 
 To compile and install the library and samples, run:
 `ANDROID_NDK_HOME=/#your-path#/android-ndk-r11c/ ANDROID_HOME=/#your-path#/android-sdk-linux/ ./gradlew installDebug`
-
-
-### Visual Studio 2015
+###Visual Studio 2015
 Only 2015 is supported. The C++11 support in previous versions is not sufficient.
-* Open the `vulkan-cpp.sln`,
-* click `Property Manager` (next to `Solution Explorer`, bottom left corner),
-* Expand any of the projects and configurations,
-* right-click on `Paths` and select properties.
-* Under `Common Properties` > `User Macros`,
-* edit the `VulkanSdk`, `GoogleTestDir`, `PngDir`, `GlmDir` and `GliDir` to point to the locations of the respective libraries.
-* The `FreeGlutDir`, `OpenVrDir`, `GlewDir` are only needed to build the openvr sample.
-* The project should now compile. `Win32` and `x64` in `Release` and `Debug` configurations are setup.
-
+`cmake -DVULKAN_SDK_DIR:PATH=<path-to-vulkan-sdk> -DGLEW_BINARY_DIR:PATH=<path-to-glew-library> .` downloads all the dependencies and sets up the projects. Notice that the GLEW library is not downloaded. The binary package must be downloaded from the GLEW website http://glew.sourceforge.net/
+**Note that GLEW is only required for the openvr example**.
+Either use  `cmake --build .` to compile or open the generated  `.sln`.
 ## Acknowledgements
 * This library optionally uses [OpenGL Mathematics, glm.](http://glm.g-truc.net/0.9.7/index.html)
 * vcc-image uses [libpng](http://www.libpng.org/) for loading VK_IMAGE_TILING_LINEAR images.

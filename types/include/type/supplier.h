@@ -66,8 +66,8 @@ public:
 	supplier(const std::shared_ptr<T> &supplier)
 		: function([supplier]()->T& {return *supplier;}) {}
 
-	supplier(std::unique_ptr<T> &&supplier)
-		: supplier<T>(std::shared_ptr<T>(std::forward<std::unique_ptr<T>>(supplier))) {}
+	supplier(std::unique_ptr<T> &&s)
+		: supplier(std::shared_ptr<T>(std::forward<std::unique_ptr<T>>(s))) {}
 
 	supplier(const std::reference_wrapper<T> &reference)
 		: function([reference]()->T& {return reference.get();}) {}

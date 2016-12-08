@@ -24,7 +24,18 @@ namespace surface {
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
 
-surface_type create(const type::supplier<<instance::instance_type> &instance, xcb_connection_t *connection, xcb_window_t window);
+surface_type create(const type::supplier<instance::instance_type> &instance,
+		xcb_connection_t *connection, xcb_window_t window) {
+
+	VkSurfaceKHR surface;
+	VkXcbSurfaceCreateInfoKHR create = {
+		VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR, NULL, 0};
+	create.connection = connection;
+	create.window = window;
+	VKCHECK(vkCreateXcbSurfaceKHR(internal::get_instance(*instance), &create,
+			NULL, &surface));
+	return surface_type(surface, instance);
+}
 
 #endif // VK_USE_PLATFORM_XCB_KHR
 

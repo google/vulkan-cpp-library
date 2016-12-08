@@ -19,6 +19,7 @@
 #ifdef __ANDROID__
 #include <android_native_app_glue.h>
 #endif // __ANDROID__
+#include <atomic>
 #include <condition_variable>
 #include <thread>
 #include <vector>
@@ -49,13 +50,26 @@ struct window_data_type;
 struct render_thread {
 	typedef std::function<void()> callback_type;
 
+  struct joinable_type {
+    friend class render_thread;
+
+    joinable_type() = delete;
+    joinable_type(const joinable_type &) = delete;
+    joinable_type(joinable_type &&) = default;
+  private:
+    explicit joinable_type(render_thread &thread) : thread(thread) {}
+    render_thread &thread;
+  public:
+    ~joinable_type() { thread.join(); }
+  };
+
 	render_thread() = default;
 
 	explicit render_thread(callback_type &&draw_callback)
 		: running(false), drawing(false),
 		  draw_callback(std::forward<callback_type>(draw_callback)) {}
 
-	void start() {
+	joinable_type start() {
 		running = true;
 		thread = std::thread([this]() {
 			while (running) {
@@ -75,6 +89,7 @@ struct render_thread {
 				}
 			}
 		});
+		return joinable_type(*this);
 	}
 
 	void set_drawing(bool drawing) {
@@ -97,7 +112,7 @@ struct render_thread {
 
 	std::vector<callback_type> tasks;
 	std::mutex tasks_mutex;
-	volatile bool running, drawing;
+	std::atomic_bool running, drawing;
 	std::condition_variable cv;
 	std::thread thread;
 	callback_type draw_callback;
@@ -216,9 +231,14 @@ struct window_data_type {
 	HWND        window;          // hWnd - window handle
 #elif defined(__ANDROID__)
 	android_app* state;
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+	xcb_connection_t *connection;
+	xcb_window_t window;
+	typedef std::unique_ptr<xcb_intern_atom_reply_t, decltype(&free)> atom_reply_t;
+	atom_reply_t atom_wm_delete_window;
 #endif // __ANDROID__
 
-	window_data_type() = default;
+	window_data_type() = delete;
 	window_data_type(const window_data_type&) = delete;
 	window_data_type(window_data_type&&) = default;
 	window_data_type &operator=(const window_data_type&) = delete;
@@ -231,6 +251,8 @@ struct window_data_type {
 			HINSTANCE hinstance,
 #elif defined(__ANDROID__)
 			android_app* state,
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+			xcb_connection_t *connection,
 #endif // __ANDROID__
 			const type::supplier<instance::instance_type> &instance,
 			const type::supplier<queue::queue_type> &graphics_queue,
@@ -240,13 +262,13 @@ struct window_data_type {
 				connection(hinstance),
 #elif defined(__ANDROID__)
 				state(state),
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+				connection(connection),
+				atom_wm_delete_window(nullptr, &free),
 #endif // WIN32
 				instance(instance),
 				extent(extent),
-				resize_callback(resize_callback),
-				draw_callback(draw_callback),
 				device(device),
-				input_callbacks(input_callbacks),
 				graphics_queue(graphics_queue),
 				render_thread([this]() {draw(); }) {}
 
@@ -272,7 +294,6 @@ struct window_data_type {
 	swapchain::swapchain_type swapchain;
 	std::vector<swapchain_type> swapchain_images;
 	command_pool::command_pool_type cmd_pool;
-	vcc::semaphore::semaphore_type present_complete_semaphore;
 };
 
 }  // namespace internal
@@ -284,7 +305,8 @@ struct window_type {
 	window_type &operator=(const window_type&) = delete;
 	window_type &operator=(window_type&&) = default;
 
-	explicit window_type(std::unique_ptr<internal::window_data_type> &&data) : data(std::forward<std::unique_ptr<internal::window_data_type>>(data)) {}
+	explicit window_type(std::unique_ptr<internal::window_data_type> &&data)
+		: data(std::forward<std::unique_ptr<internal::window_data_type>>(data)) {}
 	std::unique_ptr<internal::window_data_type> data;
 };
 
@@ -295,6 +317,8 @@ inline VkFormat get_format(const window_type &window) {
 VCC_LIBRARY window_type create(
 #ifdef _WIN32
 		HINSTANCE hinstance,
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+		xcb_connection_t *connection,
 #elif defined(__ANDROID__)
 		android_app* state,
 #endif // __ANDROID__

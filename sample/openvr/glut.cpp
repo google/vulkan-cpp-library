@@ -40,10 +40,10 @@ void resize(int width, int height) {
 
 }  // anonymous namespace
 
-glut_object::glut_object(const char *title, int width, int height) {
+glut_object::glut_object(int &argc, char **argv, const char *title, int width, int height) {
 
 	glutInitWindowSize(width, height);
-	glutInit(&__argc, __argv);
+	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE);
 	glutCreateWindow(title);
 

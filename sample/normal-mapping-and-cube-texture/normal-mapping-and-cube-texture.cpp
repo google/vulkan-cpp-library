@@ -155,9 +155,6 @@ void android_main(struct android_app* state) {
 	app_dummy();
 	JNIEnv* env;
 	state->activity->vm->AttachCurrentThread(&env, NULL);
-#elif defined(WIN32)
-int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-	LPSTR lpCmdLine, int nCmdShow) {
 #else
 int main(int argc, const char **argv) {
 #endif // __ANDROID__
@@ -266,7 +263,7 @@ int main(int argc, const char **argv) {
 			android::asset_istream(state->activity->assetManager,
 				"normal-mapping-and-cube-texture-vert.spv")
 #else
-			std::ifstream("../../../normal-mapping-and-cube-texture-vert.spv",
+			std::ifstream("normal-mapping-and-cube-texture-vert.spv",
 				std::ios_base::binary | std::ios_base::in)
 #endif  // __ ANDROID__
 			));
@@ -276,7 +273,7 @@ int main(int argc, const char **argv) {
 			android::asset_istream(state->activity->assetManager,
 				"normal-mapping-and-cube-texture-frag.spv")
 #else
-			std::ifstream("../../../normal-mapping-and-cube-texture-frag.spv",
+			std::ifstream("normal-mapping-and-cube-texture-frag.spv",
 				std::ios_base::binary | std::ios_base::in)
 #endif  // __ ANDROID__
 			));
@@ -334,7 +331,7 @@ int main(int argc, const char **argv) {
 #if defined(__ANDROID__) || defined(ANDROID)
 			android::asset_istream(state->activity->assetManager, "storforsen4.ktx")
 #else
-			std::ifstream("../../../textures/storforsen4/storforsen4.ktx",
+			std::ifstream("textures/storforsen4/storforsen4.ktx",
 				std::ios_base::binary | std::ios_base::in)
 #endif  // __ ANDROID__
 			));
@@ -343,13 +340,12 @@ int main(int argc, const char **argv) {
 #if defined(__ANDROID__) || defined(ANDROID)
 		vcc::image::image_type normal_image(vcc::image::create(std::ref(queue),
 			0, VK_IMAGE_USAGE_SAMPLED_BIT, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
-			VK_SHARING_MODE_EXCLUSIVE, {}, env, state->activity->clazz,
-			"normal_map_example_map"));
+			VK_SHARING_MODE_EXCLUSIVE, {}, env, state->activity->clazz, "normal_map"));
 #else
 		vcc::image::image_type normal_image(vcc::image::create(std::ref(queue),
 			0, VK_IMAGE_USAGE_SAMPLED_BIT, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
 			VK_SHARING_MODE_EXCLUSIVE, {},
-			std::ifstream("../../../textures/normal-mapping/Normal_map_example_-_Map.png",
+			std::ifstream("textures/normal-mapping/normal_map.png",
 				std::ios_base::binary | std::ios_base::in)));
 #endif  // __ANDROID__
 
@@ -377,11 +373,19 @@ int main(int argc, const char **argv) {
 			}
 		} });
 
+#if defined(VK_USE_PLATFORM_XCB_KHR)
+	const std::unique_ptr<xcb_connection_t, decltype(&xcb_disconnect)> connection_ptr(
+    xcb_connect(nullptr,nullptr), &xcb_disconnect);
+  auto connection(connection_ptr.get());
+  assert(!xcb_connection_has_error(connection));
+#endif // VK_USE_PLATFORM_XCB_KHR
 	vcc::window::window_type window(vcc::window::create(
 #ifdef WIN32
 		GetModuleHandle(NULL),
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__) || defined(ANDROID)
 		state,
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+		connection,
 #endif // __ANDROID__
 		std::ref(instance), std::ref(device), std::ref(queue),
 		VkExtent2D{ 500, 500 }, VK_FORMAT_A8B8G8R8_UINT_PACK32,

@@ -338,7 +338,7 @@ template<typename T, bool Mutable, bool IsArray>
 readable_storage_type<T, Mutable, IsArray> read(
 	storage_type<T, Mutable, IsArray> &array) {
 	typedef readable_storage_type<T, Mutable, IsArray> readable_storage_t;
-	return readable_storage_t(array, readable_storage_t::lock_type(
+	return readable_storage_t(array, typename readable_storage_t::lock_type(
 		internal::get_lock(array)));
 }
 
@@ -442,7 +442,7 @@ template<typename T, bool IsArray>
 writable_storage_type<T, IsArray> write(
 	storage_type<T, true, IsArray> &array) {
 	typedef writable_storage_type<T, IsArray> writable_storage_t;
-	return writable_storage_t(array, writable_storage_t::lock_type(
+	return writable_storage_t(array, typename writable_storage_t::lock_type(
 		internal::get_lock(array)));
 }
 

@@ -33,3 +33,4 @@ void main() {
   //output_values[index] = 2.0 * (1 + int(index));
   output_values[index] = 2.0 * input_values[index];
 }
+

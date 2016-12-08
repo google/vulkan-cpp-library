@@ -22,7 +22,8 @@ namespace vcc {
 namespace pipeline {
 
 VkPipelineShaderStageCreateInfo convert_shader_stage(const shader_stage_type &stage) {
-	VkPipelineShaderStageCreateInfo converted_stage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, NULL, 0 };
+	VkPipelineShaderStageCreateInfo converted_stage = {
+		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, NULL, 0 };
 	converted_stage.stage = stage.stage;
 	converted_stage.module = internal::get_instance(*stage.module);
 	converted_stage.pName = stage.name.c_str();
@@ -57,7 +58,7 @@ std::pair<std::vector<VkPipelineShaderStageCreateInfo>, std::vector<VkSpecializa
 }
 
 pipeline_type create_graphics(const type::supplier<device::device_type> &device,
-	pipeline_cache::pipeline_cache_type &pipeline_cache,
+	const pipeline_cache::pipeline_cache_type &pipeline_cache,
 	VkPipelineCreateFlags flags,
 	const std::vector<shader_stage_type> &stages,
 	const vertex_input_state &vertexInputState,
@@ -186,7 +187,7 @@ pipeline_type create_graphics(const type::supplier<device::device_type> &device,
 }
 
 pipeline_type create_graphics(const type::supplier<device::device_type> &device,
-		pipeline_cache::pipeline_cache_type &pipeline_cache,
+		const pipeline_cache::pipeline_cache_type &pipeline_cache,
 		VkPipelineCreateFlags flags,
 		const std::vector<shader_stage_type> &stages,
 		const vertex_input_state &vertexInputState,
@@ -210,7 +211,7 @@ pipeline_type create_graphics(const type::supplier<device::device_type> &device,
 }
 
 pipeline_type create_graphics(const type::supplier<device::device_type> &device,
-	pipeline_cache::pipeline_cache_type &pipeline_cache,
+	const pipeline_cache::pipeline_cache_type &pipeline_cache,
 	VkPipelineCreateFlags flags,
 	const std::vector<shader_stage_type> &stages,
 	const vertex_input_state &vertexInputState,
@@ -233,9 +234,9 @@ pipeline_type create_graphics(const type::supplier<device::device_type> &device,
 }
 
 pipeline_type create_compute(const type::supplier<device::device_type> &device,
-		pipeline_cache::pipeline_cache_type &pipeline_cache,
+		const pipeline_cache::pipeline_cache_type &pipeline_cache,
 		VkPipelineCreateFlags flags,
-		shader_stage_type &stage,
+		const shader_stage_type &stage,
 		const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
 		const type::supplier<pipeline::pipeline_type> &basePipelineHandle) {
 	VkComputePipelineCreateInfo create = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, NULL, };

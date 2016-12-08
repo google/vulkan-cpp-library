@@ -45,7 +45,7 @@ const char *debug_severity(VkDebugReportFlagsEXT severity) {
 bool print_function(VkDebugReportFlagsEXT flags,
 		VkDebugReportObjectTypeEXT objType, uint64_t srcObject, size_t location,
 		int32_t msgCode, const char* pLayerPrefix, const char* pMsg) {
-#ifdef _WIN32
+#if defined(_WIN32)
     std::stringstream ss;
     ss << debug_severity(flags) << ": [" << pLayerPrefix << "] Code "
         << msgCode << " : " << pMsg;
@@ -55,8 +55,8 @@ bool print_function(VkDebugReportFlagsEXT flags,
     __android_log_print(ANDROID_LOG_INFO, debug_severity(flags),
         "[%s] Code %d: %s", pLayerPrefix, msgCode, pMsg);
 #else
-    fprintf(stderr, debug_severity(flags), "[%s] Code %d: %s\n", pLayerPrefix,
-        msgCode, pMsg);
+    std::cerr << debug_severity(flags) << ": [" << pLayerPrefix << "] Code "
+        << msgCode << " : " << pMsg << std::endl;
 #endif
     return false;
 }

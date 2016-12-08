@@ -33,16 +33,7 @@
 
 #define VK_PROTOTYPES 1
 #include <vulkan/vulkan.h>
-
-#ifdef _WIN32
-#ifdef _USRDLL
-#define VCC_LIBRARY __declspec ( dllexport )
-#else
-#define VCC_LIBRARY __declspec ( dllimport )
-#endif // _USRDLL
-#else
-#define VCC_LIBRARY
-#endif // _WIN32
+#include <vcc/export.h>
 
 namespace vcc {
 

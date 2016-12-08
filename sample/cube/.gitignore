@@ -1,0 +1,13 @@
+## Android
+
+*.iml
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/libraries
+.DS_Store
+build
+/captures
+.externalNativeBuild
+src/main/res/drawable-nodpi/
+src/main/assets/

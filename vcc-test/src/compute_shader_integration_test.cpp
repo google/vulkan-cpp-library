@@ -104,7 +104,7 @@ TEST(ComputeShaderIntegrationTest, ComputeShaderIntegrationTest1) {
 
 	vcc::shader_module::shader_module_type shader_module(
 		vcc::shader_module::create(std::ref(device),
-			std::ifstream("../../compute-shader-integration-test-1.spv",
+			std::ifstream("integration-test-1.spv",
 				std::ios_base::binary | std::ios_base::in)));
 
 	vcc::pipeline_cache::pipeline_cache_type pipeline_cache(
