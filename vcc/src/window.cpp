@@ -590,8 +590,8 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 	window.data->resize_callback = resize_callback;
 	window.data->draw_callback = draw_callback;
 	window.data->input_callbacks = input_callbacks;
-	auto joinable(window.data->render_thread.start());
 #ifdef _WIN32
+  auto joinable(window.data->render_thread.start());
 	MSG msg;
 	for (;;) {
 		GetMessage(&msg, NULL, 0, 0);
@@ -607,25 +607,26 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 
-  for (;;) {
-    std::unique_ptr<xcb_generic_event_t, decltype(&free)> event(
-      xcb_wait_for_event(window.data->connection), &free);
+	std::atomic_bool running(true);
+	std::atomic<VkExtent2D> extent(window.data->extent);
+
+  std::thread event_thread([&]() {
+    for (;;) {
+      std::unique_ptr<xcb_generic_event_t, decltype(&free)> event(
+        xcb_wait_for_event(window.data->connection), &free);
       uint8_t event_code = event->response_type & 0x7f;
       switch (event_code) {
       case XCB_CONFIGURE_NOTIFY: {
         const xcb_configure_notify_event_t *cfg =
           (const xcb_configure_notify_event_t *) event.get();
-        const VkExtent2D extent{ cfg->width, cfg->height };
-        window.data->render_thread.post([extent, &window]() {
-          resize(*window.data, extent);
-        });
-        window.data->render_thread.set_drawing(true);
+        extent = VkExtent2D{ cfg->width, cfg->height };
         } break;
       case XCB_CLIENT_MESSAGE: {
           auto message = (xcb_client_message_event_t *) event.get();
           if (message->data.data32[0] == window.data->atom_wm_delete_window->atom) {
             vcc::device::wait_idle(*window.data->device);
-            return 0;
+            running = false;
+            return;
           }
         } break;
       case XCB_BUTTON_PRESS: {
@@ -653,9 +654,21 @@ int run(window_type &window, const resize_callback_type &resize_callback,
         window.data->input_callbacks.key_up_callback(keycode_type(kr->detail));
         } break;
       }
+    }
+  });
+
+  while (running) {
+    VkExtent2D current_extent(extent.exchange({ 0, 0 }));
+    if (current_extent.width != 0 && current_extent.height != 0) {
+      resize(*window.data, current_extent);
+    }
+    window.data->draw();
   }
+  device::wait_idle(*window.data->device);
+  event_thread.join();
 
 #elif defined(__ANDROID__)
+  auto joinable(window.data->render_thread.start());
 	for (;;) {
 		// Read all pending events.
 		int events;
