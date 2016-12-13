@@ -305,7 +305,7 @@ int main(int argc, const char **argv) {
 	return
 #endif // __ANDROID__
 	vcc::window::run(window,
-		[&](VkExtent2D extent, VkFormat format, std::vector<vcc::window::swapchain_type> &swapchain_images) {
+		[&](VkExtent2D extent, VkFormat format, std::vector<vcc::window::swapchain_image_type> &swapchain_images) {
 			type::write(projection_matrix)[0] =
 				glm::perspective(45.f, float(extent.width) / extent.height,
 					1.f, 100.f);

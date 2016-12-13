@@ -93,31 +93,35 @@ input_callbacks_type &input_callbacks_type::set_touch_move_callback(
 const char *class_name = "vcc-vulkan";
 #endif // WIN32
 
-namespace internal {
-
-window_data_type::~window_data_type() {
+// TODO(gardell): operator=(&&) would leak! Probably want to use some RAII logic that does this for us.
+window_type::~window_type() {
 #ifdef _WIN32
-	DestroyWindow(window);
+	if (window != nullptr) {
+		DestroyWindow(window);
+		window = nullptr;
+	}
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-  xcb_destroy_window(connection, window);
+	if (connection != nullptr) {
+		xcb_destroy_window(connection, window);
+		connection = nullptr;
+	}
 #endif // _WIN32
 }
 
-} // namespace internal
-
-void resize(internal::window_data_type &data, VkExtent2D extent) {
+void resize(window_type &window, VkExtent2D extent,
+		const resize_callback_type &resize_callback) {
 	// Check the surface capabilities and formats
-	const VkPhysicalDevice physical_device(device::get_physical_device(*data.device));
-	const VkSurfaceCapabilitiesKHR surfCapabilities(vcc::surface::physical_device_capabilities(physical_device, data.surface));
+	const VkPhysicalDevice physical_device(device::get_physical_device(*window.device));
+	const VkSurfaceCapabilitiesKHR surfCapabilities(vcc::surface::physical_device_capabilities(physical_device, window.surface));
 
 	// width and height are either both -1, or both not -1.
-	data.extent = surfCapabilities.currentExtent.width == -1 ? extent : surfCapabilities.currentExtent;
+	extent = surfCapabilities.currentExtent.width == -1 ? extent : surfCapabilities.currentExtent;
 
 	// If mailbox mode is available, use it, as is the lowest-latency non-
 	// tearing mode.  If not, try IMMEDIATE which will usually be available,
 	// and is fastest (though it tears).  If not, fall back to FIFO which is
 	// always available.
-	const std::vector<VkPresentModeKHR> presentModes(vcc::surface::physical_device_present_modes(physical_device, data.surface));
+	const std::vector<VkPresentModeKHR> presentModes(vcc::surface::physical_device_present_modes(physical_device, window.surface));
 	VkPresentModeKHR swapchainPresentMode(*std::max_element(presentModes.begin(), presentModes.end(), [](VkPresentModeKHR mode1, VkPresentModeKHR mode2) {
 		if (mode1 != mode2) {
 			switch (mode2) {
@@ -143,15 +147,15 @@ void resize(internal::window_data_type &data, VkExtent2D extent) {
 	const VkSurfaceTransformFlagBitsKHR preTransform(
 	  surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
 	    ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : surfCapabilities.currentTransform);
-	data.swapchain_images.clear();
-	data.swapchain = vcc::swapchain::swapchain_type();
-	data.swapchain = vcc::swapchain::create(data.device,
-		vcc::swapchain::create_info_type{ std::ref(data.surface), desiredNumberOfSwapchainImages,
-		  data.format, data.color_space, data.extent,
+	window.swapchain_images.clear();
+	window.swapchain = vcc::swapchain::swapchain_type();
+	window.swapchain = vcc::swapchain::create(window.device,
+		vcc::swapchain::create_info_type{ std::ref(window.surface), desiredNumberOfSwapchainImages,
+		window.format, window.color_space, extent,
 			1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE,{}, preTransform, 0,
-			swapchainPresentMode, VK_TRUE, std::ref(data.swapchain) });
-	std::vector<vcc::image::image_type> swapchain_images(vcc::swapchain::get_images(data.swapchain));
-	data.swapchain_images.reserve(swapchain_images.size());
+			swapchainPresentMode, VK_TRUE, std::ref(window.swapchain) });
+	std::vector<vcc::image::image_type> swapchain_images(vcc::swapchain::get_images(window.swapchain));
+	window.swapchain_images.reserve(swapchain_images.size());
 	for (vcc::image::image_type &si : swapchain_images) {
 		std::shared_ptr<vcc::image::image_type> swapchain_image(
 			std::make_shared<vcc::image::image_type>(std::move(si)));
@@ -159,8 +163,8 @@ void resize(internal::window_data_type &data, VkExtent2D extent) {
 		// Render loop will expect image to have been used before and in VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 		// layout and will change to COLOR_ATTACHMENT_OPTIMAL, so init the image to that state
 		vcc::command_buffer::command_buffer_type command_buffer(std::move(
-		  vcc::command_buffer::allocate(type::supplier<device::device_type>(data.device),
-		    std::ref(data.cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
+		  vcc::command_buffer::allocate(type::supplier<device::device_type>(window.device),
+		    std::ref(window.cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 		vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
 			vcc::command::pipeline_barrier(
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -170,21 +174,21 @@ void resize(internal::window_data_type &data, VkExtent2D extent) {
 						VK_IMAGE_LAYOUT_UNDEFINED,
 						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 						VK_QUEUE_FAMILY_IGNORED,
-						queue::get_family_index(data.present_queue),
+						queue::get_family_index(window.present_queue),
 						swapchain_image,
 						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
 					}
 				}));
-		vcc::queue::submit(data.present_queue, {}, { std::ref(command_buffer) }, {});
+		vcc::queue::submit(window.present_queue, {}, { std::ref(command_buffer) }, {});
 
 		vcc::image_view::image_view_type view(vcc::image_view::create(
-			swapchain_image, VK_IMAGE_VIEW_TYPE_2D, data.format,
+			swapchain_image, VK_IMAGE_VIEW_TYPE_2D, window.format,
 			{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G,
 				VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
 			{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }));
 
 		vcc::command_buffer::command_buffer_type pre_draw_command(std::move(
-			vcc::command_buffer::allocate(data.device, std::ref(data.cmd_pool),
+			vcc::command_buffer::allocate(window.device, std::ref(window.cmd_pool),
 				VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 		vcc::command_buffer::compile(pre_draw_command, 0, VK_FALSE, 0, 0,
 			vcc::command::pipeline_barrier(
@@ -196,15 +200,15 @@ void resize(internal::window_data_type &data, VkExtent2D extent) {
 						| VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 						VK_IMAGE_LAYOUT_UNDEFINED,
 						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-						queue::get_family_index(data.present_queue),
-						queue::get_family_index(*data.graphics_queue),
+						queue::get_family_index(window.present_queue),
+						queue::get_family_index(*window.graphics_queue),
 						swapchain_image,
 						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
 					}
 				}));
 
 		vcc::command_buffer::command_buffer_type post_draw_command(std::move(
-			vcc::command_buffer::allocate(data.device, std::ref(data.cmd_pool),
+			vcc::command_buffer::allocate(window.device, std::ref(window.cmd_pool),
 				VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 		vcc::command_buffer::compile(post_draw_command, 0, VK_FALSE, 0, 0,
 			vcc::command::pipeline_barrier(
@@ -216,36 +220,35 @@ void resize(internal::window_data_type &data, VkExtent2D extent) {
 						0,
 						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-						queue::get_family_index(*data.graphics_queue),
-						queue::get_family_index(data.present_queue),
+						queue::get_family_index(*window.graphics_queue),
+						queue::get_family_index(window.present_queue),
 						swapchain_image,
 						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } }
 				}));
 
-		data.swapchain_images.push_back(swapchain_type(swapchain_image,
+		window.swapchain_images.push_back(swapchain_image_type(swapchain_image,
 			std::move(view), std::move(pre_draw_command),
 			std::move(post_draw_command)));
 	}
-	data.resize_callback(data.extent, data.format, data.swapchain_images);
+	resize_callback(extent, window.format, window.swapchain_images);
 }
 
-namespace internal {
-
-void window_data_type::draw() {
+void draw(window_type &window, const draw_callback_type &draw_callback,
+		const resize_callback_type &resize_callback, VkExtent2D extent) {
 	VkResult err;
 	uint32_t current_buffer;
 	// TODO(gardell): Preallocate all semaphores.
 	vcc::semaphore::semaphore_type image_acquired_semaphore;
-	vcc::semaphore::semaphore_type present_semaphore(vcc::semaphore::create(device));
+	vcc::semaphore::semaphore_type present_semaphore(vcc::semaphore::create(window.device));
 	do {
-		image_acquired_semaphore = vcc::semaphore::create(device);
+		image_acquired_semaphore = vcc::semaphore::create(window.device);
 		std::tie(err, current_buffer) = vcc::swapchain::acquire_next_image(
-			swapchain, image_acquired_semaphore);
+			window.swapchain, image_acquired_semaphore);
 		switch (err) {
 		case VK_ERROR_OUT_OF_DATE_KHR:
 			// swapchain is out of date (e.g. the window was resized) and
 			// must be recreated:
-			resize_callback(extent, format, swapchain_images);
+			resize_callback(extent, window.format, window.swapchain_images);
 			break;
 		case VK_SUBOPTIMAL_KHR:
 			VCC_PRINT("VK_SUBOPTIMAL_KHR");
@@ -262,29 +265,29 @@ void window_data_type::draw() {
 	} while (err == VK_ERROR_OUT_OF_DATE_KHR);
 	// Assume the command buffer has been run on current_buffer before so
 	// we need to set the image layout back to COLOR_ATTACHMENT_OPTIMAL
-	vcc::queue::submit(*graphics_queue,
+	vcc::queue::submit(*window.graphics_queue,
 	  { vcc::queue::wait_semaphore{ std::ref(image_acquired_semaphore),
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } },
-		{ std::ref(get_pre_draw_command(swapchain_images[current_buffer])) }, {});
+		{ std::ref(get_pre_draw_command(window.swapchain_images[current_buffer])) }, {});
 
 	draw_callback(current_buffer);
 
-  vcc::semaphore::semaphore_type draw_semaphore(vcc::semaphore::create(device));
-  vcc::queue::submit(*graphics_queue, {}, {}, { std::ref(draw_semaphore) });
+  vcc::semaphore::semaphore_type draw_semaphore(vcc::semaphore::create(window.device));
+  vcc::queue::submit(*window.graphics_queue, {}, {}, { std::ref(draw_semaphore) });
 
-	vcc::queue::submit(present_queue,
+	vcc::queue::submit(window.present_queue,
 		{ vcc::queue::wait_semaphore{ std::ref(draw_semaphore),
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } },
-		{ std::ref(get_post_draw_command(swapchain_images[current_buffer])) },
+		{ std::ref(get_post_draw_command(window.swapchain_images[current_buffer])) },
 		{ std::ref(present_semaphore) });
 
-	err = vcc::queue::present(present_queue, { std::ref(present_semaphore) }, { std::ref(swapchain) },
-		{ current_buffer });
+	err = vcc::queue::present(window.present_queue, { std::ref(present_semaphore) },
+		{ std::ref(window.swapchain) }, { current_buffer });
 	switch (err) {
 	case VK_ERROR_OUT_OF_DATE_KHR:
 		// swapchain is out of date (e.g. the window was resized) and
 		// must be recreated:
-		resize_callback(extent, format, swapchain_images);
+		resize_callback(extent, window.format, window.swapchain_images);
 		break;
 	case VK_SUBOPTIMAL_KHR:
 		// swapchain is not as optimal as it could be, but the platform's
@@ -296,44 +299,42 @@ void window_data_type::draw() {
 	}
 }
 
-} // namespace internal
-
-void initialize(internal::window_data_type &data,
+void initialize(window_type &window,
 #ifdef _WIN32
-		HWND window
+		HWND hwnd
 #elif defined(__ANDROID__)
 		ANativeWindow *window
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
   xcb_window_t window
 #endif
 		) {
-	data.surface = vcc::surface::create(data.instance,
+	window.surface = vcc::surface::create(window.instance,
 #if defined(_WIN32) || defined(VK_USE_PLATFORM_XCB_KHR)
-		data.connection,
+		window.connection,
 #endif // _WIN32
-		window);
+		hwnd);
 
 #if defined(_WIN32) || defined(VK_USE_PLATFORM_XCB_KHR)
-	data.window = window;
+	window.window = hwnd;
 #endif // _WIN32
 
-	data.present_queue = queue::get_present_queue(data.device, data.surface);
+	window.present_queue = queue::get_present_queue(window.device, window.surface);
 
-	data.cmd_pool = vcc::command_pool::create(data.device, 0,
-		vcc::queue::get_family_index(data.present_queue));
+	window.cmd_pool = vcc::command_pool::create(window.device, 0,
+		vcc::queue::get_family_index(window.present_queue));
 
 	// Get the list of VkFormat's that are supported:
-	const VkPhysicalDevice physical_device(device::get_physical_device(*data.device));
+	const VkPhysicalDevice physical_device(device::get_physical_device(*window.device));
 	const std::vector<VkSurfaceFormatKHR> surface_formats(
-		vcc::surface::physical_device_formats(physical_device, data.surface));
+		vcc::surface::physical_device_formats(physical_device, window.surface));
 	// If the format list includes just one entry of VK_FORMAT_UNDEFINED,
 	// the surface has no preferred format.  Otherwise, at least one
 	// supported format will be returned.
 	// TODO(gardell): Pick a requested format
 	assert(!surface_formats.empty());
-	data.format = surface_formats.front().format == VK_FORMAT_UNDEFINED
+	window.format = surface_formats.front().format == VK_FORMAT_UNDEFINED
 		? VK_FORMAT_B8G8R8A8_UNORM : surface_formats.front().format;
-	data.color_space = surface_formats.front().colorSpace;
+	window.color_space = surface_formats.front().colorSpace;
 }
 
 #ifdef _WIN32
@@ -384,21 +385,21 @@ int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
           case AMOTION_EVENT_ACTION_MOVE:
             for (size_t i = 0; i < count; ++i) {
               const int32_t id(AMotionEvent_getPointerId(event, i));
-              handled |= window_data->input_callbacks.touch_move_callback(id,
+              handled |= window_input_callbacks.touch_move_callback(id,
                 AMotionEvent_getX(event, i), AMotionEvent_getY(event, i));
             }
             return !!handled;
           case AMOTION_EVENT_ACTION_DOWN:
             for (size_t i = 0; i < count; ++i) {
               const int32_t id(AMotionEvent_getPointerId(event, i));
-              handled |= window_data->input_callbacks.touch_down_callback(id,
+              handled |= window_input_callbacks.touch_down_callback(id,
                 AMotionEvent_getX(event, i), AMotionEvent_getY(event, i));
             }
             return !!handled;
           case AMOTION_EVENT_ACTION_UP:
             for (size_t i = 0; i < count; ++i) {
               const int32_t id(AMotionEvent_getPointerId(event, i));
-              handled |= window_data->input_callbacks.touch_up_callback(id,
+              handled |= window_input_callbacks.touch_up_callback(id,
                 AMotionEvent_getX(event, i), AMotionEvent_getY(event, i));
             }
             return !!handled;
@@ -425,17 +426,17 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
               vcc::window::resize(*data, VkExtent2D{
                 (uint32_t) ANativeWindow_getWidth(app->window),
                 (uint32_t) ANativeWindow_getHeight(app->window)});
-              data->render_thread.set_drawing(true);
+              render_thread.set_drawing(true);
             }
             break;
         case APP_CMD_TERM_WINDOW:
-            data->render_thread.set_drawing(false);
+            render_thread.set_drawing(false);
             break;
         case APP_CMD_GAINED_FOCUS:
-            data->render_thread.set_drawing(true);
+            render_thread.set_drawing(true);
             break;
         case APP_CMD_LOST_FOCUS:
-            data->render_thread.set_drawing(false);
+            render_thread.set_drawing(false);
             break;
     }
 }
@@ -455,7 +456,7 @@ window_type create(
 	const type::supplier<queue::queue_type> &graphics_queue,
 	VkExtent2D extent, VkFormat format, const std::string &title) {
 
-	window_type window{ std::make_unique<internal::window_data_type>(
+	window_type window(
 #ifdef _WIN32
 		hinstance,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
@@ -463,7 +464,7 @@ window_type create(
 #elif defined(__ANDROID__)
 		state,
 #endif // _WIN32
-		instance,  graphics_queue, extent, device) };
+		instance, device, graphics_queue);
 
 #ifdef _WIN32
 	WNDCLASSEX  win_class;
@@ -491,14 +492,10 @@ window_type create(
 	wnd_proc_type wnd_proc([&window](HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		switch (uMsg) {
 		case WM_CREATE:
-			initialize(*window.data, hWnd);
+			initialize(window, hWnd);
 			break;
 		case WM_CLOSE:
 			PostQuitMessage(0);
-			break;
-		case WM_SIZE:
-			window.data->extent = {
-				uint32_t(lParam & 0xffff), uint32_t(lParam & 0xffff0000 >> 16) };
 			break;
 		}
 		return DefWindowProc(hWnd, uMsg, wParam, lParam);
@@ -518,12 +515,12 @@ window_type create(
 	state->onInputEvent = engine_handle_input;
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 	xcb_screen_t *screen(xcb_setup_roots_iterator(xcb_get_setup(connection)).data);
-	data->window = xcb_generate_id(connection);
+	window = xcb_generate_id(connection);
 	uint32_t value_list[] = { XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE
 		| XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_STRUCTURE_NOTIFY
 		| XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_BUTTON_MOTION
 		| XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS };
-	xcb_create_window(connection, screen->root_depth, data->window, screen->root, 100, 100,
+	xcb_create_window(connection, screen->root_depth, window, screen->root, 100, 100,
 	  extent.width, extent.height, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual,
 	  XCB_CW_EVENT_MASK, value_list);
 	xcb_intern_atom_cookie_t cookie(xcb_intern_atom(connection, 1, 12, "WM_PROTOCOLS"));
@@ -531,38 +528,34 @@ window_type create(
       xcb_intern_atom_reply(connection, cookie, 0), free));
 
   xcb_intern_atom_cookie_t cookie2(xcb_intern_atom(connection, 0, 16, "WM_DELETE_WINDOW"));
-	data->atom_wm_delete_window.reset(xcb_intern_atom_reply(connection, cookie2, 0));
+	atom_wm_delete_window.reset(xcb_intern_atom_reply(connection, cookie2, 0));
 
-  xcb_change_property(connection, XCB_PROP_MODE_REPLACE, data->window, reply->atom, 4, 32, 1,
-      &data->atom_wm_delete_window->atom);
+  xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window, reply->atom, 4, 32, 1,
+      &atom_wm_delete_window->atom);
 
-	xcb_map_window(connection, data->window);
+	xcb_map_window(connection, window);
 	if (!xcb_flush(connection)) {
 	  throw vcc::vcc_exception("xcb_flush xcb_create_window xcb_map_window failed");
   }
-  vcc::window::initialize(*data, data->window);
+  vcc::window::initialize(*data, window);
 #endif
 
 	return window;
 }
 
 int run(window_type &window, const resize_callback_type &resize_callback,
-	const draw_callback_type &draw_callback,
-	const input_callbacks_type &input_callbacks) {
-	window.data->resize_callback = resize_callback;
-	window.data->draw_callback = draw_callback;
-	window.data->input_callbacks = input_callbacks;
+	const draw_callback_type &draw_callback, const input_callbacks_type &input_callbacks) {
 #ifdef _WIN32
 	std::atomic<VkExtent2D> extent;
 	{
 		RECT rect;
-		GetClientRect(window.data->window, &rect);
+		GetClientRect(window.window, &rect);
 		extent = { uint32_t(rect.right), uint32_t(rect.bottom) };
 	}
 	wnd_proc_type wnd_proc([&](HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		switch (uMsg) {
 		case WM_CREATE:
-			initialize(*window.data, hWnd);
+			initialize(window, hWnd);
 			break;
 		case WM_CLOSE:
 			PostQuitMessage(0);
@@ -571,82 +564,82 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 			extent = { uint32_t(lParam & 0xffff), uint32_t(lParam & 0xffff0000 >> 16) };
 			break;
 		case WM_LBUTTONDOWN:
-			window.data->input_callbacks.mouse_down_callback(mouse_button_left,
+			input_callbacks.mouse_down_callback(mouse_button_left,
 				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 			break;
 		case WM_MBUTTONDOWN:
-			window.data->input_callbacks.mouse_down_callback(mouse_button_middle,
+			input_callbacks.mouse_down_callback(mouse_button_middle,
 				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 			break;
 		case WM_RBUTTONDOWN:
-			window.data->input_callbacks.mouse_down_callback(mouse_button_right,
+			input_callbacks.mouse_down_callback(mouse_button_right,
 				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 			break;
 		case WM_XBUTTONDOWN:
 			switch (GET_XBUTTON_WPARAM(wParam)) {
 			case XBUTTON1:
-				window.data->input_callbacks.mouse_down_callback(mouse_button_4,
+				input_callbacks.mouse_down_callback(mouse_button_4,
 					GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 				break;
 			case XBUTTON2:
-				window.data->input_callbacks.mouse_down_callback(mouse_button_5,
+				input_callbacks.mouse_down_callback(mouse_button_5,
 					GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 				break;
 			}
 			break;
 		case WM_LBUTTONUP:
-			window.data->input_callbacks.mouse_up_callback(mouse_button_left,
+			input_callbacks.mouse_up_callback(mouse_button_left,
 				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 			break;
 		case WM_MBUTTONUP:
-			window.data->input_callbacks.mouse_up_callback(mouse_button_middle,
+			input_callbacks.mouse_up_callback(mouse_button_middle,
 				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 			break;
 		case WM_RBUTTONUP:
-			window.data->input_callbacks.mouse_up_callback(mouse_button_right,
+			input_callbacks.mouse_up_callback(mouse_button_right,
 				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 			break;
 		case WM_XBUTTONUP:
 			switch (GET_XBUTTON_WPARAM(wParam)) {
 			case XBUTTON1:
-				window.data->input_callbacks.mouse_up_callback(mouse_button_4,
+				input_callbacks.mouse_up_callback(mouse_button_4,
 					GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 				break;
 			case XBUTTON2:
-				window.data->input_callbacks.mouse_up_callback(mouse_button_5,
+				input_callbacks.mouse_up_callback(mouse_button_5,
 					GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 				break;
 			}
 			break;
 		case WM_MOUSEMOVE:
-			window.data->input_callbacks.mouse_move_callback(
+			input_callbacks.mouse_move_callback(
 				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 			break;
 		case WM_MOUSEWHEEL: {
-			window.data->input_callbacks.mouse_scroll_callback(
+			input_callbacks.mouse_scroll_callback(
 				GET_WHEEL_DELTA_WPARAM(wParam));
 		} break;
 		case WM_KEYDOWN:
-			window.data->input_callbacks.key_down_callback(keycode_type(wParam));
+			input_callbacks.key_down_callback(keycode_type(wParam));
 			break;
 		case WM_KEYUP:
-			window.data->input_callbacks.key_up_callback(keycode_type(wParam));
+			input_callbacks.key_up_callback(keycode_type(wParam));
 			break;
 		default:
 			break;
 		}
 		return DefWindowProc(hWnd, uMsg, wParam, lParam);
 	});
-	SetWindowLongPtr(window.data->window, GWLP_USERDATA, (LONG_PTR)&wnd_proc);
+	SetWindowLongPtr(window.window, GWLP_USERDATA, (LONG_PTR)&wnd_proc);
 
 	std::atomic_bool running(true);
 	std::thread render_thread([&]() {
 		while (running) {
 			VkExtent2D current_extent(extent.exchange({ 0, 0 }));
 			if (current_extent.width != 0 && current_extent.height != 0) {
-				resize(*window.data, current_extent);
+				resize(window, current_extent, resize_callback);
 			}
-			window.data->draw();
+			draw(window, draw_callback, resize_callback, extent);
 		}
 	});
 
@@ -661,7 +654,7 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 		}
 	}
 
-	device::wait_idle(*window.data->device);
+	device::wait_idle(*window.device);
 	running = false;
 	render_thread.join();
 	return (int) msg.wParam;
@@ -669,12 +662,12 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 
 	std::atomic_bool running(true);
-	std::atomic<VkExtent2D> extent(window.data->extent);
+	std::atomic<VkExtent2D> extent(window.extent);
 
   std::thread event_thread([&]() {
     for (;;) {
       std::unique_ptr<xcb_generic_event_t, decltype(&free)> event(
-        xcb_wait_for_event(window.data->connection), &free);
+        xcb_wait_for_event(window.connection), &free);
       uint8_t event_code = event->response_type & 0x7f;
       switch (event_code) {
       case XCB_CONFIGURE_NOTIFY: {
@@ -684,35 +677,35 @@ int run(window_type &window, const resize_callback_type &resize_callback,
         } break;
       case XCB_CLIENT_MESSAGE: {
           auto message = (xcb_client_message_event_t *) event.get();
-          if (message->data.data32[0] == window.data->atom_wm_delete_window->atom) {
-            vcc::device::wait_idle(*window.data->device);
+          if (message->data.data32[0] == window.atom_wm_delete_window->atom) {
+            vcc::device::wait_idle(*window.device);
             running = false;
             return;
           }
         } break;
       case XCB_BUTTON_PRESS: {
         auto bp = (xcb_button_press_event_t *) event.get();
-        window.data->input_callbacks.mouse_down_callback(mouse_button_type(bp->detail - 1),
+        window.input_callbacks.mouse_down_callback(mouse_button_type(bp->detail - 1),
             bp->event_x, bp->event_y);
         } break;
       case XCB_BUTTON_RELEASE: {
         auto br = (xcb_button_release_event_t *) event.get();
-        window.data->input_callbacks.mouse_up_callback(mouse_button_type(br->detail - 1),
+        window.input_callbacks.mouse_up_callback(mouse_button_type(br->detail - 1),
             br->event_x, br->event_y);
         } break;
       case XCB_MOTION_NOTIFY: {
         auto motion = (xcb_motion_notify_event_t *) event.get();
-        window.data->input_callbacks.mouse_move_callback(motion->event_x, motion->event_y);
+        window.input_callbacks.mouse_move_callback(motion->event_x, motion->event_y);
         } break;
       case XCB_KEY_PRESS: {
         auto kp = (xcb_key_press_event_t *) event.get();
         // TODO(gardell): Translate button
-        window.data->input_callbacks.key_down_callback(keycode_type(kp->detail));
+        window.input_callbacks.key_down_callback(keycode_type(kp->detail));
         } break;
       case XCB_KEY_RELEASE: {
         auto kr = (xcb_key_release_event_t *) event.get();
         // TODO(gardell): Translate button
-        window.data->input_callbacks.key_up_callback(keycode_type(kr->detail));
+        window.input_callbacks.key_up_callback(keycode_type(kr->detail));
         } break;
       }
     }
@@ -723,13 +716,13 @@ int run(window_type &window, const resize_callback_type &resize_callback,
     if (current_extent.width != 0 && current_extent.height != 0) {
       resize(*window.data, current_extent);
     }
-    window.data->draw();
+    window.draw();
   }
-  device::wait_idle(*window.data->device);
+  device::wait_idle(*window.device);
   event_thread.join();
 
 #elif defined(__ANDROID__)
-  auto joinable(window.data->render_thread.start());
+  auto joinable(window.render_thread.start());
 	for (;;) {
 		// Read all pending events.
 		int events;
@@ -738,10 +731,10 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 				(ident = ALooper_pollAll(-1, NULL, &events, (void**) &source)) >= 0;) {
 
 			if (source) {
-				source->process(window.data->state, source);
+				source->process(window.state, source);
 			}
 
-			if (window.data->state->destroyRequested != 0) {
+			if (window.state->destroyRequested != 0) {
 				return 0;
 			}
 		}

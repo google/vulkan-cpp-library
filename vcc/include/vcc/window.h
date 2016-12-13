@@ -38,107 +38,22 @@
 namespace vcc {
 namespace window {
 
-namespace internal {
-struct window_data_type;
-
-/*
- * Simple thread that executes given tasks on a queue
- * as well as a default render function.
- *
- * TODO(gardell): Create generic task runners, thread pools etc.
- */
-struct render_thread {
-	typedef std::function<void()> callback_type;
-
-  struct joinable_type {
-    friend class render_thread;
-
-    joinable_type() = delete;
-    joinable_type(const joinable_type &) = delete;
-    joinable_type(joinable_type &&) = default;
-  private:
-    explicit joinable_type(render_thread &thread) : thread(thread) {}
-    render_thread &thread;
-  public:
-    ~joinable_type() { thread.join(); }
-  };
-
-	render_thread() = default;
-
-	explicit render_thread(callback_type &&draw_callback)
-		: running(false), drawing(false),
-		  draw_callback(std::forward<callback_type>(draw_callback)) {}
-
-	joinable_type start() {
-		running = true;
-		thread = std::thread([this]() {
-			while (running) {
-				std::vector<callback_type> tasks;
-				{
-					std::unique_lock<std::mutex> lock(tasks_mutex);
-					cv.wait(lock, [this]() {
-						return !this->tasks.empty() || drawing;
-					});
-					tasks = std::move(this->tasks);
-				}
-				for (const callback_type &callback : tasks) {
-					callback();
-				}
-				if (drawing) {
-					draw_callback();
-				}
-			}
-		});
-		return joinable_type(*this);
-	}
-
-	void set_drawing(bool drawing) {
-		this->drawing = drawing;
-		cv.notify_one();
-	}
-
-	void post(callback_type &&callback) {
-		std::lock_guard<std::mutex> lock(tasks_mutex);
-		tasks.push_back(std::forward<callback_type>(callback));
-	}
-
-	void join() {
-		running = false;
-		cv.notify_one();
-		if (thread.joinable()) {
-			thread.join();
-		}
-	}
-
-	std::vector<callback_type> tasks;
-	std::mutex tasks_mutex;
-	std::atomic_bool running, drawing;
-	std::condition_variable cv;
-	std::thread thread;
-	callback_type draw_callback;
-};
-
-} // namespace internal
-
-// TODO(gardell): Rename to swapchain_image_type.
-struct swapchain_type {
-	friend void resize(internal::window_data_type &data, VkExtent2D extent);
-	friend image::image_type &get_image(swapchain_type &swapchain);
+struct swapchain_image_type {
+	friend image::image_type &get_image(swapchain_image_type &swapchain);
 	friend image_view::image_view_type &get_image_view(
-		swapchain_type &swapchain);
+		swapchain_image_type &swapchain);
 	friend command_buffer::command_buffer_type &get_pre_draw_command(
-		swapchain_type &swapchain);
+		swapchain_image_type &swapchain);
 	friend command_buffer::command_buffer_type &get_post_draw_command(
-		swapchain_type &swapchain);
+		swapchain_image_type &swapchain);
 
-	swapchain_type() = default;
-	swapchain_type(const swapchain_type&) = delete;
-	swapchain_type(swapchain_type&&) = default;
-	swapchain_type &operator=(const swapchain_type&) = delete;
-	swapchain_type &operator=(swapchain_type&&) = default;
+	swapchain_image_type() = default;
+	swapchain_image_type(const swapchain_image_type&) = delete;
+	swapchain_image_type(swapchain_image_type&&) = default;
+	swapchain_image_type &operator=(const swapchain_image_type&) = delete;
+	swapchain_image_type &operator=(swapchain_image_type&&) = default;
 
-private:
-	swapchain_type(const type::supplier<image::image_type> &image,
+	swapchain_image_type(const type::supplier<image::image_type> &image,
 		image_view::image_view_type &&view,
 		command_buffer::command_buffer_type &&pre_draw_command,
 		command_buffer::command_buffer_type &&post_draw_command)
@@ -147,31 +62,32 @@ private:
 			pre_draw_command)),
 		  post_draw_command(std::forward<command_buffer::command_buffer_type>(
 			post_draw_command)) {}
+private:
 	type::supplier<image::image_type> image;
 	type::supplier<image_view::image_view_type> view;
 	command_buffer::command_buffer_type pre_draw_command, post_draw_command;
 };
 
-inline image::image_type &get_image(swapchain_type &swapchain) {
+inline image::image_type &get_image(swapchain_image_type &swapchain) {
 	return *swapchain.image;
 }
 
-inline image_view::image_view_type &get_image_view(swapchain_type &swapchain) {
+inline image_view::image_view_type &get_image_view(swapchain_image_type &swapchain) {
 	return *swapchain.view;
 }
 
 inline command_buffer::command_buffer_type &get_pre_draw_command(
-		swapchain_type &swapchain) {
+		swapchain_image_type &swapchain) {
 	return swapchain.pre_draw_command;
 }
 
 inline command_buffer::command_buffer_type &get_post_draw_command(
-		swapchain_type &swapchain) {
+		swapchain_image_type &swapchain) {
 	return swapchain.post_draw_command;
 }
 
 typedef std::function<void(VkFormat)> initialize_callback_type;
-typedef std::function<void(VkExtent2D, VkFormat, std::vector<swapchain_type> &)> resize_callback_type;
+typedef std::function<void(VkExtent2D, VkFormat, std::vector<swapchain_image_type> &)> resize_callback_type;
 typedef std::function<void(uint32_t)> draw_callback_type;
 
 enum mouse_button_type {
@@ -185,8 +101,7 @@ enum mouse_button_type {
 	mouse_button_8 = 7
 };
 
-typedef std::function<bool(mouse_button_type, int, int)>
-	mouse_press_callback_type;
+typedef std::function<bool(mouse_button_type, int, int)> mouse_press_callback_type;
 typedef std::function<bool(int, int)> mouse_move_callback_type;
 typedef std::function<bool(int)> mouse_scroll_callback_type;
 typedef std::function<bool(keycode_type)> key_press_callback_type;
@@ -223,12 +138,64 @@ struct input_callbacks_type {
 		const touch_move_callback_type &callback);
 };
 
-namespace internal {
-
-struct window_data_type {
+struct window_type {
+	friend VkFormat get_format(const window_type &window);
+	friend window_type create(
 #ifdef _WIN32
-	HINSTANCE connection;        // hInstance - Windows Instance
-	HWND        window;          // hWnd - window handle
+		HINSTANCE hinstance,
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+		xcb_connection_t *connection,
+#elif defined(__ANDROID__)
+		android_app* state,
+#endif // __ANDROID__
+		const type::supplier<instance::instance_type> &instance,
+		const type::supplier<device::device_type> &device,
+		const type::supplier<queue::queue_type> &graphics_queue,
+		VkExtent2D extent, VkFormat format, const std::string &title);
+	friend void initialize(window_type &window,
+#ifdef _WIN32
+		HWND hwnd
+#elif defined(__ANDROID__)
+		ANativeWindow *window
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+		xcb_window_t window
+#endif
+	);
+	friend void resize(window_type &window, VkExtent2D extent,
+		const resize_callback_type &resize_callback);
+	friend void draw(window_type &window, const draw_callback_type &draw_callback,
+		const resize_callback_type &resize_callback, VkExtent2D extent);
+	friend int run(window_type &window, const resize_callback_type &resize_callback,
+		const draw_callback_type &draw_callback, const input_callbacks_type &input_callbacks);
+
+	window_type() = default;
+	window_type(const window_type&) = delete;
+	window_type(window_type&&) = default;
+	window_type &operator=(const window_type&) = delete;
+	window_type &operator=(window_type&&) = default;
+	~window_type();
+
+private:
+	window_type(
+#ifdef _WIN32
+		HINSTANCE connection,
+#elif defined(__ANDROID__)
+		android_app* state,
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+		xcb_connection_t *connection,
+		xcb_window_t window,
+		atom_reply_t atom_wm_delete_window,
+#endif // __ANDROID__
+		type::supplier<instance::instance_type> instance,
+		const type::supplier<device::device_type> &device,
+		const type::supplier<queue::queue_type> &graphics_queue)
+		: connection(connection)
+		, instance(instance)
+		, device(device), graphics_queue(graphics_queue) {}
+
+#ifdef _WIN32
+	HINSTANCE connection;
+	HWND        window;
 #elif defined(__ANDROID__)
 	android_app* state;
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
@@ -237,81 +204,21 @@ struct window_data_type {
 	typedef std::unique_ptr<xcb_intern_atom_reply_t, decltype(&free)> atom_reply_t;
 	atom_reply_t atom_wm_delete_window;
 #endif // __ANDROID__
-
-	window_data_type() = delete;
-	window_data_type(const window_data_type&) = delete;
-	window_data_type(window_data_type&&) = default;
-	window_data_type &operator=(const window_data_type&) = delete;
-	window_data_type &operator=(window_data_type&&) = default;
-
-	VCC_LIBRARY ~window_data_type();
-
-	window_data_type(
-#ifdef WIN32
-			HINSTANCE hinstance,
-#elif defined(__ANDROID__)
-			android_app* state,
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-			xcb_connection_t *connection,
-#endif // __ANDROID__
-			const type::supplier<instance::instance_type> &instance,
-			const type::supplier<queue::queue_type> &graphics_queue,
-			VkExtent2D extent,
-			const type::supplier<device::device_type> &device) :
-#ifdef WIN32
-				connection(hinstance),
-#elif defined(__ANDROID__)
-				state(state),
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-				connection(connection),
-				atom_wm_delete_window(nullptr, &free),
-#endif // WIN32
-				instance(instance),
-				extent(extent),
-				device(device),
-				graphics_queue(graphics_queue),
-				render_thread([this]() {draw(); }) {}
-
-	void draw();
-
 	type::supplier<instance::instance_type> instance;
 	surface::surface_type surface;
 
-	VkExtent2D extent;
-
-	// TODO(gardell): Extract to generic worker thread.
-	internal::render_thread render_thread;
-
-	resize_callback_type resize_callback;
-	draw_callback_type draw_callback;
-
 	type::supplier<device::device_type> device;
-	input_callbacks_type input_callbacks;
 	type::supplier<queue::queue_type> graphics_queue;
 	queue::queue_type present_queue;
 	VkFormat format;
 	VkColorSpaceKHR color_space;
 	swapchain::swapchain_type swapchain;
-	std::vector<swapchain_type> swapchain_images;
+	std::vector<swapchain_image_type> swapchain_images;
 	command_pool::command_pool_type cmd_pool;
 };
 
-}  // namespace internal
-
-struct window_type {
-	window_type() = default;
-	window_type(const window_type&) = delete;
-	window_type(window_type&&) = default;
-	window_type &operator=(const window_type&) = delete;
-	window_type &operator=(window_type&&) = default;
-
-	explicit window_type(std::unique_ptr<internal::window_data_type> &&data)
-		: data(std::forward<std::unique_ptr<internal::window_data_type>>(data)) {}
-	std::unique_ptr<internal::window_data_type> data;
-};
-
 inline VkFormat get_format(const window_type &window) {
-	return window.data->format;
+	return window.format;
 }
 
 VCC_LIBRARY window_type create(
