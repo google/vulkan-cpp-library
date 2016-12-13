@@ -144,6 +144,7 @@ void resize(internal::window_data_type &data, VkExtent2D extent) {
 	  surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
 	    ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : surfCapabilities.currentTransform);
 	data.swapchain_images.clear();
+	data.swapchain = vcc::swapchain::swapchain_type();
 	data.swapchain = vcc::swapchain::create(data.device,
 		vcc::swapchain::create_info_type{ std::ref(data.surface), desiredNumberOfSwapchainImages,
 		  data.format, data.color_space, data.extent,
@@ -474,21 +475,13 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
               data->render_thread.set_drawing(true);
             }
             break;
-        case APP_CMD_WINDOW_RESIZED: {
-            VkExtent2D extent{ (uint32_t) ANativeWindow_getWidth(app->window),
-              (uint32_t) ANativeWindow_getHeight(app->window)};
-            data->render_thread.post([extent, &data]() { resize(*data, extent); });
-            } break;
         case APP_CMD_TERM_WINDOW:
-            // The window is being hidden or closed, clean it up.
+            data->render_thread.set_drawing(false);
             break;
         case APP_CMD_GAINED_FOCUS:
-            // When our app gains focus, we start monitoring the accelerometer.
             data->render_thread.set_drawing(true);
             break;
         case APP_CMD_LOST_FOCUS:
-            // When our app loses focus, we stop monitoring the accelerometer.
-            // This is to avoid consuming battery while not being used.
             data->render_thread.set_drawing(false);
             break;
     }
