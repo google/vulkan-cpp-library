@@ -337,86 +337,39 @@ void initialize(internal::window_data_type &data,
 }
 
 #ifdef _WIN32
-LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	LONG_PTR user_data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-	internal::window_data_type *window_data =
-		reinterpret_cast<internal::window_data_type *>(user_data);
+typedef std::function<LRESULT(HWND, UINT, WPARAM, LPARAM)> wnd_proc_type;
 
+LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	switch (uMsg) {
-	case WM_NCCREATE:
-		SetWindowLongPtr(hWnd, GWLP_USERDATA,
-			(LONG_PTR)((LPCREATESTRUCT)lParam)->lpCreateParams);
-		break;
 	case WM_CREATE:
-		initialize(*window_data, hWnd);
-		break;
 	case WM_CLOSE:
-		PostQuitMessage(0);
-		break;
 	case WM_SIZE:
-		{
-			const VkExtent2D extent{
-				uint32_t(lParam & 0xffff), uint32_t(lParam & 0xffff0000 >> 16) };
-			window_data->render_thread.post([extent, window_data]() {
-				resize(*window_data, extent);
-			});
-			window_data->render_thread.set_drawing(true);
-		}
-		break;
 	case WM_LBUTTONDOWN:
-		window_data->input_callbacks.mouse_down_callback(mouse_button_left, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-		break;
 	case WM_MBUTTONDOWN:
-		window_data->input_callbacks.mouse_down_callback(mouse_button_middle, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-		break;
 	case WM_RBUTTONDOWN:
-		window_data->input_callbacks.mouse_down_callback(mouse_button_right, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-		break;
 	case WM_XBUTTONDOWN:
-		switch (GET_XBUTTON_WPARAM(wParam)) {
-		case XBUTTON1:
-			window_data->input_callbacks.mouse_down_callback(mouse_button_4, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-			break;
-		case XBUTTON2:
-			window_data->input_callbacks.mouse_down_callback(mouse_button_5, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-			break;
-		}
-		break;
 	case WM_LBUTTONUP:
-		window_data->input_callbacks.mouse_up_callback(mouse_button_left, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-		break;
 	case WM_MBUTTONUP:
-		window_data->input_callbacks.mouse_up_callback(mouse_button_middle, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-		break;
 	case WM_RBUTTONUP:
-		window_data->input_callbacks.mouse_up_callback(mouse_button_right, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-		break;
 	case WM_XBUTTONUP:
-		switch (GET_XBUTTON_WPARAM(wParam)) {
-		case XBUTTON1:
-			window_data->input_callbacks.mouse_up_callback(mouse_button_4, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-			break;
-		case XBUTTON2:
-			window_data->input_callbacks.mouse_up_callback(mouse_button_5, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-			break;
-		}
-		break;
 	case WM_MOUSEMOVE:
-		window_data->input_callbacks.mouse_move_callback(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-		break;
-	case WM_MOUSEWHEEL: {
-		window_data->input_callbacks.mouse_scroll_callback(GET_WHEEL_DELTA_WPARAM(wParam));
-	} break;
+	case WM_MOUSEWHEEL:
 	case WM_KEYDOWN:
-		window_data->input_callbacks.key_down_callback(keycode_type(wParam));
-		break;
-	case WM_KEYUP:
-		window_data->input_callbacks.key_up_callback(keycode_type(wParam));
-		break;
-	default:
-		break;
+	case WM_KEYUP: {
+		wnd_proc_type &wnd_proc(*reinterpret_cast<wnd_proc_type *>(
+			GetWindowLongPtr(hWnd, GWLP_USERDATA)));
+		return wnd_proc(hWnd, uMsg, wParam, lParam);
+		} break;
+	case WM_NCCREATE:
+	{
+		wnd_proc_type &wnd_proc(*reinterpret_cast<wnd_proc_type *>(
+			((LPCREATESTRUCT)lParam)->lpCreateParams));
+		SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)&wnd_proc);
 	}
-	return DefWindowProc(hWnd, uMsg, wParam, lParam);
+	// no break
+	default:
+		return DefWindowProc(hWnd, uMsg, wParam, lParam);
+	}
 }
 #elif defined(__ANDROID__)
 
@@ -502,7 +455,7 @@ window_type create(
 	const type::supplier<queue::queue_type> &graphics_queue,
 	VkExtent2D extent, VkFormat format, const std::string &title) {
 
-	std::unique_ptr<internal::window_data_type> data(new internal::window_data_type(
+	window_type window{ std::make_unique<internal::window_data_type>(
 #ifdef _WIN32
 		hinstance,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
@@ -510,7 +463,7 @@ window_type create(
 #elif defined(__ANDROID__)
 		state,
 #endif // _WIN32
-		instance,  graphics_queue, extent, device));
+		instance,  graphics_queue, extent, device) };
 
 #ifdef _WIN32
 	WNDCLASSEX  win_class;
@@ -535,12 +488,28 @@ window_type create(
 		}
 	}
 
+	wnd_proc_type wnd_proc([&window](HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+		switch (uMsg) {
+		case WM_CREATE:
+			initialize(*window.data, hWnd);
+			break;
+		case WM_CLOSE:
+			PostQuitMessage(0);
+			break;
+		case WM_SIZE:
+			window.data->extent = {
+				uint32_t(lParam & 0xffff), uint32_t(lParam & 0xffff0000 >> 16) };
+			break;
+		}
+		return DefWindowProc(hWnd, uMsg, wParam, lParam);
+	});
+
 	// Create window with the registered class:
 	RECT wr = { 0, 0, (LONG) extent.width, (LONG) extent.height };
 	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 	if (!CreateWindowEx(0, class_name, title.c_str(),
 		WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_SYSMENU,
-		100, 100, wr.right - wr.left, wr.bottom - wr.top, NULL, NULL, hinstance, data.get())) {
+		100, 100, wr.right - wr.left, wr.bottom - wr.top, NULL, NULL, hinstance, &wnd_proc)) {
 		throw vcc::vcc_exception("CreateWindowEx failed");
 	}
 #elif defined(__ANDROID__)
@@ -574,7 +543,7 @@ window_type create(
   vcc::window::initialize(*data, data->window);
 #endif
 
-	return window_type{std::move(data)};
+	return window;
 }
 
 int run(window_type &window, const resize_callback_type &resize_callback,
@@ -584,18 +553,117 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 	window.data->draw_callback = draw_callback;
 	window.data->input_callbacks = input_callbacks;
 #ifdef _WIN32
-  auto joinable(window.data->render_thread.start());
+	std::atomic<VkExtent2D> extent;
+	{
+		RECT rect;
+		GetClientRect(window.data->window, &rect);
+		extent = { uint32_t(rect.right), uint32_t(rect.bottom) };
+	}
+	wnd_proc_type wnd_proc([&](HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+		switch (uMsg) {
+		case WM_CREATE:
+			initialize(*window.data, hWnd);
+			break;
+		case WM_CLOSE:
+			PostQuitMessage(0);
+			break;
+		case WM_SIZE:
+			extent = { uint32_t(lParam & 0xffff), uint32_t(lParam & 0xffff0000 >> 16) };
+			break;
+		case WM_LBUTTONDOWN:
+			window.data->input_callbacks.mouse_down_callback(mouse_button_left,
+				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			break;
+		case WM_MBUTTONDOWN:
+			window.data->input_callbacks.mouse_down_callback(mouse_button_middle,
+				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			break;
+		case WM_RBUTTONDOWN:
+			window.data->input_callbacks.mouse_down_callback(mouse_button_right,
+				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			break;
+		case WM_XBUTTONDOWN:
+			switch (GET_XBUTTON_WPARAM(wParam)) {
+			case XBUTTON1:
+				window.data->input_callbacks.mouse_down_callback(mouse_button_4,
+					GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+				break;
+			case XBUTTON2:
+				window.data->input_callbacks.mouse_down_callback(mouse_button_5,
+					GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+				break;
+			}
+			break;
+		case WM_LBUTTONUP:
+			window.data->input_callbacks.mouse_up_callback(mouse_button_left,
+				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			break;
+		case WM_MBUTTONUP:
+			window.data->input_callbacks.mouse_up_callback(mouse_button_middle,
+				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			break;
+		case WM_RBUTTONUP:
+			window.data->input_callbacks.mouse_up_callback(mouse_button_right,
+				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			break;
+		case WM_XBUTTONUP:
+			switch (GET_XBUTTON_WPARAM(wParam)) {
+			case XBUTTON1:
+				window.data->input_callbacks.mouse_up_callback(mouse_button_4,
+					GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+				break;
+			case XBUTTON2:
+				window.data->input_callbacks.mouse_up_callback(mouse_button_5,
+					GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+				break;
+			}
+			break;
+		case WM_MOUSEMOVE:
+			window.data->input_callbacks.mouse_move_callback(
+				GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			break;
+		case WM_MOUSEWHEEL: {
+			window.data->input_callbacks.mouse_scroll_callback(
+				GET_WHEEL_DELTA_WPARAM(wParam));
+		} break;
+		case WM_KEYDOWN:
+			window.data->input_callbacks.key_down_callback(keycode_type(wParam));
+			break;
+		case WM_KEYUP:
+			window.data->input_callbacks.key_up_callback(keycode_type(wParam));
+			break;
+		default:
+			break;
+		}
+		return DefWindowProc(hWnd, uMsg, wParam, lParam);
+	});
+	SetWindowLongPtr(window.data->window, GWLP_USERDATA, (LONG_PTR)&wnd_proc);
+
+	std::atomic_bool running(true);
+	std::thread render_thread([&]() {
+		while (running) {
+			VkExtent2D current_extent(extent.exchange({ 0, 0 }));
+			if (current_extent.width != 0 && current_extent.height != 0) {
+				resize(*window.data, current_extent);
+			}
+			window.data->draw();
+		}
+	});
+
 	MSG msg;
 	for (;;) {
 		GetMessage(&msg, NULL, 0, 0);
 		if (msg.message == WM_QUIT) {
 			break;
 		} else {
-			/* Translate and dispatch to event queue*/
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
 	}
+
+	device::wait_idle(*window.data->device);
+	running = false;
+	render_thread.join();
 	return (int) msg.wParam;
 
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
