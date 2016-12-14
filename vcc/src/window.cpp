@@ -93,21 +93,11 @@ input_callbacks_type &input_callbacks_type::set_touch_move_callback(
 const char *class_name = "vcc-vulkan";
 #endif // WIN32
 
-window_type::~window_type() {
-#if defined(VK_USE_PLATFORM_XCB_KHR)
-	if (connection != nullptr) {
-		xcb_destroy_window(connection, window);
-		connection = nullptr;
-	}
-#endif // _WIN32
-}
-
 std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>> resize(
 		window_type &window, VkExtent2D extent, const resize_callback_type &resize_callback) {
 	// Check the surface capabilities and formats
 	const VkPhysicalDevice physical_device(device::get_physical_device(*window.device));
 	const VkSurfaceCapabilitiesKHR surfCapabilities(vcc::surface::physical_device_capabilities(physical_device, window.surface));
-
 	// width and height are either both -1, or both not -1.
 	extent = surfCapabilities.currentExtent.width == -1 ? extent : surfCapabilities.currentExtent;
 
@@ -141,14 +131,13 @@ std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>> resize(
 	const VkSurfaceTransformFlagBitsKHR preTransform(
 	  surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
 	    ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : surfCapabilities.currentTransform);
-	std::vector<swapchain_image_type> swapchain_images;
-	swapchain_images.clear();
 	swapchain::swapchain_type swapchain(vcc::swapchain::create(window.device,
 		vcc::swapchain::create_info_type{ std::ref(window.surface), desiredNumberOfSwapchainImages,
 		window.format, window.color_space, extent,
 			1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE,{}, preTransform, 0,
 			swapchainPresentMode, VK_TRUE }));
 	std::vector<vcc::image::image_type> images(vcc::swapchain::get_images(swapchain));
+	std::vector<swapchain_image_type> swapchain_images;
 	swapchain_images.reserve(images.size());
 	for (vcc::image::image_type &si : images) {
 		std::shared_ptr<vcc::image::image_type> swapchain_image(
@@ -228,7 +217,7 @@ std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>> resize(
 	return std::make_tuple(std::move(swapchain), std::move(swapchain_images));
 }
 
-void draw(window_type &window, swapchain::swapchain_type & swapchain,
+void draw(window_type &window, swapchain::swapchain_type &swapchain,
 		std::vector<swapchain_image_type> &swapchain_images,
 		const draw_callback_type &draw_callback, const resize_callback_type &resize_callback,
 		VkExtent2D extent) {
@@ -303,6 +292,7 @@ void initialize(window_type &window,
 #elif defined(__ANDROID__)
 		ANativeWindow *window_handle
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
+  xcb_connection_t *connection,
   xcb_window_t window_handle
 #endif
 		) {
@@ -312,7 +302,7 @@ void initialize(window_type &window,
 #endif // _WIN32
 		window_handle);
 
-#if defined(_WIN32) || defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(_WIN32)
 	window.window = window_type::window_handle_type(window_handle, &DestroyWindow);
 #endif // _WIN32
 
@@ -455,8 +445,11 @@ window_type create(
 	VkExtent2D extent, VkFormat format, const std::string &title) {
 
 	window_type window(
-#if defined(_WIN32) || defined(VK_USE_PLATFORM_XCB_KHR)
+#ifdef _WIN32
+    connection,
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
 		connection,
+		xcb_generate_id(connection),
 #elif defined(__ANDROID__)
 		state,
 #endif // _WIN32
@@ -511,29 +504,27 @@ window_type create(
 	state->onInputEvent = engine_handle_input;
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 	xcb_screen_t *screen(xcb_setup_roots_iterator(xcb_get_setup(connection)).data);
-	window = xcb_generate_id(connection);
 	uint32_t value_list[] = { XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE
 		| XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_STRUCTURE_NOTIFY
 		| XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_BUTTON_MOTION
 		| XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS };
-	xcb_create_window(connection, screen->root_depth, window, screen->root, 100, 100,
+	xcb_create_window(connection, screen->root_depth, window.window, screen->root, 100, 100,
 	  extent.width, extent.height, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual,
 	  XCB_CW_EVENT_MASK, value_list);
 	xcb_intern_atom_cookie_t cookie(xcb_intern_atom(connection, 1, 12, "WM_PROTOCOLS"));
-  auto reply(internal::window_data_type::atom_reply_t(
-      xcb_intern_atom_reply(connection, cookie, 0), free));
+  auto reply(window_type::atom_reply_t(xcb_intern_atom_reply(connection, cookie, 0), free));
 
   xcb_intern_atom_cookie_t cookie2(xcb_intern_atom(connection, 0, 16, "WM_DELETE_WINDOW"));
-	atom_wm_delete_window.reset(xcb_intern_atom_reply(connection, cookie2, 0));
+	window.atom_wm_delete_window.reset(xcb_intern_atom_reply(connection, cookie2, 0));
 
-  xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window, reply->atom, 4, 32, 1,
-      &atom_wm_delete_window->atom);
+  xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window.window, reply->atom, 4, 32, 1,
+      &window.atom_wm_delete_window->atom);
 
-	xcb_map_window(connection, window);
+	xcb_map_window(connection, window.window);
 	if (!xcb_flush(connection)) {
 	  throw vcc::vcc_exception("xcb_flush xcb_create_window xcb_map_window failed");
   }
-  vcc::window::initialize(*data, window);
+  vcc::window::initialize(window, connection, window.window);
 #endif
 
 	return window;
@@ -637,8 +628,7 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 				// gives us the possibility to hand the previous swapchain as argument
 				// when creating the new one.
 				swapchain = swapchain::swapchain_type();
-				std::tie(swapchain, swapchain_images) =
-					resize(window, current_extent, resize_callback);
+				std::tie(swapchain, swapchain_images) = resize(window, current_extent, resize_callback);
 			}
 			draw(window, swapchain, swapchain_images, draw_callback, resize_callback, extent);
 		}
@@ -662,11 +652,26 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 
+	swapchain::swapchain_type swapchain;
+	std::vector<swapchain_image_type> swapchain_images;
+
 	std::atomic_bool running(true);
-	std::atomic<VkExtent2D> extent(window.extent);
+	std::atomic<VkExtent2D> extent;
+
+  for (;;) {
+    std::unique_ptr<xcb_generic_event_t, decltype(&free)> event(
+      xcb_wait_for_event(window.connection), &free);
+    uint8_t event_code = event->response_type & 0x7f;
+    if (event_code == XCB_CONFIGURE_NOTIFY) {
+      const xcb_configure_notify_event_t *cfg =
+        (const xcb_configure_notify_event_t *) event.get();
+      extent = VkExtent2D{ cfg->width, cfg->height };
+      break;
+    }
+  }
 
   std::thread event_thread([&]() {
-    for (;;) {
+    while (running) {
       std::unique_ptr<xcb_generic_event_t, decltype(&free)> event(
         xcb_wait_for_event(window.connection), &free);
       uint8_t event_code = event->response_type & 0x7f;
@@ -681,32 +686,31 @@ int run(window_type &window, const resize_callback_type &resize_callback,
           if (message->data.data32[0] == window.atom_wm_delete_window->atom) {
             vcc::device::wait_idle(*window.device);
             running = false;
-            return;
           }
         } break;
       case XCB_BUTTON_PRESS: {
         auto bp = (xcb_button_press_event_t *) event.get();
-        window.input_callbacks.mouse_down_callback(mouse_button_type(bp->detail - 1),
+        input_callbacks.mouse_down_callback(mouse_button_type(bp->detail - 1),
             bp->event_x, bp->event_y);
         } break;
       case XCB_BUTTON_RELEASE: {
         auto br = (xcb_button_release_event_t *) event.get();
-        window.input_callbacks.mouse_up_callback(mouse_button_type(br->detail - 1),
+        input_callbacks.mouse_up_callback(mouse_button_type(br->detail - 1),
             br->event_x, br->event_y);
         } break;
       case XCB_MOTION_NOTIFY: {
         auto motion = (xcb_motion_notify_event_t *) event.get();
-        window.input_callbacks.mouse_move_callback(motion->event_x, motion->event_y);
+        input_callbacks.mouse_move_callback(motion->event_x, motion->event_y);
         } break;
       case XCB_KEY_PRESS: {
         auto kp = (xcb_key_press_event_t *) event.get();
         // TODO(gardell): Translate button
-        window.input_callbacks.key_down_callback(keycode_type(kp->detail));
+        input_callbacks.key_down_callback(keycode_type(kp->detail));
         } break;
       case XCB_KEY_RELEASE: {
         auto kr = (xcb_key_release_event_t *) event.get();
         // TODO(gardell): Translate button
-        window.input_callbacks.key_up_callback(keycode_type(kr->detail));
+        input_callbacks.key_up_callback(keycode_type(kr->detail));
         } break;
       }
     }
@@ -715,12 +719,13 @@ int run(window_type &window, const resize_callback_type &resize_callback,
   while (running) {
     VkExtent2D current_extent(extent.exchange({ 0, 0 }));
     if (current_extent.width != 0 && current_extent.height != 0) {
-      resize(*window.data, current_extent);
+      std::tie(swapchain, swapchain_images) = resize(window, current_extent, resize_callback);
     }
-    window.draw();
+    draw(window, swapchain, swapchain_images, draw_callback, resize_callback, current_extent);
   }
-  device::wait_idle(*window.device);
+
   event_thread.join();
+  device::wait_idle(*window.device);
 
 #elif defined(__ANDROID__)
   auto joinable(window.render_thread.start());

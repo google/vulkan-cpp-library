@@ -154,12 +154,13 @@ struct window_type {
 		VkExtent2D extent, VkFormat format, const std::string &title);
 	friend void initialize(window_type &window,
 #ifdef _WIN32
-		HINSTANCE connection,
-		HWND hwnd
+		HINSTANCE,
+		HWND
 #elif defined(__ANDROID__)
-		ANativeWindow *window
+		ANativeWindow *
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-		xcb_window_t window
+		xcb_connection_t *connection,
+		xcb_window_t window_handle
 #endif
 	);
 	friend std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>> resize(
@@ -176,7 +177,6 @@ struct window_type {
 	window_type(window_type&&) = default;
 	window_type &operator=(const window_type&) = delete;
 	window_type &operator=(window_type&&) = default;
-	~window_type();
 
 private:
 	window_type(
@@ -187,15 +187,16 @@ private:
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 		xcb_connection_t *connection,
 		xcb_window_t window,
-		atom_reply_t atom_wm_delete_window,
 #endif // __ANDROID__
 		type::supplier<instance::instance_type> instance,
 		const type::supplier<device::device_type> &device,
 		const type::supplier<queue::queue_type> &graphics_queue)
 		: instance(instance)
-#ifndef _WIN32
+#ifdef VK_USE_PLATFORM_XCB_KHR
 		, connection(connection)
-#endif // _WIN32
+		, window(window, std::bind(&xcb_destroy_window, connection, std::placeholders::_1))
+    , atom_wm_delete_window(nullptr, free)
+#endif // VK_USE_PLATFORM_XCB_KHR
 		, device(device), graphics_queue(graphics_queue) {}
 
 #ifdef _WIN32
@@ -205,7 +206,10 @@ private:
 	android_app* state;
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 	xcb_connection_t *connection;
-	xcb_window_t window;
+	typedef internal::managed_type<xcb_window_t,
+		decltype(std::bind(&xcb_destroy_window, (xcb_connection_t *) nullptr, std::placeholders::_1))>
+		window_handle_type;
+	window_handle_type window;
 	typedef std::unique_ptr<xcb_intern_atom_reply_t, decltype(&free)> atom_reply_t;
 	atom_reply_t atom_wm_delete_window;
 #endif // __ANDROID__

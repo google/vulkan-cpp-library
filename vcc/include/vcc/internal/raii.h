@@ -30,7 +30,8 @@ struct managed_type {
 	Destructor destructor;
 	bool initialized;
 
-	managed_type() : initialized(false) {}
+	managed_type(Destructor &&destructor = Destructor())
+		: destructor(std::forward<Destructor>(destructor)), initialized(false) {}
 	managed_type(T handle, Destructor &&destructor)
 		: handle(std::forward<T>(handle))
 		, destructor(std::forward<Destructor>(destructor))
