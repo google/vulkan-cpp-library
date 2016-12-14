@@ -154,6 +154,7 @@ struct window_type {
 		VkExtent2D extent, VkFormat format, const std::string &title);
 	friend void initialize(window_type &window,
 #ifdef _WIN32
+		HINSTANCE connection,
 		HWND hwnd
 #elif defined(__ANDROID__)
 		ANativeWindow *window
@@ -161,10 +162,12 @@ struct window_type {
 		xcb_window_t window
 #endif
 	);
-	friend void resize(window_type &window, VkExtent2D extent,
-		const resize_callback_type &resize_callback);
-	friend void draw(window_type &window, const draw_callback_type &draw_callback,
-		const resize_callback_type &resize_callback, VkExtent2D extent);
+	friend std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>> resize(
+		window_type &window, VkExtent2D extent, const resize_callback_type &resize_callback);
+	friend void draw(window_type &window, swapchain::swapchain_type &swapchain,
+		std::vector<swapchain_image_type> &swapchain_images,
+		const draw_callback_type &draw_callback, const resize_callback_type &resize_callback,
+		VkExtent2D extent);
 	friend int run(window_type &window, const resize_callback_type &resize_callback,
 		const draw_callback_type &draw_callback, const input_callbacks_type &input_callbacks);
 
@@ -189,13 +192,15 @@ private:
 		type::supplier<instance::instance_type> instance,
 		const type::supplier<device::device_type> &device,
 		const type::supplier<queue::queue_type> &graphics_queue)
-		: connection(connection)
-		, instance(instance)
+		: instance(instance)
+#ifndef _WIN32
+		, connection(connection)
+#endif // _WIN32
 		, device(device), graphics_queue(graphics_queue) {}
 
 #ifdef _WIN32
-	HINSTANCE connection;
-	HWND        window;
+	typedef internal::managed_type<HWND, decltype(&DestroyWindow)> window_handle_type;
+	window_handle_type window;
 #elif defined(__ANDROID__)
 	android_app* state;
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
@@ -206,14 +211,11 @@ private:
 #endif // __ANDROID__
 	type::supplier<instance::instance_type> instance;
 	surface::surface_type surface;
-
 	type::supplier<device::device_type> device;
 	type::supplier<queue::queue_type> graphics_queue;
 	queue::queue_type present_queue;
 	VkFormat format;
 	VkColorSpaceKHR color_space;
-	swapchain::swapchain_type swapchain;
-	std::vector<swapchain_image_type> swapchain_images;
 	command_pool::command_pool_type cmd_pool;
 };
 

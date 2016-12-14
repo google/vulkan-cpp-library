@@ -93,14 +93,8 @@ input_callbacks_type &input_callbacks_type::set_touch_move_callback(
 const char *class_name = "vcc-vulkan";
 #endif // WIN32
 
-// TODO(gardell): operator=(&&) would leak! Probably want to use some RAII logic that does this for us.
 window_type::~window_type() {
-#ifdef _WIN32
-	if (window != nullptr) {
-		DestroyWindow(window);
-		window = nullptr;
-	}
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_XCB_KHR)
 	if (connection != nullptr) {
 		xcb_destroy_window(connection, window);
 		connection = nullptr;
@@ -108,8 +102,8 @@ window_type::~window_type() {
 #endif // _WIN32
 }
 
-void resize(window_type &window, VkExtent2D extent,
-		const resize_callback_type &resize_callback) {
+std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>> resize(
+		window_type &window, VkExtent2D extent, const resize_callback_type &resize_callback) {
 	// Check the surface capabilities and formats
 	const VkPhysicalDevice physical_device(device::get_physical_device(*window.device));
 	const VkSurfaceCapabilitiesKHR surfCapabilities(vcc::surface::physical_device_capabilities(physical_device, window.surface));
@@ -147,16 +141,16 @@ void resize(window_type &window, VkExtent2D extent,
 	const VkSurfaceTransformFlagBitsKHR preTransform(
 	  surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
 	    ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : surfCapabilities.currentTransform);
-	window.swapchain_images.clear();
-	window.swapchain = vcc::swapchain::swapchain_type();
-	window.swapchain = vcc::swapchain::create(window.device,
+	std::vector<swapchain_image_type> swapchain_images;
+	swapchain_images.clear();
+	swapchain::swapchain_type swapchain(vcc::swapchain::create(window.device,
 		vcc::swapchain::create_info_type{ std::ref(window.surface), desiredNumberOfSwapchainImages,
 		window.format, window.color_space, extent,
 			1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE,{}, preTransform, 0,
-			swapchainPresentMode, VK_TRUE, std::ref(window.swapchain) });
-	std::vector<vcc::image::image_type> swapchain_images(vcc::swapchain::get_images(window.swapchain));
-	window.swapchain_images.reserve(swapchain_images.size());
-	for (vcc::image::image_type &si : swapchain_images) {
+			swapchainPresentMode, VK_TRUE }));
+	std::vector<vcc::image::image_type> images(vcc::swapchain::get_images(swapchain));
+	swapchain_images.reserve(images.size());
+	for (vcc::image::image_type &si : images) {
 		std::shared_ptr<vcc::image::image_type> swapchain_image(
 			std::make_shared<vcc::image::image_type>(std::move(si)));
 
@@ -226,15 +220,18 @@ void resize(window_type &window, VkExtent2D extent,
 						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } }
 				}));
 
-		window.swapchain_images.push_back(swapchain_image_type(swapchain_image,
+		swapchain_images.push_back(swapchain_image_type(swapchain_image,
 			std::move(view), std::move(pre_draw_command),
 			std::move(post_draw_command)));
 	}
-	resize_callback(extent, window.format, window.swapchain_images);
+	resize_callback(extent, window.format, swapchain_images);
+	return std::make_tuple(std::move(swapchain), std::move(swapchain_images));
 }
 
-void draw(window_type &window, const draw_callback_type &draw_callback,
-		const resize_callback_type &resize_callback, VkExtent2D extent) {
+void draw(window_type &window, swapchain::swapchain_type & swapchain,
+		std::vector<swapchain_image_type> &swapchain_images,
+		const draw_callback_type &draw_callback, const resize_callback_type &resize_callback,
+		VkExtent2D extent) {
 	VkResult err;
 	uint32_t current_buffer;
 	// TODO(gardell): Preallocate all semaphores.
@@ -243,12 +240,12 @@ void draw(window_type &window, const draw_callback_type &draw_callback,
 	do {
 		image_acquired_semaphore = vcc::semaphore::create(window.device);
 		std::tie(err, current_buffer) = vcc::swapchain::acquire_next_image(
-			window.swapchain, image_acquired_semaphore);
+			swapchain, image_acquired_semaphore);
 		switch (err) {
 		case VK_ERROR_OUT_OF_DATE_KHR:
 			// swapchain is out of date (e.g. the window was resized) and
 			// must be recreated:
-			resize_callback(extent, window.format, window.swapchain_images);
+			resize_callback(extent, window.format, swapchain_images);
 			break;
 		case VK_SUBOPTIMAL_KHR:
 			VCC_PRINT("VK_SUBOPTIMAL_KHR");
@@ -268,7 +265,7 @@ void draw(window_type &window, const draw_callback_type &draw_callback,
 	vcc::queue::submit(*window.graphics_queue,
 	  { vcc::queue::wait_semaphore{ std::ref(image_acquired_semaphore),
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } },
-		{ std::ref(get_pre_draw_command(window.swapchain_images[current_buffer])) }, {});
+		{ std::ref(get_pre_draw_command(swapchain_images[current_buffer])) }, {});
 
 	draw_callback(current_buffer);
 
@@ -278,16 +275,16 @@ void draw(window_type &window, const draw_callback_type &draw_callback,
 	vcc::queue::submit(window.present_queue,
 		{ vcc::queue::wait_semaphore{ std::ref(draw_semaphore),
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } },
-		{ std::ref(get_post_draw_command(window.swapchain_images[current_buffer])) },
+		{ std::ref(get_post_draw_command(swapchain_images[current_buffer])) },
 		{ std::ref(present_semaphore) });
 
 	err = vcc::queue::present(window.present_queue, { std::ref(present_semaphore) },
-		{ std::ref(window.swapchain) }, { current_buffer });
+		{ std::ref(swapchain) }, { current_buffer });
 	switch (err) {
 	case VK_ERROR_OUT_OF_DATE_KHR:
 		// swapchain is out of date (e.g. the window was resized) and
 		// must be recreated:
-		resize_callback(extent, window.format, window.swapchain_images);
+		resize_callback(extent, window.format, swapchain_images);
 		break;
 	case VK_SUBOPTIMAL_KHR:
 		// swapchain is not as optimal as it could be, but the platform's
@@ -301,21 +298,22 @@ void draw(window_type &window, const draw_callback_type &draw_callback,
 
 void initialize(window_type &window,
 #ifdef _WIN32
-		HWND hwnd
+		HINSTANCE connection,
+		HWND window_handle
 #elif defined(__ANDROID__)
-		ANativeWindow *window
+		ANativeWindow *window_handle
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-  xcb_window_t window
+  xcb_window_t window_handle
 #endif
 		) {
 	window.surface = vcc::surface::create(window.instance,
 #if defined(_WIN32) || defined(VK_USE_PLATFORM_XCB_KHR)
-		window.connection,
+		connection,
 #endif // _WIN32
-		hwnd);
+		window_handle);
 
 #if defined(_WIN32) || defined(VK_USE_PLATFORM_XCB_KHR)
-	window.window = hwnd;
+	window.window = window_type::window_handle_type(window_handle, &DestroyWindow);
 #endif // _WIN32
 
 	window.present_queue = queue::get_present_queue(window.device, window.surface);
@@ -445,7 +443,7 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
 
 window_type create(
 #ifdef _WIN32
-	HINSTANCE hinstance,
+	HINSTANCE connection,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 	xcb_connection_t *connection,
 #elif defined(__ANDROID__)
@@ -457,9 +455,7 @@ window_type create(
 	VkExtent2D extent, VkFormat format, const std::string &title) {
 
 	window_type window(
-#ifdef _WIN32
-		hinstance,
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(_WIN32) || defined(VK_USE_PLATFORM_XCB_KHR)
 		connection,
 #elif defined(__ANDROID__)
 		state,
@@ -470,13 +466,13 @@ window_type create(
 	WNDCLASSEX  win_class;
 	win_class.cbSize = sizeof(WNDCLASSEX);
 
-	if (!GetClassInfoEx(hinstance, class_name, &win_class)) {
+	if (!GetClassInfoEx(connection, class_name, &win_class)) {
 		// Initialize the window class structure:
 		win_class.style = CS_HREDRAW | CS_VREDRAW;
 		win_class.lpfnWndProc = WndProc;
 		win_class.cbClsExtra = 0;
 		win_class.cbWndExtra = 0;
-		win_class.hInstance = hinstance; // hInstance
+		win_class.hInstance = connection;
 		win_class.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 		win_class.hCursor = LoadCursor(NULL, IDC_ARROW);
 		win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
@@ -489,10 +485,10 @@ window_type create(
 		}
 	}
 
-	wnd_proc_type wnd_proc([&window](HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	wnd_proc_type wnd_proc([&](HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		switch (uMsg) {
 		case WM_CREATE:
-			initialize(window, hWnd);
+			initialize(window, connection, hWnd);
 			break;
 		case WM_CLOSE:
 			PostQuitMessage(0);
@@ -506,7 +502,7 @@ window_type create(
 	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 	if (!CreateWindowEx(0, class_name, title.c_str(),
 		WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_SYSMENU,
-		100, 100, wr.right - wr.left, wr.bottom - wr.top, NULL, NULL, hinstance, &wnd_proc)) {
+		100, 100, wr.right - wr.left, wr.bottom - wr.top, NULL, NULL, connection, &wnd_proc)) {
 		throw vcc::vcc_exception("CreateWindowEx failed");
 	}
 #elif defined(__ANDROID__)
@@ -554,9 +550,6 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 	}
 	wnd_proc_type wnd_proc([&](HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		switch (uMsg) {
-		case WM_CREATE:
-			initialize(window, hWnd);
-			break;
 		case WM_CLOSE:
 			PostQuitMessage(0);
 			break;
@@ -632,14 +625,22 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 	});
 	SetWindowLongPtr(window.window, GWLP_USERDATA, (LONG_PTR)&wnd_proc);
 
+	swapchain::swapchain_type swapchain;
+	std::vector<swapchain_image_type> swapchain_images;
+
 	std::atomic_bool running(true);
 	std::thread render_thread([&]() {
 		while (running) {
 			VkExtent2D current_extent(extent.exchange({ 0, 0 }));
 			if (current_extent.width != 0 && current_extent.height != 0) {
-				resize(window, current_extent, resize_callback);
+				// Android fails if there is a swapchain already, although the API
+				// gives us the possibility to hand the previous swapchain as argument
+				// when creating the new one.
+				swapchain = swapchain::swapchain_type();
+				std::tie(swapchain, swapchain_images) =
+					resize(window, current_extent, resize_callback);
 			}
-			draw(window, draw_callback, resize_callback, extent);
+			draw(window, swapchain, swapchain_images, draw_callback, resize_callback, extent);
 		}
 	});
 
