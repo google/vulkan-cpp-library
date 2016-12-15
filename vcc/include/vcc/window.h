@@ -144,7 +144,8 @@ struct window_type {
 #ifdef _WIN32
 		HINSTANCE hinstance,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-		xcb_connection_t *connection,
+		const char *displayname,
+		int *screenp,
 #elif defined(__ANDROID__)
 		android_app* state,
 #endif // __ANDROID__
@@ -154,15 +155,14 @@ struct window_type {
 		VkExtent2D extent, VkFormat format, const std::string &title);
 	friend void initialize(window_type &window,
 #ifdef _WIN32
-		HINSTANCE,
-		HWND
+		HINSTANCE connection,
+		HWND window_handle
 #elif defined(__ANDROID__)
-		ANativeWindow *
+		ANativeWindow *window_handle
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-		xcb_connection_t *connection,
-		xcb_window_t window_handle
+		xcb_connection_t *connection
 #endif
-	);
+		);
 	friend std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>> resize(
 		window_type &window, VkExtent2D extent, const resize_callback_type &resize_callback);
 	friend void draw(window_type &window, swapchain::swapchain_type &swapchain,
@@ -179,22 +179,30 @@ struct window_type {
 	window_type &operator=(window_type&&) = default;
 
 private:
+#ifdef VK_USE_PLATFORM_XCB_KHR
+	typedef std::unique_ptr<xcb_connection_t, decltype(&xcb_disconnect)> connection_type;
+	typedef internal::managed_type<xcb_window_t,
+	  decltype(std::bind(&xcb_destroy_window, (xcb_connection_t *) nullptr, std::placeholders::_1))>
+		window_handle_type;
+#endif // VK_USE_PLATFORM_XCB_KHR
 	window_type(
 #ifdef _WIN32
 		HINSTANCE connection,
 #elif defined(__ANDROID__)
 		android_app* state,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-		xcb_connection_t *connection,
-		xcb_window_t window,
+		connection_type &&connection,
+		window_handle_type &&window,
+		VkExtent2D extent,
 #endif // __ANDROID__
 		type::supplier<instance::instance_type> instance,
 		const type::supplier<device::device_type> &device,
 		const type::supplier<queue::queue_type> &graphics_queue)
 		: instance(instance)
 #ifdef VK_USE_PLATFORM_XCB_KHR
-		, connection(connection)
-		, window(window, std::bind(&xcb_destroy_window, connection, std::placeholders::_1))
+		, connection(std::forward<connection_type>(connection))
+		, window(std::forward<window_handle_type>(window))
+		, extent(extent)
     , atom_wm_delete_window(nullptr, free)
 #endif // VK_USE_PLATFORM_XCB_KHR
 		, device(device), graphics_queue(graphics_queue) {}
@@ -205,13 +213,11 @@ private:
 #elif defined(__ANDROID__)
 	android_app* state;
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-	xcb_connection_t *connection;
-	typedef internal::managed_type<xcb_window_t,
-		decltype(std::bind(&xcb_destroy_window, (xcb_connection_t *) nullptr, std::placeholders::_1))>
-		window_handle_type;
+	connection_type connection;
 	window_handle_type window;
 	typedef std::unique_ptr<xcb_intern_atom_reply_t, decltype(&free)> atom_reply_t;
 	atom_reply_t atom_wm_delete_window;
+	VkExtent2D extent;
 #endif // __ANDROID__
 	type::supplier<instance::instance_type> instance;
 	surface::surface_type surface;
@@ -231,7 +237,8 @@ VCC_LIBRARY window_type create(
 #ifdef _WIN32
 		HINSTANCE hinstance,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-		xcb_connection_t *connection,
+		const char *displayname,
+		int *screenp,
 #elif defined(__ANDROID__)
 		android_app* state,
 #endif // __ANDROID__

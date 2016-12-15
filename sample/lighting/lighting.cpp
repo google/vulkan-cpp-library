@@ -174,19 +174,13 @@ int main(int argc, const char **argv) {
 
 	vcc::queue::queue_type queue(vcc::queue::get_graphics_queue(
 		std::ref(device)));
-#if defined(VK_USE_PLATFORM_XCB_KHR)
-	const std::unique_ptr<xcb_connection_t, decltype(&xcb_disconnect)> connection_ptr(
-    xcb_connect(nullptr,nullptr), &xcb_disconnect);
-  auto connection(connection_ptr.get());
-  assert(!xcb_connection_has_error(connection));
-#endif // VK_USE_PLATFORM_XCB_KHR
 	vcc::window::window_type window(vcc::window::create(
 #ifdef WIN32
 		GetModuleHandle(NULL),
 #elif defined(__ANDROID__) || defined(ANDROID)
 		state,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-		connection,
+		nullptr, nullptr,
 #endif // __ANDROID__
 		std::ref(instance), std::ref(device), std::ref(queue),
 		VkExtent2D{ 500, 500 }, VK_FORMAT_A8B8G8R8_UINT_PACK32,

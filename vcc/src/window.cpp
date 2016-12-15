@@ -292,15 +292,14 @@ void initialize(window_type &window,
 #elif defined(__ANDROID__)
 		ANativeWindow *window_handle
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-  xcb_connection_t *connection,
-  xcb_window_t window_handle
+		xcb_connection_t *connection
 #endif
 		) {
 	window.surface = vcc::surface::create(window.instance,
 #if defined(_WIN32) || defined(VK_USE_PLATFORM_XCB_KHR)
 		connection,
 #endif // _WIN32
-		window_handle);
+		window.window);
 
 #if defined(_WIN32)
 	window.window = window_type::window_handle_type(window_handle, &DestroyWindow);
@@ -435,7 +434,8 @@ window_type create(
 #ifdef _WIN32
 	HINSTANCE connection,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-	xcb_connection_t *connection,
+	const char *displayname,
+	int *screenp,
 #elif defined(__ANDROID__)
 	android_app* state,
 #endif // __ANDROID__
@@ -444,12 +444,19 @@ window_type create(
 	const type::supplier<queue::queue_type> &graphics_queue,
 	VkExtent2D extent, VkFormat format, const std::string &title) {
 
+#ifdef VK_USE_PLATFORM_XCB_KHR
+	window_type::connection_type connection(xcb_connect(displayname, screenp), xcb_disconnect);
+	window_type::window_handle_type window_handle(xcb_generate_id(connection.get()),
+		std::bind(&xcb_destroy_window, (xcb_connection_t *) nullptr, std::placeholders::_1));
+#endif // VK_USE_PLATFORM_XCB_KHR
+
 	window_type window(
 #ifdef _WIN32
     connection,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-		connection,
-		xcb_generate_id(connection),
+		std::move(connection),
+		std::move(window_handle),
+		extent,
 #elif defined(__ANDROID__)
 		state,
 #endif // _WIN32
@@ -503,28 +510,33 @@ window_type create(
 	state->onAppCmd = engine_handle_cmd;
 	state->onInputEvent = engine_handle_input;
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-	xcb_screen_t *screen(xcb_setup_roots_iterator(xcb_get_setup(connection)).data);
+	if (xcb_connection_has_error(window.connection.get())) {
+	  throw vcc::vcc_exception("xcb_connect failed");
+  }
+	xcb_screen_t *screen(xcb_setup_roots_iterator(xcb_get_setup(window.connection.get())).data);
 	uint32_t value_list[] = { XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE
 		| XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_STRUCTURE_NOTIFY
 		| XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_BUTTON_MOTION
 		| XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS };
-	xcb_create_window(connection, screen->root_depth, window.window, screen->root, 100, 100,
-	  extent.width, extent.height, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual,
+	xcb_create_window(window.connection.get(), screen->root_depth, window.window, screen->root,
+		100, 100, extent.width, extent.height, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual,
 	  XCB_CW_EVENT_MASK, value_list);
-	xcb_intern_atom_cookie_t cookie(xcb_intern_atom(connection, 1, 12, "WM_PROTOCOLS"));
-  auto reply(window_type::atom_reply_t(xcb_intern_atom_reply(connection, cookie, 0), free));
+	xcb_intern_atom_cookie_t cookie(xcb_intern_atom(window.connection.get(), 1, 12, "WM_PROTOCOLS"));
+	auto reply(window_type::atom_reply_t(xcb_intern_atom_reply(window.connection.get(), cookie, 0),
+		free));
 
-  xcb_intern_atom_cookie_t cookie2(xcb_intern_atom(connection, 0, 16, "WM_DELETE_WINDOW"));
-	window.atom_wm_delete_window.reset(xcb_intern_atom_reply(connection, cookie2, 0));
+	xcb_intern_atom_cookie_t cookie2(xcb_intern_atom(window.connection.get(), 0, 16,
+		"WM_DELETE_WINDOW"));
+	window.atom_wm_delete_window.reset(xcb_intern_atom_reply(window.connection.get(), cookie2, 0));
 
-  xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window.window, reply->atom, 4, 32, 1,
-      &window.atom_wm_delete_window->atom);
+	xcb_change_property(window.connection.get(), XCB_PROP_MODE_REPLACE, window.window, reply->atom,
+		4, 32, 1, &window.atom_wm_delete_window->atom);
 
-	xcb_map_window(connection, window.window);
-	if (!xcb_flush(connection)) {
+	xcb_map_window(window.connection.get(), window.window);
+	if (!xcb_flush(window.connection.get())) {
 	  throw vcc::vcc_exception("xcb_flush xcb_create_window xcb_map_window failed");
   }
-  vcc::window::initialize(window, connection, window.window);
+  vcc::window::initialize(window, window.connection.get());
 #endif
 
 	return window;
@@ -621,16 +633,18 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 
 	std::atomic_bool running(true);
 	std::thread render_thread([&]() {
+	  VkExtent2D draw_extent;
 		while (running) {
-			VkExtent2D current_extent(extent.exchange({ 0, 0 }));
-			if (current_extent.width != 0 && current_extent.height != 0) {
+			VkExtent2D resize_extent(extent.exchange({ 0, 0 }));
+			if (resize_extent.width != 0 && resize_extent.height != 0) {
 				// Android fails if there is a swapchain already, although the API
 				// gives us the possibility to hand the previous swapchain as argument
 				// when creating the new one.
 				swapchain = swapchain::swapchain_type();
-				std::tie(swapchain, swapchain_images) = resize(window, current_extent, resize_callback);
+				std::tie(swapchain, swapchain_images) = resize(window, resize_extent, resize_callback);
+				draw_extent = resize_extent;
 			}
-			draw(window, swapchain, swapchain_images, draw_callback, resize_callback, extent);
+			draw(window, swapchain, swapchain_images, draw_callback, resize_callback, draw_extent);
 		}
 	});
 
@@ -656,11 +670,11 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 	std::vector<swapchain_image_type> swapchain_images;
 
 	std::atomic_bool running(true);
-	std::atomic<VkExtent2D> extent;
+	std::atomic<VkExtent2D> extent(window.extent);
 
   for (;;) {
     std::unique_ptr<xcb_generic_event_t, decltype(&free)> event(
-      xcb_wait_for_event(window.connection), &free);
+      xcb_wait_for_event(window.connection.get()), &free);
     uint8_t event_code = event->response_type & 0x7f;
     if (event_code == XCB_CONFIGURE_NOTIFY) {
       const xcb_configure_notify_event_t *cfg =
@@ -673,7 +687,7 @@ int run(window_type &window, const resize_callback_type &resize_callback,
   std::thread event_thread([&]() {
     while (running) {
       std::unique_ptr<xcb_generic_event_t, decltype(&free)> event(
-        xcb_wait_for_event(window.connection), &free);
+        xcb_wait_for_event(window.connection.get()), &free);
       uint8_t event_code = event->response_type & 0x7f;
       switch (event_code) {
       case XCB_CONFIGURE_NOTIFY: {
@@ -716,16 +730,19 @@ int run(window_type &window, const resize_callback_type &resize_callback,
     }
   });
 
+  VkExtent2D draw_extent;
   while (running) {
-    VkExtent2D current_extent(extent.exchange({ 0, 0 }));
-    if (current_extent.width != 0 && current_extent.height != 0) {
-      std::tie(swapchain, swapchain_images) = resize(window, current_extent, resize_callback);
+    VkExtent2D resize_extent(extent.exchange({ 0, 0 }));
+    if (resize_extent.width != 0 && resize_extent.height != 0) {
+      std::tie(swapchain, swapchain_images) = resize(window, resize_extent, resize_callback);
+      draw_extent = resize_extent;
     }
-    draw(window, swapchain, swapchain_images, draw_callback, resize_callback, current_extent);
+    draw(window, swapchain, swapchain_images, draw_callback, resize_callback, draw_extent);
   }
 
   event_thread.join();
   device::wait_idle(*window.device);
+  window.extent = extent;
 
 #elif defined(__ANDROID__)
   auto joinable(window.render_thread.start());
