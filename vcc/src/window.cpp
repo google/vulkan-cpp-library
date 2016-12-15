@@ -706,34 +706,30 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 				// The system has asked us to save our current state.  Do so.
 				break;
 			case APP_CMD_INIT_WINDOW:
-				VCC_PRINT("APP_CMD_INIT_WINDOW");
 				// The window is being shown, get it ready.
 				if (app.window != NULL) {
 					vcc::window::initialize(window, app.window);
 					extent = { (uint32_t) ANativeWindow_getWidth(app.window),
 							   (uint32_t) ANativeWindow_getHeight(app.window) };
+					swapchain_images.clear();
+					swapchain = swapchain::swapchain_type();
 					std::tie(swapchain, swapchain_images) = resize(window, extent, resize_callback);
 				}
 				break;
 			case APP_CMD_GAINED_FOCUS:
 				running = true;
-				VCC_PRINT("APP_CMD_GAINED_FOCUS");
 				render_thread = std::thread([&]() {
 					while (running) {
 						draw(window, swapchain, swapchain_images, draw_callback, resize_callback,
 							 extent);
 					}
 				});
-				VCC_PRINT("APP_CMD_GAINED_FOCUS end");
 				break;
 			case APP_CMD_LOST_FOCUS:
-				VCC_PRINT("APP_CMD_LOST_FOCUS");
 				running = false;
 				render_thread.join();
-				VCC_PRINT("APP_CMD_LOST_FOCUS end");
 				break;
 			case APP_CMD_TERM_WINDOW:
-				VCC_PRINT("APP_CMD_TERM_WINDOW");
 				running = false;
 				if (render_thread.joinable()) {
 					render_thread.join();
