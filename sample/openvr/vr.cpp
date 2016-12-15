@@ -195,7 +195,7 @@ int vr_type::run(const draw_callback_type &draw_callback,
 				0.f, 0.f, 1.f, 1.f));
 
 			const vr::Texture_t texdesc = { (void*)texture.get_instance(),
-				vr::API_OpenGL, vr::ColorSpace_Gamma };
+				vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
 			{
 				const vr::VRTextureBounds_t bounds = { 0.f, 0.f, .5f, 1.f };
 				compositor->Submit(vr::Eye_Left, &texdesc, &bounds);
@@ -241,8 +241,7 @@ VkExtent2D vr_type::get_recommended_render_target_size() const {
 
 glm::mat4 vr_type::get_projection_matrix(vr::Hmd_Eye nEye, float near_z,
 		float far_z) const {
-	const vr::HmdMatrix44_t mat(hmd->GetProjectionMatrix(nEye, near_z, far_z,
-		vr::API_OpenGL));
+	const vr::HmdMatrix44_t mat(hmd->GetProjectionMatrix(nEye, near_z, far_z));
 	return convert(mat);
 }
 

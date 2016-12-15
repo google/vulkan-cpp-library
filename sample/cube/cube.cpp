@@ -248,19 +248,13 @@ int main(int argc, const char **argv) {
 				} });
 	}
 
-#if defined(VK_USE_PLATFORM_XCB_KHR)
-	const std::unique_ptr<xcb_connection_t, decltype(&xcb_disconnect)> connection_ptr(
-    xcb_connect(nullptr,nullptr), &xcb_disconnect);
-  auto connection(connection_ptr.get());
-  assert(!xcb_connection_has_error(connection));
-#endif // VK_USE_PLATFORM_XCB_KHR
 	vcc::window::window_type window(vcc::window::create(
 #ifdef WIN32
 		GetModuleHandle(NULL),
 #elif defined(__ANDROID__) || defined(ANDROID)
 		state,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-		connection,
+		nullptr, nullptr,
 #endif // __ANDROID__
 		std::ref(instance), std::ref(device), std::ref(queue),
 		VkExtent2D{ 500, 500 }, VK_FORMAT_A8B8G8R8_UINT_PACK32, "Cube demo"));
@@ -371,7 +365,7 @@ int main(int argc, const char **argv) {
 #endif // __ANDROID__
 	vcc::window::run(window,
 		[&](VkExtent2D extent, VkFormat format,
-			std::vector<vcc::window::swapchain_type> &swapchain_images) {
+			std::vector<vcc::window::swapchain_image_type> &swapchain_images) {
 			projection_matrix = glm::perspective(45.f,
 				float(extent.width) / extent.height, 1.f, 100.f);
 

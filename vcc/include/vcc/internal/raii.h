@@ -24,6 +24,55 @@
 namespace vcc {
 namespace internal {
 
+template<typename T, typename Destructor>
+struct managed_type {
+	T handle;
+	Destructor destructor;
+	bool initialized;
+
+	managed_type(Destructor &&destructor = Destructor())
+		: destructor(std::forward<Destructor>(destructor)), initialized(false) {}
+	managed_type(T handle, Destructor &&destructor)
+		: handle(std::forward<T>(handle))
+		, destructor(std::forward<Destructor>(destructor))
+		, initialized(true) {}
+	managed_type(const managed_type<T, Destructor> &) = delete;
+	managed_type(managed_type<T, Destructor> &&copy)
+		: handle(copy.handle)
+		, destructor(std::move(copy.destructor))
+		, initialized(copy.initialized) {
+		copy.initialized = false;
+	}
+	managed_type &operator=(const managed_type<T, Destructor> &&) = delete;
+	managed_type &operator=(managed_type<T, Destructor> &&copy) {
+		destroy();
+		handle = copy.handle;
+		destructor = std::move(copy.destructor);
+		initialized = copy.initialized;
+		copy.initialized = false;
+		return *this;
+	}
+
+	~managed_type() {
+		destroy();
+	}
+
+	operator T &() {
+		return handle;
+	}
+	operator const T &() const {
+		return handle;
+	}
+
+private:
+	void destroy() {
+		if (initialized) {
+			destructor(handle);
+			initialized = false;
+		}
+	}
+};
+
 template<typename T>
 struct handle_type {
 
