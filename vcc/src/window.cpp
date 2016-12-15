@@ -680,7 +680,7 @@ int run(window_type &window, const resize_callback_type &resize_callback,
     }
   });
 
-  VkExtent2D draw_extent;
+  VkExtent2D draw_extent{ 0, 0 };
   while (running) {
     VkExtent2D resize_extent(extent.exchange({ 0, 0 }));
     if (resize_extent.width != 0 && resize_extent.height != 0) {
