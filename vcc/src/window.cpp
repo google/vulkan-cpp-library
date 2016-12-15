@@ -633,10 +633,12 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 
 	std::atomic_bool running(true);
 	std::thread render_thread([&]() {
-	  VkExtent2D draw_extent;
+		VkExtent2D draw_extent{ 0, 0 };
 		while (running) {
 			VkExtent2D resize_extent(extent.exchange({ 0, 0 }));
-			if (resize_extent.width != 0 && resize_extent.height != 0) {
+			if (resize_extent.width != 0 && resize_extent.height != 0
+				&& (resize_extent.width != draw_extent.width
+					|| resize_extent.height != draw_extent.height)) {
 				// Android fails if there is a swapchain already, although the API
 				// gives us the possibility to hand the previous swapchain as argument
 				// when creating the new one.
