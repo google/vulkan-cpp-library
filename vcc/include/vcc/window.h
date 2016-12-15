@@ -199,7 +199,9 @@ private:
 		const type::supplier<device::device_type> &device,
 		const type::supplier<queue::queue_type> &graphics_queue)
 		: instance(instance)
-#ifdef VK_USE_PLATFORM_XCB_KHR
+#if defined(__ANDROID__)
+		, state(state)
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
 		, connection(std::forward<connection_type>(connection))
 		, window(std::forward<window_handle_type>(window))
 		, extent(extent)

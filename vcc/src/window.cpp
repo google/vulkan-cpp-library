@@ -301,8 +301,10 @@ void initialize(window_type &window,
 	window.surface = vcc::surface::create(window.instance,
 #if defined(_WIN32) || defined(VK_USE_PLATFORM_XCB_KHR)
 		connection,
-#endif // _WIN32
 		window.window);
+#elif defined(__ANDROID__)
+		window_handle);
+#endif
 
 	window.present_queue = queue::get_present_queue(window.device, window.surface);
 
@@ -360,71 +362,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 }
 #elif defined(__ANDROID__)
 
+template<typename CommandF, typename InputF>
+struct callbacks_type {
+	CommandF command_function;
+	InputF input_function;
+};
+
+template<typename CommandF, typename InputF>
 int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
-    internal::window_data_type *window_data =
-      (internal::window_data_type *) app->userData;
-    switch (AInputEvent_getType(event)) {
-      case AINPUT_EVENT_TYPE_MOTION: {
-        const size_t count(AMotionEvent_getPointerCount(event));
-				bool handled = false;
-        switch (AMotionEvent_getAction(event)) {
-          case AMOTION_EVENT_ACTION_MOVE:
-            for (size_t i = 0; i < count; ++i) {
-              const int32_t id(AMotionEvent_getPointerId(event, i));
-              handled |= window_input_callbacks.touch_move_callback(id,
-                AMotionEvent_getX(event, i), AMotionEvent_getY(event, i));
-            }
-            return !!handled;
-          case AMOTION_EVENT_ACTION_DOWN:
-            for (size_t i = 0; i < count; ++i) {
-              const int32_t id(AMotionEvent_getPointerId(event, i));
-              handled |= window_input_callbacks.touch_down_callback(id,
-                AMotionEvent_getX(event, i), AMotionEvent_getY(event, i));
-            }
-            return !!handled;
-          case AMOTION_EVENT_ACTION_UP:
-            for (size_t i = 0; i < count; ++i) {
-              const int32_t id(AMotionEvent_getPointerId(event, i));
-              handled |= window_input_callbacks.touch_up_callback(id,
-                AMotionEvent_getX(event, i), AMotionEvent_getY(event, i));
-            }
-            return !!handled;
-        }
-        } break;
-    }
-    return 0;
+	return reinterpret_cast<callbacks_type<CommandF, InputF> *>(app->userData)
+		->input_function(*app, *event);
 }
 
-/**
- * Process the next main command.
- */
+template<typename CommandF, typename InputF>
 void engine_handle_cmd(struct android_app* app, int32_t cmd) {
-    internal::window_data_type *data =
-        (internal::window_data_type *) app->userData;
-    switch (cmd) {
-        case APP_CMD_SAVE_STATE:
-            // The system has asked us to save our current state.  Do so.
-            break;
-        case APP_CMD_INIT_WINDOW:
-            // The window is being shown, get it ready.
-            if (app->window != NULL) {
-              vcc::window::initialize(*data, app->window);
-              vcc::window::resize(*data, VkExtent2D{
-                (uint32_t) ANativeWindow_getWidth(app->window),
-                (uint32_t) ANativeWindow_getHeight(app->window)});
-              render_thread.set_drawing(true);
-            }
-            break;
-        case APP_CMD_TERM_WINDOW:
-            render_thread.set_drawing(false);
-            break;
-        case APP_CMD_GAINED_FOCUS:
-            render_thread.set_drawing(true);
-            break;
-        case APP_CMD_LOST_FOCUS:
-            render_thread.set_drawing(false);
-            break;
-    }
+	reinterpret_cast<callbacks_type<CommandF, InputF> *>(app->userData)->command_function(*app,
+		cmd);
 }
 
 #endif // __ANDROID__
@@ -504,10 +457,6 @@ window_type create(
 		100, 100, wr.right - wr.left, wr.bottom - wr.top, NULL, NULL, connection, &wnd_proc)) {
 		throw vcc::vcc_exception("CreateWindowEx failed");
 	}
-#elif defined(__ANDROID__)
-	state->userData = data.get();
-	state->onAppCmd = engine_handle_cmd;
-	state->onInputEvent = engine_handle_input;
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 	if (xcb_connection_has_error(window.connection.get())) {
 	  throw vcc::vcc_exception("xcb_connect failed");
@@ -746,7 +695,89 @@ int run(window_type &window, const resize_callback_type &resize_callback,
   window.extent = extent;
 
 #elif defined(__ANDROID__)
-  auto joinable(window.render_thread.start());
+	swapchain::swapchain_type swapchain;
+	std::vector<swapchain_image_type> swapchain_images;
+	std::atomic_bool running;
+	std::thread render_thread;
+	VkExtent2D extent;
+	auto handle_cmd([&](struct android_app &app, int32_t cmd) {
+		switch (cmd) {
+			case APP_CMD_SAVE_STATE:
+				// The system has asked us to save our current state.  Do so.
+				break;
+			case APP_CMD_INIT_WINDOW:
+				VCC_PRINT("APP_CMD_INIT_WINDOW");
+				// The window is being shown, get it ready.
+				if (app.window != NULL) {
+					vcc::window::initialize(window, app.window);
+					extent = { (uint32_t) ANativeWindow_getWidth(app.window),
+							   (uint32_t) ANativeWindow_getHeight(app.window) };
+					std::tie(swapchain, swapchain_images) = resize(window, extent, resize_callback);
+				}
+				break;
+			case APP_CMD_GAINED_FOCUS:
+				running = true;
+				VCC_PRINT("APP_CMD_GAINED_FOCUS");
+				render_thread = std::thread([&]() {
+					while (running) {
+						draw(window, swapchain, swapchain_images, draw_callback, resize_callback,
+							 extent);
+					}
+				});
+				VCC_PRINT("APP_CMD_GAINED_FOCUS end");
+				break;
+			case APP_CMD_LOST_FOCUS:
+				VCC_PRINT("APP_CMD_LOST_FOCUS");
+				running = false;
+				render_thread.join();
+				VCC_PRINT("APP_CMD_LOST_FOCUS end");
+				break;
+			case APP_CMD_TERM_WINDOW:
+				VCC_PRINT("APP_CMD_TERM_WINDOW");
+				running = false;
+				if (render_thread.joinable()) {
+					render_thread.join();
+				}
+				break;
+		}
+	});
+	auto handle_input([&](struct android_app &app, AInputEvent &event)->int32_t {
+		switch (AInputEvent_getType(&event)) {
+			case AINPUT_EVENT_TYPE_MOTION: {
+				const size_t count(AMotionEvent_getPointerCount(&event));
+				bool handled = false;
+				switch (AMotionEvent_getAction(&event)) {
+					case AMOTION_EVENT_ACTION_MOVE:
+					for (size_t i = 0; i < count; ++i) {
+						const int32_t id(AMotionEvent_getPointerId(&event, i));
+						handled |= input_callbacks.touch_move_callback(
+								id, AMotionEvent_getX(&event, i), AMotionEvent_getY(&event, i));
+					}
+					return !!handled;
+					case AMOTION_EVENT_ACTION_DOWN:
+						for (size_t i = 0; i < count; ++i) {
+							const int32_t id(AMotionEvent_getPointerId(&event, i));
+							handled |= input_callbacks.touch_down_callback(
+									id, AMotionEvent_getX(&event, i), AMotionEvent_getY(&event, i));
+						}
+						return !!handled;
+					case AMOTION_EVENT_ACTION_UP:
+						for (size_t i = 0; i < count; ++i) {
+							const int32_t id(AMotionEvent_getPointerId(&event, i));
+							handled |= input_callbacks.touch_up_callback(
+									id, AMotionEvent_getX(&event, i), AMotionEvent_getY(&event, i));
+						}
+						return !!handled;
+				}
+			} break;
+		}
+		return 0;
+	});
+	callbacks_type<decltype(handle_cmd), decltype(handle_input)> callbacks{
+		handle_cmd, handle_input };
+	window.state->userData = &callbacks;
+	window.state->onAppCmd = engine_handle_cmd<decltype(handle_cmd), decltype(handle_input)>;
+	window.state->onInputEvent = engine_handle_input<decltype(handle_cmd), decltype(handle_input)>;
 	for (;;) {
 		// Read all pending events.
 		int events;
