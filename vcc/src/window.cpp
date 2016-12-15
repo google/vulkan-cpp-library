@@ -295,15 +295,14 @@ void initialize(window_type &window,
 		xcb_connection_t *connection
 #endif
 		) {
+#if defined(_WIN32)
+	window.window = window_type::window_handle_type(window_handle, &DestroyWindow);
+#endif // _WIN32
 	window.surface = vcc::surface::create(window.instance,
 #if defined(_WIN32) || defined(VK_USE_PLATFORM_XCB_KHR)
 		connection,
 #endif // _WIN32
 		window.window);
-
-#if defined(_WIN32)
-	window.window = window_type::window_handle_type(window_handle, &DestroyWindow);
-#endif // _WIN32
 
 	window.present_queue = queue::get_present_queue(window.device, window.surface);
 
