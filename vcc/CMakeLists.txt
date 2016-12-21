@@ -24,7 +24,6 @@ if(DEFINED ANDROID_NDK)
 endif()
 
 set(VCC_INCLUDES
-  "include/vcc/keycode.h"
   "include/vcc/command.h"
   "include/vcc/descriptor_set.h"
   "include/vcc/framebuffer.h"
