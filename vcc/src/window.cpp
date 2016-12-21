@@ -93,7 +93,9 @@ input_callbacks_type &input_callbacks_type::set_touch_move_callback(
 const char *class_name = "vcc-vulkan";
 #endif // WIN32
 
-std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>> resize(
+std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>,
+	std::vector<command_buffer::command_buffer_type>,
+	std::vector<command_buffer::command_buffer_type>> resize(
 		window_type &window, VkExtent2D extent, const resize_callback_type &resize_callback) {
 	// Check the surface capabilities and formats
 	const VkPhysicalDevice physical_device(device::get_physical_device(*window.device));
@@ -139,6 +141,9 @@ std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>> resize(
 	std::vector<vcc::image::image_type> images(vcc::swapchain::get_images(swapchain));
 	std::vector<swapchain_image_type> swapchain_images;
 	swapchain_images.reserve(images.size());
+	std::vector<command_buffer::command_buffer_type> pre_draw_commands, post_draw_commands;
+	pre_draw_commands.reserve(images.size());
+	post_draw_commands.reserve(images.size());
 	for (vcc::image::image_type &si : images) {
 		std::shared_ptr<vcc::image::image_type> swapchain_image(
 			std::make_shared<vcc::image::image_type>(std::move(si)));
@@ -209,25 +214,27 @@ std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>> resize(
 						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } }
 				}));
 
-		swapchain_images.push_back(swapchain_image_type(swapchain_image,
-			std::move(view), std::move(pre_draw_command),
-			std::move(post_draw_command)));
+		swapchain_images.push_back(swapchain_image_type(swapchain_image, std::move(view)));
+		pre_draw_commands.push_back(std::move(pre_draw_command));
+		post_draw_commands.push_back(std::move(post_draw_command));
 	}
 	resize_callback(extent, window.format, swapchain_images);
-	return std::make_tuple(std::move(swapchain), std::move(swapchain_images));
+	return std::make_tuple(std::move(swapchain), std::move(swapchain_images),
+		std::move(pre_draw_commands), std::move(post_draw_commands));
 }
 
 void draw(window_type &window, swapchain::swapchain_type &swapchain,
 		std::vector<swapchain_image_type> &swapchain_images,
+		std::vector<command_buffer::command_buffer_type> &pre_draw_commands,
+		std::vector<command_buffer::command_buffer_type> &post_draw_commands,
+		vcc::semaphore::semaphore_type &image_acquired_semaphore,
+		vcc::semaphore::semaphore_type &present_semaphore,
+		vcc::semaphore::semaphore_type &draw_semaphore,
 		const draw_callback_type &draw_callback, const resize_callback_type &resize_callback,
 		VkExtent2D extent) {
 	VkResult err;
 	uint32_t current_buffer;
-	// TODO(gardell): Preallocate all semaphores.
-	vcc::semaphore::semaphore_type image_acquired_semaphore;
-	vcc::semaphore::semaphore_type present_semaphore(vcc::semaphore::create(window.device));
 	do {
-		image_acquired_semaphore = vcc::semaphore::create(window.device);
 		std::tie(err, current_buffer) = vcc::swapchain::acquire_next_image(
 			swapchain, image_acquired_semaphore);
 		switch (err) {
@@ -254,20 +261,20 @@ void draw(window_type &window, swapchain::swapchain_type &swapchain,
 	vcc::queue::submit(*window.graphics_queue,
 	  { vcc::queue::wait_semaphore{ std::ref(image_acquired_semaphore),
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } },
-		{ std::ref(get_pre_draw_command(swapchain_images[current_buffer])) }, {});
+		{ std::ref(pre_draw_commands[current_buffer]) }, {});
 
 	draw_callback(current_buffer);
 
-  vcc::semaphore::semaphore_type draw_semaphore(vcc::semaphore::create(window.device));
   vcc::queue::submit(*window.graphics_queue, {}, {}, { std::ref(draw_semaphore) });
 
 	vcc::queue::submit(window.present_queue,
 		{ vcc::queue::wait_semaphore{ std::ref(draw_semaphore),
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } },
-		{ std::ref(get_post_draw_command(swapchain_images[current_buffer])) },
+		{ std::ref(post_draw_commands[current_buffer]) },
 		{ std::ref(present_semaphore) });
 
-	err = vcc::queue::present(window.present_queue, { std::ref(present_semaphore) },
+	err = vcc::queue::present(window.present_queue,
+		{ std::ref(present_semaphore) },
 		{ std::ref(swapchain) }, { current_buffer });
 	switch (err) {
 	case VK_ERROR_OUT_OF_DATE_KHR:
@@ -578,7 +585,10 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 
 	swapchain::swapchain_type swapchain;
 	std::vector<swapchain_image_type> swapchain_images;
-
+	std::vector<command_buffer::command_buffer_type> pre_draw_commands, post_draw_commands;
+	vcc::semaphore::semaphore_type image_acquired_semaphore(vcc::semaphore::create(window.device)),
+		present_semaphore(vcc::semaphore::create(window.device)),
+		draw_semaphore(vcc::semaphore::create(window.device));
 	std::atomic_bool running(true);
 	std::thread render_thread([&]() {
 		VkExtent2D draw_extent{ 0, 0 };
@@ -591,10 +601,13 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 				// gives us the possibility to hand the previous swapchain as argument
 				// when creating the new one.
 				swapchain = swapchain::swapchain_type();
-				std::tie(swapchain, swapchain_images) = resize(window, resize_extent, resize_callback);
+				std::tie(swapchain, swapchain_images, pre_draw_commands, post_draw_commands) = resize(
+						window, resize_extent, resize_callback);
 				draw_extent = resize_extent;
 			}
-			draw(window, swapchain, swapchain_images, draw_callback, resize_callback, draw_extent);
+			draw(window, swapchain, swapchain_images, pre_draw_commands, post_draw_commands,
+				image_acquired_semaphore, present_semaphore, draw_semaphore, draw_callback,
+				resize_callback, draw_extent);
 		}
 	});
 
