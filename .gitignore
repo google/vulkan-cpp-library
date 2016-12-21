@@ -60,6 +60,7 @@ Win32/
 # Build results
 [Dd]ebug/
 [Rr]elease/
+RelWithDebInfo/
 
 # Visual Studio 2015 cache/options directory
 .vs/

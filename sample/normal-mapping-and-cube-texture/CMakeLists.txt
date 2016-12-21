@@ -22,12 +22,12 @@ if(NOT VULKAN_SDK_DIR STREQUAL "")
 endif()
 
 set(SAMPLE_NORMAL_MAPPING_AND_CUBE_TEXTURE_SRCS
-  "normal-mapping-and-cube-texture.cpp"
+  "src/normal-mapping-and-cube-texture.cpp"
 )
 
 set(SAMPLE_NORMAL_MAPPING_AND_CUBE_TEXTURE_SHADER_SRCS
-  "normal-mapping-and-cube-texture-frag.frag"
-  "normal-mapping-and-cube-texture-vert.vert"
+  "src/normal-mapping-and-cube-texture-frag.frag"
+  "src/normal-mapping-and-cube-texture-vert.vert"
 )
 
 if(DEFINED ANDROID_NDK)
