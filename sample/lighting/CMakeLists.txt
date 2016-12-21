@@ -11,6 +11,7 @@
 # limitations under the License.
 #
 
+include_directories(include)
 include_directories(../../types/include)
 include_directories(../../vcc/include)
 include_directories(${CMAKE_BINARY_DIR}/vcc/include)
@@ -21,22 +22,22 @@ if(NOT VULKAN_SDK_DIR STREQUAL "")
 endif()
 
 set(SAMPLE_LIGHTING_INCLUDES
-  "teapot.h"
+  "include/teapot.h"
 )
 
 set(SAMPLE_LIGHTING_SRCS
-  "lighting.cpp"
+  "src/lighting.cpp"
 )
 
 set(SAMPLE_LIGHTING_SHADER_SRCS
-  "lighting-frag.frag"
-  "lighting-vert.vert"
+  "src/lighting-frag.frag"
+  "src/lighting-vert.vert"
 )
 
 if(DEFINED ANDROID_NDK)
   include_directories(${ANDROID_NDK}/sources/android/native_app_glue/)
 
-  add_library(lighting SHARED ${SAMPLE_LIGHTING_SRCS}
+  add_library(lighting SHARED ${SAMPLE_LIGHTING_INCLUDES} ${SAMPLE_LIGHTING_SRCS}
     ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
 
   find_library(log-lib log)

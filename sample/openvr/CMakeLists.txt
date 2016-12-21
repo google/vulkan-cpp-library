@@ -43,15 +43,15 @@ set(SAMPLE_OPENVR_INCLUDES
 )
 
 set(SAMPLE_OPENVR_SRCS
-  "gl_objects.cpp"
-  "glut.cpp"
-  "openvr.cpp"
-  "vr.cpp"
+  "src/gl_objects.cpp"
+  "src/glut.cpp"
+  "src/openvr.cpp"
+  "src/vr.cpp"
 )
 
 set(SAMPLE_OPENVR_SHADER_SRCS
-  "openvr-frag.frag"
-  "openvr-vert.vert"
+  "src/openvr-frag.frag"
+  "src/openvr-vert.vert"
 )
 
 if(UNIX)

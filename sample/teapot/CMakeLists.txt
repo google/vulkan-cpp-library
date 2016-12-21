@@ -11,6 +11,7 @@
 # limitations under the License.
 #
 
+include_directories(include)
 include_directories(../../types/include)
 include_directories(../../vcc/include)
 include_directories(${CMAKE_BINARY_DIR}/vcc/include)
@@ -21,19 +22,23 @@ if(NOT VULKAN_SDK_DIR STREQUAL "")
   link_directories(${VULKAN_SDK_DIR}/bin)
 endif()
 
+set(SAMPLE_TEAPOT_INCLUDES
+  "include/teapot.h"
+)
+
 set(SAMPLE_TEAPOT_SRCS
-  "teapot.cpp"
+  "src/teapot.cpp"
 )
 
 set(SAMPLE_TEAPOT_SHADER_SRCS
-  "teapot-frag.frag"
-  "teapot-vert.vert"
+  "src/teapot-frag.frag"
+  "src/teapot-vert.vert"
 )
 
 if(DEFINED ANDROID_NDK)
   include_directories(${ANDROID_NDK}/sources/android/native_app_glue/)
 
-  add_library(teapot SHARED ${SAMPLE_TEAPOT_SRCS}
+  add_library(teapot SHARED ${SAMPLE_TEAPOT_INCLUDES} ${SAMPLE_TEAPOT_SRCS}
     ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
 
   find_library(log-lib log)
@@ -42,7 +47,7 @@ if(DEFINED ANDROID_NDK)
   find_library(jnigraphics-lib jnigraphics)
   target_link_libraries(teapot ${log-lib} ${android-lib} ${vulkan-lib} ${jnigraphics-lib})
 else()
-  add_executable(teapot ${SAMPLE_TEAPOT_SRCS})
+  add_executable(teapot ${SAMPLE_TEAPOT_INCLUDES} ${SAMPLE_TEAPOT_SRCS})
 endif()
 target_link_libraries(teapot vcc vcc-image)
 

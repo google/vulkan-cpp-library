@@ -22,12 +22,12 @@ if(NOT VULKAN_SDK_DIR STREQUAL "")
 endif()
 
 set(SAMPLE_CUBE_SRCS
-  "cube.cpp"
+  "src/cube.cpp"
 )
 
 set(SAMPLE_CUBE_SHADER_SRCS
-  "cube-frag.frag"
-  "cube-vert.vert"
+  "src/cube-frag.frag"
+  "src/cube-vert.vert"
 )
 
 if(DEFINED ANDROID_NDK)
