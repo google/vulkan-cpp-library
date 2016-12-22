@@ -27,10 +27,8 @@
 #include <async_cache.h>
 #include <cassert>
 #include <fstream>
-#include <gl_objects.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
-#include <glut_object.h>
 #include <iterator>
 #include <queue>
 #include <sstream>
@@ -272,18 +270,13 @@ vcc::command_buffer::command_buffer_type recalculate_command_buffer(
 	return std::move(command_buffer);
 }
 
-#ifdef WIN32
-int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-		LPSTR lpCmdLine, int nCmdShow) {
-		int argc = __argc;
-		char **argv = __argv;
-#else
 int main(int argc, char **argv) {
-#endif // WIN32
+
+	hmd_type hmd;
 
 	vcc::instance::instance_type instance;
 	{
-		const std::set<std::string> extensions = {
+		std::set<std::string> extensions = {
 			VK_KHR_SURFACE_EXTENSION_NAME,
 #ifdef WIN32
 			VK_KHR_WIN32_SURFACE_EXTENSION_NAME
@@ -291,6 +284,9 @@ int main(int argc, char **argv) {
       VK_KHR_XCB_SURFACE_EXTENSION_NAME
 #endif
 		};
+		auto vr_extensions(hmd.get_vulkan_instance_extensions_required());
+		std::copy(std::begin(vr_extensions), std::end(vr_extensions),
+			std::inserter(extensions, std::end(extensions)));
 		assert(vcc::enumerate::contains_all(
 			vcc::enumerate::instance_extension_properties(""),
 			extensions));
@@ -302,7 +298,11 @@ int main(int argc, char **argv) {
 		const VkPhysicalDevice physical_device(
 			vcc::physical_device::enumerate(instance).front());
 
-		const std::set<std::string> extensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+		std::set<std::string> extensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+		auto vr_extensions(hmd.get_vulkan_device_extensions_required(physical_device));
+		std::copy(std::begin(vr_extensions), std::end(vr_extensions),
+			std::inserter(extensions, std::end(extensions)));
+
 		assert(vcc::enumerate::contains_all(
 			vcc::enumerate::device_extension_properties(physical_device, ""),
 			extensions));
@@ -428,7 +428,7 @@ int main(int argc, char **argv) {
 
 	const glm::vec2 angle(1, 0);
 
-	vr_type vr_instance(argc, argv, "OpenVR sample", 1024, 768, std::ref(queue));
+	vr_type vr_instance(std::move(hmd), std::ref(instance), std::ref(queue));
 	const VkExtent2D extent(vr_instance.get_recommended_render_target_size());
 
 	const float near_z(.1f), far_z(100);
@@ -525,7 +525,7 @@ int main(int argc, char **argv) {
 	for (uint32_t unTrackedDevice = vr::k_unTrackedDeviceIndex_Hmd + 1;
 			unTrackedDevice < vr::k_unMaxTrackedDeviceCount;
 			unTrackedDevice++) {
-		if (vr_instance.hmd->IsTrackedDeviceConnected(unTrackedDevice)) {
+		if (vr_instance.hmd.get_hmd().IsTrackedDeviceConnected(unTrackedDevice)) {
 			track_device_callback(unTrackedDevice);
 		}
 	}
@@ -537,12 +537,12 @@ int main(int argc, char **argv) {
 			std::shared_ptr<vcc::command_buffer::command_buffer_type>
 				command_buffer(shared_command_buffer);
 			if (command_buffer) {
-				vcc::queue::submit(queue, {},
-					{ type::make_supplier(command_buffer) }, {});
+				vcc::queue::submit(queue, {}, { type::make_supplier(command_buffer) }, {});
 			}
 		},
 		[&](const vr::VREvent_t &event) {
-			VCC_PRINT("event: %d", event.eventType);
+			VCC_PRINT("event: %s", vr_instance.hmd.get_hmd().GetEventTypeNameFromEnum(
+				vr::EVREventType(event.eventType)));
 			switch (event.eventType) {
 			case vr::VREvent_TrackedDeviceActivated:
 				track_device_callback(event.trackedDeviceIndex);

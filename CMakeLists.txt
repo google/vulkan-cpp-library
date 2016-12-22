@@ -14,7 +14,6 @@ cmake_minimum_required(VERSION 3.1)
 set(CMAKE_CXX_STANDARD 11)
 
 set(VULKAN_SDK_DIR "" CACHE PATH "Path to the Vulkan SDK")
-set(GLEW_BINARY_DIR "" CACHE PATH "Path to the GLEW binaries")
 
 #
 # SPIRV-Headers
@@ -181,24 +180,6 @@ execute_process(COMMAND ${CMAKE_COMMAND} --build .
 # Add png directly to our build.
 add_subdirectory(${PNG_SRC_DIR} ${PNG_BUILD_DIR})
 
-#
-# freeglut
-#
-
-set(FREEGLUT_SRC_DIR ${CMAKE_BINARY_DIR}/freeglut-src)
-set(FREEGLUT_INCLUDE_DIR ${FREEGLUT_SRC_DIR}/freeglut/freeglut/include)
-# Download and unpack freeglut at configure time
-configure_file(CMakeLists.txt.freeglut.in
-               freeglut-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/freeglut-download)
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/freeglut-download)
-
-# Add freeglut directly to our build.
-add_subdirectory(${FREEGLUT_SRC_DIR}/freeglut/freeglut
-                 ${CMAKE_BINARY_DIR}/freeglut-build)
-
 endif()
 
 enable_testing()
@@ -212,14 +193,12 @@ elseif(UNIX)
 endif()
 
 set(VULKAN_LIBRARY "vulkan")
-set(GLEW_LIBRARY "GLEW")
 if(WIN32)
   if(NOT EXISTS ${VULKAN_SDK_DIR}/Include/vulkan/vulkan.h)
     message(SEND_ERROR "On Windows VULKAN_SDK_DIR must be set.")
   endif()
 
   set(VULKAN_LIBRARY "vulkan-1")
-  set(GLEW_LIBRARY "glew32s")
 endif()
 
 add_subdirectory(spirv-reflection)
@@ -239,12 +218,9 @@ add_subdirectory(spirv-reflection-test)
 add_subdirectory(types-test)
 add_subdirectory(vcc-test)
 
-if(NOT WIN32 OR NOT GLEW_BINARY_DIR STREQUAL "")
-  add_subdirectory(sample/openvr)
-  list(APPEND SAMPLES openvr)
-endif()
+add_subdirectory(sample/openvr)
+list(APPEND SAMPLES openvr)
 
 set_property(TARGET ${SAMPLES} PROPERTY FOLDER "samples")
 
 endif()
-
