@@ -711,6 +711,10 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 #elif defined(__ANDROID__)
 	swapchain::swapchain_type swapchain;
 	std::vector<swapchain_image_type> swapchain_images;
+	std::vector<command_buffer::command_buffer_type> pre_draw_commands, post_draw_commands;
+	vcc::semaphore::semaphore_type image_acquired_semaphore(vcc::semaphore::create(window.device)),
+			present_semaphore(vcc::semaphore::create(window.device)),
+			draw_semaphore(vcc::semaphore::create(window.device));
 	std::atomic_bool running;
 	std::thread render_thread;
 	VkExtent2D extent;
@@ -727,15 +731,17 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 							   (uint32_t) ANativeWindow_getHeight(app.window) };
 					swapchain_images.clear();
 					swapchain = swapchain::swapchain_type();
-					std::tie(swapchain, swapchain_images) = resize(window, extent, resize_callback);
+					std::tie(swapchain, swapchain_images, pre_draw_commands, post_draw_commands) =
+						resize(window, extent, resize_callback);
 				}
 				break;
 			case APP_CMD_GAINED_FOCUS:
 				running = true;
 				render_thread = std::thread([&]() {
 					while (running) {
-						draw(window, swapchain, swapchain_images, draw_callback, resize_callback,
-							 extent);
+						draw(window, swapchain, swapchain_images, pre_draw_commands,
+							 post_draw_commands, image_acquired_semaphore, present_semaphore,
+							 draw_semaphore, draw_callback, resize_callback, extent);
 					}
 				});
 				break;
@@ -780,6 +786,16 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 						return !!handled;
 				}
 			} break;
+			case AINPUT_EVENT_TYPE_KEY:
+				switch (AKeyEvent_getAction(&event)) {
+					case AKEY_EVENT_ACTION_DOWN:
+						input_callbacks.key_down_callback(AKeyEvent_getKeyCode(&event));
+						break;
+					case AKEY_EVENT_ACTION_UP:
+						input_callbacks.key_up_callback(AKeyEvent_getKeyCode(&event));
+						break;
+				}
+				break;
 		}
 		return 0;
 	});

@@ -296,7 +296,7 @@ int main(int argc, const char **argv) {
 		VK_SHARING_MODE_EXCLUSIVE,
 		{},
 #if defined(__ANDROID__) || defined(ANDROID)
-			android::asset_istream(state->activity->assetManager, "storforsen4.ktx")
+			android::asset_istream(state->activity->assetManager, "storforsen_etc2_rgb.ktx")
 #else
 			std::ifstream("textures/storforsen4/storforsen4.ktx",
 				std::ios_base::binary | std::ios_base::in)
