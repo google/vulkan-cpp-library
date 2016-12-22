@@ -136,7 +136,8 @@ std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>,
 	swapchain::swapchain_type swapchain(vcc::swapchain::create(window.device,
 		vcc::swapchain::create_info_type{ std::ref(window.surface), desiredNumberOfSwapchainImages,
 		window.format, window.color_space, extent,
-			1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE,{}, preTransform, 0,
+			1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE,{}, preTransform,
+			VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
 			swapchainPresentMode, VK_TRUE }));
 	std::vector<vcc::image::image_type> images(vcc::swapchain::get_images(swapchain));
 	std::vector<swapchain_image_type> swapchain_images;
@@ -161,7 +162,7 @@ std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>,
 					vcc::command::image_memory_barrier{ 0, 0,
 						VK_IMAGE_LAYOUT_UNDEFINED,
 						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-						VK_QUEUE_FAMILY_IGNORED,
+						queue::get_family_index(*window.graphics_queue),
 						queue::get_family_index(window.present_queue),
 						swapchain_image,
 						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }

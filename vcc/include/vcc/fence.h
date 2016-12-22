@@ -48,8 +48,10 @@ VCC_LIBRARY fence_type create(
 
 VCC_LIBRARY VkResult wait(device::device_type &device,
 		const std::vector<std::reference_wrapper<fence_type>> &fences,
-		bool wait_all,
-		std::chrono::nanoseconds timeout);
+		bool wait_all, std::chrono::nanoseconds timeout);
+
+VkResult wait(device::device_type &device,
+	const std::vector<std::reference_wrapper<fence_type>> &fences, bool wait_all);
 
 VCC_LIBRARY void reset(device::device_type &device,
 	const std::vector<type::supplier<fence_type>> &fences);

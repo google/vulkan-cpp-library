@@ -29,20 +29,30 @@ fence_type create(const type::supplier<device::device_type> &device,
 
 VkResult wait(device::device_type &device,
 		const std::vector<std::reference_wrapper<fence_type>> &fences,
-		bool wait_all,
-		std::chrono::nanoseconds timeout) {
+		bool wait_all, uint64_t timeout) {
 	std::vector<VkFence> converted_fences;
 	converted_fences.reserve(fences.size());
 	for (const std::reference_wrapper<fence_type> &fence : fences) {
 		converted_fences.push_back(internal::get_instance(fence.get()));
 	}
 	VkResult result = vkWaitForFences(internal::get_instance(device),
-		(uint32_t) fences.size(), converted_fences.data(), !!wait_all,
-		timeout.count());
+		(uint32_t)fences.size(), converted_fences.data(), !!wait_all, timeout);
 	if (result != VK_TIMEOUT && result != VK_SUCCESS) {
 		VKCHECK(result);
 	}
 	return result;
+}
+
+VkResult wait(device::device_type &device,
+		const std::vector<std::reference_wrapper<fence_type>> &fences,
+		bool wait_all,
+		std::chrono::nanoseconds timeout) {
+	return wait(device, fences, wait_all, timeout.count());
+}
+
+VkResult wait(device::device_type &device,
+		const std::vector<std::reference_wrapper<fence_type>> &fences, bool wait_all) {
+	return wait(device, fences, wait_all, UINT64_MAX);
 }
 
 void reset(device::device_type &device,

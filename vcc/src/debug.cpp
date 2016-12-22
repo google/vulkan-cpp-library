@@ -48,7 +48,7 @@ bool print_function(VkDebugReportFlagsEXT flags,
 #if defined(_WIN32)
     std::stringstream ss;
     ss << debug_severity(flags) << ": [" << pLayerPrefix << "] Code "
-        << msgCode << " : " << pMsg;
+        << msgCode << " : " << pMsg << std::endl;
     const std::string string(ss.str());
     OutputDebugString(string.c_str());
 #elif defined(__ANDROID__) || defined(ANDROID)

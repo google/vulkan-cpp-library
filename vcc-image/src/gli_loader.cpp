@@ -56,6 +56,7 @@ image::image_type gli_loader_type::load(
 	VkSharingMode sharingMode,
 	const std::vector<uint32_t> &queueFamilyIndices,
 	std::istream &stream) {
+	usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	std::stringstream ss;
 	ss << stream.rdbuf();
 	const std::string data(ss.str());
@@ -85,16 +86,19 @@ image::image_type gli_loader_type::load(
 		usage, sharingMode, queueFamilyIndices, VK_IMAGE_LAYOUT_UNDEFINED));
 	memory::bind(device, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image);
 
-	command_pool::command_pool_type command_pool(command_pool::create(
-		device, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, queue::get_family_index(*queue)));
+	command_pool::command_pool_type command_pool(command_pool::create(device,
+		VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		queue::get_family_index(*queue)));
 	command_buffer::command_buffer_type command_buffer(std::move(command_buffer::allocate(
 		device, std::ref(command_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 	image::image_type staging_image(image::create(device, 0, VK_IMAGE_TYPE_2D,
 		format, VkExtent3D{ extent.width, extent.height, 1 }, 1, 1,
 		VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR,
 		VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_SHARING_MODE_EXCLUSIVE,
-		{ queue::get_family_index(*queue) }, VK_IMAGE_LAYOUT_UNDEFINED));
+		{ queue::get_family_index(*queue) }, VK_IMAGE_LAYOUT_PREINITIALIZED));
 	memory::bind(device, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, staging_image);
+	vcc::fence::fence_type fence(vcc::fence::create(device));
+
 	for (std::size_t layer = 0; layer < texture.layers(); ++layer) {
 		for (std::size_t face = 0; face < texture.faces(); ++face) {
 			for (std::size_t level = 0; level < texture.levels(); ++level) {
@@ -106,6 +110,27 @@ image::image_type gli_loader_type::load(
 						gli::is_compressed(texture.format())
 						? compressed_extent(texture) : extent);
 					const std::size_t block_size(gli::block_size(texture.format()));
+
+					command_buffer::compile(command_buffer,
+						VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, VK_FALSE, 0, 0,
+						command::pipeline_barrier(
+							VK_PIPELINE_STAGE_HOST_BIT,
+							VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+							{}, {},
+							{ command::image_memory_barrier{
+						VK_ACCESS_TRANSFER_READ_BIT,
+						VK_ACCESS_HOST_WRITE_BIT,
+						layer == 0 && face == 0 && level == 0 && z == 0
+							? VK_IMAGE_LAYOUT_PREINITIALIZED : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+						VK_IMAGE_LAYOUT_GENERAL,
+						VK_QUEUE_FAMILY_IGNORED,
+						VK_QUEUE_FAMILY_IGNORED,
+						std::ref(staging_image),
+						{ aspect_mask, 0, 1, 0, 1 } } }));
+					fence::reset(*device, { std::ref(fence) });
+					queue::submit(*queue, {}, { std::ref(command_buffer) }, {}, fence);
+					fence::wait(*device, { std::ref(fence) }, true);
+
 					copy_to_linear_image(format, aspect_mask,
 						VkExtent2D{ uint32_t(copy_extent.x), uint32_t(copy_extent.y) },
 						texture.data(layer, face, level), block_size,
@@ -119,23 +144,23 @@ image::image_type gli_loader_type::load(
 							{},{},
 							{
 								command::image_memory_barrier{
-									VK_ACCESS_HOST_WRITE_BIT,
-									VK_ACCESS_TRANSFER_READ_BIT,
-									VK_IMAGE_LAYOUT_UNDEFINED,
-									VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-									VK_QUEUE_FAMILY_IGNORED,
-									VK_QUEUE_FAMILY_IGNORED,
-									std::ref(staging_image),
-									{ aspect_mask, 0, 1, 0, 1 } },
-								command::image_memory_barrier{
 									0, VK_ACCESS_TRANSFER_READ_BIT,
-									VK_IMAGE_LAYOUT_GENERAL,
+									VK_IMAGE_LAYOUT_UNDEFINED,
 									VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 									VK_QUEUE_FAMILY_IGNORED,
 									VK_QUEUE_FAMILY_IGNORED,
 									std::ref(image),
 									{ aspect_mask, uint32_t(level), 1,
-									uint32_t(layer_index), 1 } }
+									uint32_t(layer_index), 1 } },
+								command::image_memory_barrier{
+									VK_ACCESS_HOST_WRITE_BIT,
+									VK_ACCESS_TRANSFER_READ_BIT,
+									VK_IMAGE_LAYOUT_GENERAL,
+									VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+									VK_QUEUE_FAMILY_IGNORED,
+									VK_QUEUE_FAMILY_IGNORED,
+									std::ref(staging_image),
+									{ aspect_mask, 0, 1, 0, 1 } }
 							}),
 						command::copy_image{ std::ref(staging_image),
 						VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -148,8 +173,9 @@ image::image_type gli_loader_type::load(
 							{ 0, 0, int32_t(z) },
 							{ uint32_t(extent.x), uint32_t(extent.y), 1 }
 					} } });
-					queue::submit(*queue, {}, { std::ref(command_buffer) },
-						{});
+					fence::reset(*device, { std::ref(fence) });
+					queue::submit(*queue, {}, { std::ref(command_buffer) }, {}, fence);
+					fence::wait(*device, { std::ref(fence) }, true);
 				}
 			}
 		}
