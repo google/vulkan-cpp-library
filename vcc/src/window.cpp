@@ -407,7 +407,7 @@ window_type create(
 #ifdef VK_USE_PLATFORM_XCB_KHR
 	window_type::connection_type connection(xcb_connect(displayname, screenp), xcb_disconnect);
 	window_type::window_handle_type window_handle(xcb_generate_id(connection.get()),
-		std::bind(&xcb_destroy_window, (xcb_connection_t *) nullptr, std::placeholders::_1));
+		std::bind(&xcb_destroy_window, (xcb_connection_t *) connection.get(), std::placeholders::_1));
 #endif // VK_USE_PLATFORM_XCB_KHR
 
 	window_type window(
@@ -636,6 +636,7 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 	std::atomic_bool running(true);
 	std::atomic<VkExtent2D> extent(window.extent);
 
+	std::vector<command_buffer::command_buffer_type> pre_draw_commands, post_draw_commands;
   for (;;) {
     std::unique_ptr<xcb_generic_event_t, decltype(&free)> event(
       xcb_wait_for_event(window.connection.get()), &free);
@@ -644,10 +645,69 @@ int run(window_type &window, const resize_callback_type &resize_callback,
       const xcb_configure_notify_event_t *cfg =
         (const xcb_configure_notify_event_t *) event.get();
       extent = VkExtent2D{ cfg->width, cfg->height };
+      std::tie(swapchain, swapchain_images, pre_draw_commands, post_draw_commands) =
+          resize(window, extent, resize_callback);
       break;
     }
   }
 
+  vcc::semaphore::semaphore_type image_acquired_semaphore(vcc::semaphore::create(window.device)),
+  present_semaphore(vcc::semaphore::create(window.device)),
+    draw_semaphore(vcc::semaphore::create(window.device));
+
+#ifdef VCC_XCB_SINGLE_THREAD_DRAWING
+  while (running) {
+    typedef std::unique_ptr<xcb_generic_event_t, decltype(&free)> event_type;
+    event_type event(nullptr, &free);
+    while (event = event_type(xcb_poll_for_event(window.connection.get()), &free)) {
+      uint8_t event_code = event->response_type & 0x7f;
+      switch (event_code) {
+      case XCB_CONFIGURE_NOTIFY: {
+        const xcb_configure_notify_event_t *cfg =
+          (const xcb_configure_notify_event_t *) event.get();
+        extent = VkExtent2D{ cfg->width, cfg->height };
+        std::tie(swapchain, swapchain_images, pre_draw_commands, post_draw_commands) =
+          resize(window, extent, resize_callback);
+        } break;
+      case XCB_CLIENT_MESSAGE: {
+          auto message = (xcb_client_message_event_t *) event.get();
+          if (message->data.data32[0] == window.atom_wm_delete_window->atom) {
+            vcc::device::wait_idle(*window.device);
+            running = false;
+          }
+        } break;
+      case XCB_BUTTON_PRESS: {
+        auto bp = (xcb_button_press_event_t *) event.get();
+        input_callbacks.mouse_down_callback(mouse_button_type(bp->detail - 1),
+            bp->event_x, bp->event_y);
+        } break;
+      case XCB_BUTTON_RELEASE: {
+        auto br = (xcb_button_release_event_t *) event.get();
+        input_callbacks.mouse_up_callback(mouse_button_type(br->detail - 1),
+            br->event_x, br->event_y);
+        } break;
+      case XCB_MOTION_NOTIFY: {
+        auto motion = (xcb_motion_notify_event_t *) event.get();
+        input_callbacks.mouse_move_callback(motion->event_x, motion->event_y);
+        } break;
+      case XCB_KEY_PRESS: {
+        auto kp = (xcb_key_press_event_t *) event.get();
+        // TODO(gardell): Translate button
+        input_callbacks.key_down_callback(keycode_type(kp->detail));
+        } break;
+      case XCB_KEY_RELEASE: {
+        auto kr = (xcb_key_release_event_t *) event.get();
+        // TODO(gardell): Translate button
+        input_callbacks.key_up_callback(keycode_type(kr->detail));
+        } break;
+      }
+    }
+
+    draw(window, swapchain, swapchain_images, pre_draw_commands,
+      post_draw_commands, image_acquired_semaphore, present_semaphore,
+      draw_semaphore, draw_callback, resize_callback, extent);
+  }
+#else
   std::thread event_thread([&]() {
     while (running) {
       std::unique_ptr<xcb_generic_event_t, decltype(&free)> event(
@@ -698,13 +758,19 @@ int run(window_type &window, const resize_callback_type &resize_callback,
   while (running) {
     VkExtent2D resize_extent(extent.exchange({ 0, 0 }));
     if (resize_extent.width != 0 && resize_extent.height != 0) {
-      std::tie(swapchain, swapchain_images) = resize(window, resize_extent, resize_callback);
+      std::tie(swapchain, swapchain_images, pre_draw_commands, post_draw_commands) =
+        resize(window, extent, resize_callback);
       draw_extent = resize_extent;
     }
-    draw(window, swapchain, swapchain_images, draw_callback, resize_callback, draw_extent);
+    draw(window, swapchain, swapchain_images, pre_draw_commands,
+      post_draw_commands, image_acquired_semaphore, present_semaphore,
+      draw_semaphore, draw_callback, resize_callback, draw_extent);
   }
 
   event_thread.join();
+
+#endif // VCC_XCB_SINGLE_THREAD_DRAWING
+
   device::wait_idle(*window.device);
   window.extent = extent;
 

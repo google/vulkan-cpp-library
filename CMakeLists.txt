@@ -14,6 +14,8 @@ cmake_minimum_required(VERSION 3.1)
 set(CMAKE_CXX_STANDARD 11)
 
 set(VULKAN_SDK_DIR "" CACHE PATH "Path to the Vulkan SDK")
+set(XCB_SINGLE_THREAD_DRAWING false CACHE BOOL
+  "Disable multi-thread drawing using XCB. Fixes some device issues")
 
 #
 # SPIRV-Headers
