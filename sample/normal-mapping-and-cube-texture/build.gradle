@@ -30,17 +30,18 @@ android {
 }
 
 task copyKtxTexture(type: Copy) {
-    from '../../textures/storforsen4/storforsen4.ktx'
+    from '../../textures/storforsen4/storforsen_etc2_rgb.ktx'
     into "src/main/assets/"
 }
 
 task copyPngTexture(type: Copy) {
     from '../../textures/normal-mapping/normal_map.png'
-    into "res/drawable-nodpi/"
+    into "src/main/res/drawable-nodpi/"
 }
 
 project.afterEvaluate {
     preBuild.dependsOn copyKtxTexture
+    preBuild.dependsOn copyPngTexture
 }
 
 dependencies {}

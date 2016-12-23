@@ -15,6 +15,7 @@
  */
 #include <cassert>
 #include <chrono>
+#include <glm/gtx/transform.hpp>
 #include <sstream>
 #include <thread>
 #include <vcc/command.h>
@@ -44,28 +45,59 @@ glm::mat4 convert(const vr::HmdMatrix44_t &m) {
 
 }  // anonymous namespace
 
-vr::IVRSystem *vr_type::init_hmd() {
+hmd_type::hmd_type() {
 	vr::EVRInitError eError(vr::VRInitError_None);
-	vr::IVRSystem *hmd = vr::VR_Init(&eError, vr::VRApplication_Scene);
+	hmd = vr::VR_Init(&eError, vr::VRApplication_Scene);
 	if (eError != vr::VRInitError_None) {
 		VCC_PRINT("Failed to initialize the VR system: %s",
 			vr::VR_GetVRInitErrorAsEnglishDescription(eError));
 		throw std::runtime_error("VR_Init failed");
 	}
-	return hmd;
 }
 
-vr_type::vr_type(int &argc, char **argv, const char *window_title, uint32_t window_width,
-		uint32_t window_height,
-		const type::supplier<vcc::queue::queue_type> &queue)
-	: hmd(init_hmd()), queue(queue),
-	  glut(argc, argv, window_title, window_width, window_height),
-	  window_width(window_width), window_height(window_height),
-	  extent(get_recommended_render_target_size()) {
-
-	if (!GLEW_NV_draw_vulkan_image) {
-		throw std::runtime_error("Missing GL_NV_draw_vulkan_image is required");
+std::string &&trim_null_characters(std::string &&string) {
+	while (!string.empty() && string.back() == '\0') {
+		string.pop_back();
 	}
+	return std::forward<std::string>(string);
+}
+
+std::vector<std::string> string_split(const std::string &string, const char *delimiter) {
+	std::vector<std::string> result;
+	size_t last = 0, next = 0;
+	while ((next = string.find(delimiter, last)) != std::string::npos) {
+		result.push_back(string.substr(last, next - last));
+		last = next + 1;
+	}
+	auto last_string(string.substr(last));
+	if (!last_string.empty()) {
+		result.push_back(std::move(last_string));
+	}
+	return result;
+}
+
+std::vector<std::string> hmd_type::get_vulkan_instance_extensions_required() const {
+	vr::IVRCompositor *compositor(vr::VRCompositor());
+	std::string extensions(compositor->GetVulkanInstanceExtensionsRequired(nullptr, 0), '\0');
+	compositor->GetVulkanInstanceExtensionsRequired(&extensions[0], extensions.size());
+	return string_split(trim_null_characters(std::move(extensions)), " ");
+}
+
+std::vector<std::string> hmd_type::get_vulkan_device_extensions_required(
+	VkPhysicalDevice physical_device) const {
+	vr::IVRCompositor *compositor(vr::VRCompositor());
+	std::string extensions(compositor->GetVulkanDeviceExtensionsRequired(physical_device,
+		nullptr, 0), '\0');
+	compositor->GetVulkanDeviceExtensionsRequired(physical_device, &extensions[0],
+		extensions.size());
+	return string_split(trim_null_characters(std::move(extensions)), " ");
+}
+
+vr_type::vr_type(hmd_type &&hmd,
+		const type::supplier<vcc::instance::instance_type> &instance,
+		const type::supplier<vcc::queue::queue_type> &queue)
+	: hmd(std::forward<hmd_type>(hmd)), instance(instance), queue(queue)
+	, extent(get_recommended_render_target_size()) {
 
 	VCC_PRINT("driver: %s, display: %s",
 		get_string_tracked_device_property(vr::k_unTrackedDeviceIndex_Hmd,
@@ -86,8 +118,7 @@ vr_type::vr_type(int &argc, char **argv, const char *window_title, uint32_t wind
 		VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 		VK_SHARING_MODE_EXCLUSIVE, {}, VK_IMAGE_LAYOUT_UNDEFINED));
-	vcc::memory::bind(device, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		image);
+	vcc::memory::bind(device, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image);
 	image_view = vcc::image_view::create(std::ref(image),
 		{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 }
@@ -101,9 +132,6 @@ int vr_type::run(const draw_callback_type &draw_callback,
 	vcc::command_pool::command_pool_type command_pool(
 		vcc::command_pool::create(vcc::internal::get_parent(*queue),
 			0, vcc::queue::get_family_index(*queue)));
-	vcc::semaphore::semaphore_type pre_draw_semaphore(vcc::semaphore::create(
-		vcc::internal::get_parent(*queue))), post_draw_semaphore(
-			vcc::semaphore::create(vcc::internal::get_parent(*queue)));
 	vcc::command_buffer::command_buffer_type pre_draw_command_buffer(std::move(
 		vcc::command_buffer::allocate(vcc::internal::get_parent(*queue),
 			std::ref(command_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1)
@@ -111,9 +139,6 @@ int vr_type::run(const draw_callback_type &draw_callback,
 		post_draw_command_buffer(std::move(vcc::command_buffer::allocate(
 			vcc::internal::get_parent(*queue), std::ref(command_pool),
 			VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-
-	const gl::render_texture texture(extent.width, extent.height);
-	const gl::framebuffer framebuffer(texture);
 
 	vcc::command_buffer::compile(std::ref(pre_draw_command_buffer),
 		0, VK_FALSE, 0, 0, vcc::command::pipeline_barrier(
@@ -148,115 +173,88 @@ int vr_type::run(const draw_callback_type &draw_callback,
 		trackedDevicePose;
 	std::array<glm::mat4x3, vr::k_unMaxTrackedDeviceCount> mat4DevicePose;
 	std::array<bool, vr::k_unMaxTrackedDeviceCount> bPoseIsValid;
-	return glut.run(
-		[&]() {
-			vr::IVRCompositor *compositor(vr::VRCompositor());
-			compositor->WaitGetPoses(trackedDevicePose.data(),
-				vr::k_unMaxTrackedDeviceCount, NULL, 0);
+	for (;;) {
+		vr::VREvent_t event;
+		while (hmd.hmd->PollNextEvent(&event, sizeof(event))) {
+			event_callback(event);
+		}
 
-			for (int nDevice = 0; nDevice < vr::k_unMaxTrackedDeviceCount; ++nDevice) {
-				bPoseIsValid[nDevice] = trackedDevicePose[nDevice].bPoseIsValid;
-				if (bPoseIsValid[nDevice]) {
-					mat4DevicePose[nDevice] = convert(
-						trackedDevicePose[nDevice].mDeviceToAbsoluteTracking);
-				}
-			}
-
-			type::supplier<vcc::device::device_type> device(
-				vcc::internal::get_parent(*queue));
-
-			const VkSemaphore pre_draw_vk_semaphore(
-				vcc::internal::get_instance(pre_draw_semaphore));
-			GLCHECK(glSignalVkSemaphoreNV(
-				(GLuint64)pre_draw_vk_semaphore));
-
-			vcc::queue::submit(*queue, { { std::ref(pre_draw_semaphore),
-				VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT } },
-				{ std::ref(pre_draw_command_buffer) }, {});
-
-			draw_callback(mat4DevicePose);
-
-			vcc::queue::submit(*queue, {},
-				{ std::ref(post_draw_command_buffer) },
-				{ std::ref(post_draw_semaphore) });
-
-			const VkSemaphore post_draw_vk_semaphore(
-				vcc::internal::get_instance(post_draw_semaphore));
-			GLCHECK(glWaitVkSemaphoreNV(
-				(GLuint64)post_draw_vk_semaphore));
-
-			framebuffer.bind(GL_DRAW_FRAMEBUFFER);
-			framebuffer.complete(GL_DRAW_FRAMEBUFFER);
-			GLCHECK(glViewport(0, 0, extent.width, extent.height));
-			VkImage vk_image(vcc::internal::get_instance(image));
-			GLCHECK(glDrawVkImageNV((GLuint64)vk_image, 0,
-				0.f, 0.f,
-				GLfloat(extent.width), GLfloat(extent.height), 0.f,
-				0.f, 0.f, 1.f, 1.f));
-
-			const vr::Texture_t texdesc = { (void*)texture.get_instance(),
-				vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
-			{
-				const vr::VRTextureBounds_t bounds = { 0.f, 0.f, .5f, 1.f };
-				compositor->Submit(vr::Eye_Left, &texdesc, &bounds);
-			}
-			{
-				const vr::VRTextureBounds_t bounds = { .5f, 0.f, 1.f, 1.f };
-				compositor->Submit(vr::Eye_Right, &texdesc, &bounds);
-			}
-
-			gl::framebuffer::unbind(GL_DRAW_FRAMEBUFFER);
-			framebuffer.bind(GL_READ_FRAMEBUFFER);
-			framebuffer.complete(GL_READ_FRAMEBUFFER);
-			GLCHECK(glViewport(0, 0, window_width, window_height));
-			GLCHECK(glBlitFramebuffer(0, 0, extent.width / 2, extent.height, 0, 0,
-				window_width, window_height, GL_COLOR_BUFFER_BIT, GL_LINEAR));
-			glFlush();
-		},
-		[&]() {
-			vr::VREvent_t event;
-			while (hmd->PollNextEvent(&event, sizeof(event))) {
-				event_callback(event);
-			}
-
-			for (vr::TrackedDeviceIndex_t unDevice = 0;
+		for (vr::TrackedDeviceIndex_t unDevice = 0;
 			unDevice < vr::k_unMaxTrackedDeviceCount; unDevice++) {
-				vr::VRControllerState_t state;
-				if (hmd->GetControllerState(unDevice, &state, sizeof(vr::VRControllerState_t))) {
-					//m_rbShowTrackedDevice[unDevice] = state.ulButtonPressed == 0;
-				}
+			vr::VRControllerState_t state;
+			if (hmd.hmd->GetControllerState(unDevice, &state, sizeof(vr::VRControllerState_t))) {
+				//m_rbShowTrackedDevice[unDevice] = state.ulButtonPressed == 0;
 			}
-		},
-		[&](int width, int height) {
-			window_width = width;
-			window_height = height;
-		});
+		}
+		vr::IVRCompositor *compositor(vr::VRCompositor());
+		compositor->WaitGetPoses(trackedDevicePose.data(),
+			vr::k_unMaxTrackedDeviceCount, NULL, 0);
+
+		for (int nDevice = 0; nDevice < vr::k_unMaxTrackedDeviceCount; ++nDevice) {
+			bPoseIsValid[nDevice] = trackedDevicePose[nDevice].bPoseIsValid;
+			if (bPoseIsValid[nDevice]) {
+				mat4DevicePose[nDevice] = convert(
+					trackedDevicePose[nDevice].mDeviceToAbsoluteTracking);
+			}
+		}
+
+		type::supplier<vcc::device::device_type> device(
+			vcc::internal::get_parent(*queue));
+
+		vcc::queue::submit(*queue, { }, { std::ref(pre_draw_command_buffer) }, {});
+
+		draw_callback(mat4DevicePose);
+
+		vcc::queue::submit(*queue, {}, { std::ref(post_draw_command_buffer) }, { });
+
+		vr::VRVulkanTextureData_t texture_data{
+			uint64_t(VkImage(vcc::internal::get_instance(image))),
+			vcc::internal::get_instance(*device),
+			vcc::device::get_physical_device(*device),
+			vcc::internal::get_instance(*instance),
+			vcc::internal::get_instance(*queue),
+			vcc::queue::get_family_index(*queue),
+			extent.width, extent.height, VK_FORMAT_R8G8B8A8_UNORM, 1
+		};
+		const vr::Texture_t texdesc = { (void*)&texture_data,
+			vr::TextureType_Vulkan, vr::ColorSpace_Gamma };
+		{
+			const vr::VRTextureBounds_t bounds = { 0.f, 0.f, .5f, 1.f };
+			vr::EVRCompositorError error(compositor->Submit(vr::Eye_Left, &texdesc, &bounds));
+			assert(error == vr::VRCompositorError_None);
+		}
+		{
+			const vr::VRTextureBounds_t bounds = { .5f, 0.f, 1.f, 1.f };
+			vr::EVRCompositorError error(compositor->Submit(vr::Eye_Right, &texdesc, &bounds));
+			assert(error == vr::VRCompositorError_None);
+		}
+	}
 }
 
 VkExtent2D vr_type::get_recommended_render_target_size() const {
 	VkExtent2D extent;
-	hmd->GetRecommendedRenderTargetSize(&extent.width, &extent.height);
+	hmd.hmd->GetRecommendedRenderTargetSize(&extent.width, &extent.height);
 	return VkExtent2D{ 2 * extent.width, extent.height };
 }
 
 glm::mat4 vr_type::get_projection_matrix(vr::Hmd_Eye nEye, float near_z,
 		float far_z) const {
-	const vr::HmdMatrix44_t mat(hmd->GetProjectionMatrix(nEye, near_z, far_z));
-	return convert(mat);
+	const vr::HmdMatrix44_t mat(hmd.hmd->GetProjectionMatrix(nEye, near_z, far_z));
+	return glm::scale(glm::vec3(1, -1, 1)) * convert(mat);
 }
 
 glm::mat4 vr_type::get_head_to_eye_transform(vr::Hmd_Eye nEye) const {
-	return glm::inverse(glm::mat4(convert(hmd->GetEyeToHeadTransform(nEye))));
+	return glm::inverse(glm::mat4(convert(hmd.hmd->GetEyeToHeadTransform(nEye))));
 }
 
 std::string vr_type::get_string_tracked_device_property(
 		vr::TrackedDeviceIndex_t unDeviceIndex,
 		vr::ETrackedDeviceProperty prop) const {
 	vr::ETrackedPropertyError error;
-	const uint32_t size(hmd->GetStringTrackedDeviceProperty(unDeviceIndex,
+	const uint32_t size(hmd.hmd->GetStringTrackedDeviceProperty(unDeviceIndex,
 		prop, NULL, 0, &error));
 	std::string string(size, '\0');
-	hmd->GetStringTrackedDeviceProperty(unDeviceIndex, prop, &string[0], size,
+	hmd.hmd->GetStringTrackedDeviceProperty(unDeviceIndex, prop, &string[0], size,
 		&error);
 	assert(error == vr::TrackedProp_Success);
 	return std::move(string);

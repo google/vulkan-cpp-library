@@ -28,7 +28,6 @@
 #include <vcc/image.h>
 #include <vcc/image_view.h>
 #include <vcc/instance.h>
-#include <vcc/keycode.h>
 #include <vcc/queue.h>
 #include <vcc/surface.h>
 #ifdef _WIN32
@@ -80,6 +79,7 @@ enum mouse_button_type {
 	mouse_button_8 = 7
 };
 
+typedef int keycode_type;
 typedef std::function<bool(mouse_button_type, int, int)> mouse_press_callback_type;
 typedef std::function<bool(int, int)> mouse_move_callback_type;
 typedef std::function<bool(int)> mouse_scroll_callback_type;

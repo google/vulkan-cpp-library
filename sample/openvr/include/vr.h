@@ -17,9 +17,7 @@
 #define _OPENVR_VR_H_
 
 #include <array>
-#include <gl_objects.h>
 #include <glm/glm.hpp>
-#include <glut_object.h>
 #include <openvr.h>
 #include <string>
 #include <type/types.h>
@@ -34,16 +32,34 @@ struct vr_model {
 	vcc::image::image_type image;
 };
 
-struct vr_type {
+struct hmd_type {
+	friend struct vr_type;
+
+	hmd_type();
+	hmd_type(const hmd_type &) = delete;
+	hmd_type(hmd_type &&) = default;
+	hmd_type &operator=(hmd_type &&) = delete;
+	hmd_type &operator=(const hmd_type &) = default;
+
+	std::vector<std::string> get_vulkan_instance_extensions_required() const;
+	std::vector<std::string> get_vulkan_device_extensions_required(
+		VkPhysicalDevice physical_device) const;
+
+	vr::IVRSystem &get_hmd() const {
+		return *hmd;
+	}
+
 private:
-	static vr::IVRSystem *init_hmd();
-public:
+	vr::IVRSystem *hmd;
+};
+
+struct vr_type {
 	typedef std::function<void(const vr::VREvent_t &)> event_callback_type;
 	typedef std::function<void(const std::array<glm::mat4x3, vr::k_unMaxTrackedDeviceCount> &)>
 		draw_callback_type;
 
-	vr_type(int &argc, char **argv, const char *window_title, uint32_t window_width,
-		uint32_t window_height,
+	vr_type(hmd_type &&hmd,
+		const type::supplier<vcc::instance::instance_type> &instance,
 		const type::supplier<vcc::queue::queue_type> &queue);
 	~vr_type();
 
@@ -77,13 +93,12 @@ public:
 
 	vr_model load_model(const char *model_name) const;
 
-	vr::IVRSystem *hmd;
+	hmd_type hmd;
 private:
+	type::supplier<vcc::instance::instance_type> instance;
 	type::supplier<vcc::queue::queue_type> queue;
 	vcc::image::image_type image;
 	vcc::image_view::image_view_type image_view;
-	glut_object glut;
-	int window_width, window_height;
 	VkExtent2D extent;
 };
 

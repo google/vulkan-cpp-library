@@ -41,7 +41,6 @@ Notice that `Implicit Externally Synchronized Parameters` is not included.
 ### OpenVR
 Samples include an OpenVR example. This simple demo renders the models of the connected devices like trackers and controllers. It supports lazy loading and recompiles the command buffers when any new devices are added or removed.
 
-Notice that as of writing this, OpenVR does not support Vulkan. This sample is using `GL_NV_draw_vulkan_image` to blit Vulkan images to OpenGL.
 ##Install
 ###Linux/XCB
 `cmake .` downloads all the dependencies needed. `cmake --build .` compiles the libraries and samples.
@@ -53,8 +52,7 @@ To compile and install the library and samples, run:
 `ANDROID_NDK_HOME=/#your-path#/android-ndk-r11c/ ANDROID_HOME=/#your-path#/android-sdk-linux/ ./gradlew installDebug`
 ###Visual Studio 2015
 Only 2015 is supported. The C++11 support in previous versions is not sufficient.
-`cmake -DVULKAN_SDK_DIR:PATH=<path-to-vulkan-sdk> -DGLEW_BINARY_DIR:PATH=<path-to-glew-library> .` downloads all the dependencies and sets up the projects. Notice that the GLEW library is not downloaded. The binary package must be downloaded from the GLEW website http://glew.sourceforge.net/
-**Note that GLEW is only required for the openvr example**.
+`cmake -DVULKAN_SDK_DIR:PATH=<path-to-vulkan-sdk> .` downloads all the dependencies and sets up the projects.
 Either use  `cmake --build .` to compile or open the generated  `.sln`.
 ## Acknowledgements
 * This library optionally uses [OpenGL Mathematics, glm.](http://glm.g-truc.net/0.9.7/index.html)

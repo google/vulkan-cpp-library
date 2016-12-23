@@ -30,7 +30,7 @@ android {
 }
 
 task copyKtxTexture(type: Copy) {
-    from '../../textures/storforsen4/storforsen4.ktx'
+    from '../../textures/storforsen4/storforsen_etc2_rgb.ktx'
     into "src/main/assets/"
 }
 

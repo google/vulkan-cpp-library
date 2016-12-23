@@ -16,19 +16,8 @@ include_directories(../../types/include)
 include_directories(../../vcc/include)
 include_directories(${CMAKE_BINARY_DIR}/vcc/include)
 include_directories(../../vcc-image/include)
-include_directories(${FREEGLUT_INCLUDE_DIR})
 include_directories(${GLM_SRC_DIR})
 include_directories(${OPENVR_SOURCE_DIR}/headers)
-if(NOT GLEW_BINARY_DIR STREQUAL "")
-  include_directories(${GLEW_BINARY_DIR}/include)
-  if (WIN32)
-    if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-      link_directories(${GLEW_BINARY_DIR}/lib/Release/x64)
-    else()
-      link_directories(${GLEW_BINARY_DIR}/lib/Release/Win32)
-    endif()
-  endif()
-endif()
 if(NOT VULKAN_SDK_DIR STREQUAL "")
   include_directories(${VULKAN_SDK_DIR}/include)
   link_directories(${VULKAN_SDK_DIR}/bin)
@@ -36,15 +25,11 @@ endif()
 
 set(SAMPLE_OPENVR_INCLUDES
   "include/async_cache.h"
-  "include/gl_objects.h"
-  "include/glut_object.h"
   "include/thread_pool.h"
   "include/vr.h"
 )
 
 set(SAMPLE_OPENVR_SRCS
-  "src/gl_objects.cpp"
-  "src/glut.cpp"
   "src/openvr.cpp"
   "src/vr.cpp"
 )
@@ -55,17 +40,22 @@ set(SAMPLE_OPENVR_SHADER_SRCS
 )
 
 if(UNIX)
-  link_directories(${OPENVR_SOURCE_DIR}/lib/linux64)
+  set(OPENVR_LIB_DIR ${OPENVR_SOURCE_DIR}/lib/linux64)
+  set(OPENVR_LIBRARY_FILE ${OPENVR_SOURCE_DIR}/bin/linux64/libopenvr_api.so)
 elseif(WIN32)
   if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    link_directories(${OPENVR_SOURCE_DIR}/lib/win64)
+    set(OPENVR_LIB_DIR ${OPENVR_SOURCE_DIR}/lib/win64)
+    set(OPENVR_LIBRARY_FILE ${OPENVR_SOURCE_DIR}/bin/win64/openvr_api.dll)
   else()
-    link_directories(${OPENVR_SOURCE_DIR}/lib/win32)
+    set(OPENVR_LIB_DIR ${OPENVR_SOURCE_DIR}/lib/win32)
+    set(OPENVR_LIBRARY_FILE ${OPENVR_SOURCE_DIR}/bin/win32/openvr_api.dll)
   endif()
 endif()
 
+link_directories(${OPENVR_LIB_DIR})
+
 add_executable(openvr ${SAMPLE_OPENVR_INCLUDES} ${SAMPLE_OPENVR_SRCS})
-target_link_libraries(openvr vcc vcc-image openvr_api ${GLEW_LIBRARY} freeglut_static)
+target_link_libraries(openvr vcc vcc-image openvr_api)
 
 foreach(FILE ${SAMPLE_OPENVR_SHADER_SRCS})
   get_filename_component(FILEWE ${FILE} NAME_WE)
@@ -79,4 +69,7 @@ endforeach()
 add_custom_command(TARGET openvr POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
   ${CMAKE_SOURCE_DIR}/textures $<TARGET_FILE_DIR:openvr>/textures)
+add_custom_command(TARGET openvr POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy
+  ${OPENVR_LIBRARY_FILE} $<TARGET_FILE_DIR:openvr>/)
 

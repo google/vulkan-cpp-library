@@ -77,17 +77,8 @@ int main(int argc, const char **argv) {
 		std::set<std::string> instance_validation_layers;
 		if (validate) {
 			std::set<std::string> required_instance_validation_layers{
-				//"VK_LAYER_LUNARG_api_dump",
-				//"VK_LAYER_LUNARG_device_limits",
-				//"VK_LAYER_LUNARG_draw_state",
-				//"VK_LAYER_LUNARG_image",
-				//"VK_LAYER_LUNARG_mem_tracker",
-				//"VK_LAYER_LUNARG_object_tracker",
-				//"VK_LAYER_LUNARG_screenshot",
-				//"VK_LAYER_LUNARG_swapchain",
-				//"VK_LAYER_LUNARG_threading"
-				/*,
-				"VK_LAYER_LUNARG_vktrace"*/ };
+				//"VK_LAYER_LUNARG_standard_validation"
+			};
 			assert(vcc::enumerate::contains_all(
 				vcc::enumerate::instance_layer_properties(),
 				required_instance_validation_layers));
@@ -125,17 +116,8 @@ int main(int argc, const char **argv) {
 		std::set<std::string> device_validation_layers;
 		if (validate) {
 			const std::set<std::string> required_validation_layers{
-				//"VK_LAYER_LUNARG_api_dump",
-				//"VK_LAYER_LUNARG_device_limits",
-				//"VK_LAYER_LUNARG_draw_state",
-				//"VK_LAYER_LUNARG_image",
-				//"VK_LAYER_LUNARG_mem_tracker",
-				//"VK_LAYER_LUNARG_object_tracker",
-				//"VK_LAYER_LUNARG_screenshot",
-				//"VK_LAYER_LUNARG_swapchain",
-				//"VK_LAYER_LUNARG_threading"
-				/*,
-				"VK_LAYER_LUNARG_vktrace"*/ };
+				//"VK_LAYER_LUNARG_standard_validation"
+			};
 			assert(vcc::enumerate::contains_all(
 				vcc::enumerate::device_layer_properties(physical_device),
 				required_validation_layers));
@@ -305,7 +287,7 @@ int main(int argc, const char **argv) {
 		VK_SHARING_MODE_EXCLUSIVE,
 		{},
 #if defined(__ANDROID__) || defined(ANDROID)
-			android::asset_istream(state->activity->assetManager, "storforsen4.ktx")
+			android::asset_istream(state->activity->assetManager, "storforsen_etc2_rgb.ktx")
 #else
 			std::ifstream("textures/storforsen4/storforsen4.ktx",
 				std::ios_base::binary | std::ios_base::in)
@@ -491,8 +473,9 @@ int main(int argc, const char **argv) {
 					VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
 					depth_image,{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 } } }));
-		vcc::queue::submit(queue, {}, { std::ref(command_buffer) }, {});
-		vcc::queue::wait_idle(queue);
+		vcc::fence::fence_type fence(vcc::fence::create(std::ref(device)));
+		vcc::queue::submit(queue, {}, { std::ref(command_buffer) }, {}, fence);
+		vcc::fence::wait(device, { std::ref(fence) }, true);
 
 		command_buffers = vcc::command_buffer::allocate(std::ref(device),
 			std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY,
