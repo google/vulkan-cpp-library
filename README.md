@@ -40,10 +40,11 @@ The library is thread-safe as required by the Vulkan specification, `2.5 Threadi
 Notice that `Implicit Externally Synchronized Parameters` is not included.
 ### OpenVR
 Samples include an OpenVR example. This simple demo renders the models of the connected devices like trackers and controllers. It supports lazy loading and recompiles the command buffers when any new devices are added or removed.
-
 ##Install
 ###Linux/XCB
-`cmake .` downloads all the dependencies needed. `cmake --build .` compiles the libraries and samples.
+`cmake .` downloads all the dependencies needed. `cmake --build .` compiles the libraries and samples. 
+There seem to be an issue with the multi threaded renderer with xcb. To force single threaded drawing use
+`cmake -DXCB_SINGLE_THREAD_DRAWING:BOOL=true .`
 ###Android
 Install `Android Studio` and the `NDK`. `SDK 24` is required. Import the root project directory. Initial building and synchronizing will take a very long time, as it will download the dependency projects needed.
 
