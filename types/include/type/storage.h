@@ -211,11 +211,6 @@ public:
 		copy.array = nullptr;
 		return *this;
 	}
-	~readable_storage_type() {
-		if (array) {
-			++internal::get_revision(*array);
-		}
-	}
 
 	const_iterator begin() const {
 		return internal::get_container(*array).cbegin();
