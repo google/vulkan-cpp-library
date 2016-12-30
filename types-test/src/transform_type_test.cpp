@@ -26,17 +26,25 @@ struct float2 {
 
 TEST(TransformTypeTest, Constructor) {
 	type::t_array<float> array({1, 2, 3});
-	type::transform_type<float2> transform(type::make_transform(std::ref(array), [](float f){
-		return float2{0, 0};
-	}));
+	auto transform(type::make_transform(type::t_array<float2>(array.size()),
+		[](type::readable_t_array<float, true> &input, type::writable_t_array<float2> &output) {
+			std::transform(std::begin(input), std::end(input), std::begin(output),
+				[](const auto &value) {
+					return float2{ 0, 0 };
+			});
+		}, std::ref(array)));
 	ASSERT_EQ(transform.size(), array.size());
 }
 
 TEST(TransformTypeTest, Iterate) {
 	type::t_array<float> array({1, 2, 3});
-	type::transform_type<float2> transform(type::make_transform(std::ref(array), [](float f){
-		return float2{f, -f};
-	}));
+	auto transform(type::make_transform(type::t_array<float2>(array.size()),
+		[](type::readable_t_array<float, true> &input, type::writable_t_array<float2> &output) {
+			std::transform(std::begin(input), std::end(input), std::begin(output),
+				[](const auto &value) {
+					return float2{ value, -value };
+			});
+		}, std::ref(array)));
 	auto read_transform(type::read(transform));
 	for (std::size_t i = 0; i < array.size(); ++i) {
 		const float2 f{ float(i + 1), -float(i + 1) };
@@ -46,9 +54,13 @@ TEST(TransformTypeTest, Iterate) {
 
 TEST(TransformTypeTest, Mutate) {
 	type::t_array<float> array({1, 2, 3});
-	type::transform_type<float2> transform(type::make_transform(std::ref(array), [](float f){
-		return float2{f, -f};
-	}));
+	auto transform(type::make_transform(type::t_array<float2>(array.size()),
+		[](type::readable_t_array<float, true> &input, type::writable_t_array<float2> &output) {
+			std::transform(std::begin(input), std::end(input), std::begin(output),
+				[](const auto &value) {
+				return float2{ value, -value };
+			});
+		}, std::ref(array)));
 	for (float &f : type::write(array)) {
 		f += 1;
 	}
@@ -57,4 +69,53 @@ TEST(TransformTypeTest, Mutate) {
 		float2 f{ float(i + 2), -float(i + 2) };
 		EXPECT_EQ(f, transform_read[i]);
 	}
+}
+
+TEST(TransformTypeTest, MultipleArguments) {
+	type::t_array<float> array1({ 1, 2, 3 }), array2({ 4, 5, 6 });
+	type::t_primitive<float> primitive(1);
+	auto transform(type::make_transform(type::t_array<float2>(array1.size()),
+		[](type::readable_t_array<float, true> &input1,
+				type::readable_t_array<float, true> &input2,
+				type::readable_t_primitive<float, true> &input3,
+				type::writable_t_array<float2> &output) {
+			std::transform(std::begin(input1), std::end(input1), std::begin(input2),
+				std::begin(output),
+				[&](const auto &value1, const auto &value2) {
+					return float2{ value1, -value2 + input3[0] };
+				});
+		}, std::ref(array1), std::ref(array2), std::ref(primitive)));
+	auto transform_read(type::read(transform));
+	for (std::size_t i = 0; i < array1.size(); ++i) {
+		float2 f{ float(i + 1), -float(i + 4) + 1 };
+		EXPECT_EQ(f, transform_read[i]);
+	}
+}
+
+TEST(TransformTypeTest, RedundantFlush) {
+	type::t_array<float> array({ 1, 2, 3 });
+	int counter(0);
+	auto transform(type::make_transform(type::t_array<float2>(array.size()),
+		[&](type::readable_t_array<float, true> &input, type::writable_t_array<float2> &output) {
+		std::transform(std::begin(input), std::end(input), std::begin(output),
+			[](const auto &value) {
+			return float2{ value, -value };
+		});
+		++counter;
+	}, std::ref(array)));
+	{
+		auto transform_read(type::read(transform));
+		for (std::size_t i = 0; i < array.size(); ++i) {
+			float2 f{ float(i + 1), -float(i + 1) };
+			EXPECT_EQ(f, transform_read[i]);
+		}
+	}
+	{
+		auto transform_read(type::read(transform));
+		for (std::size_t i = 0; i < array.size(); ++i) {
+			float2 f{ float(i + 1), -float(i + 1) };
+			EXPECT_EQ(f, transform_read[i]);
+		}
+	}
+	ASSERT_EQ(counter, 1);
 }

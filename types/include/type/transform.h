@@ -17,6 +17,8 @@
 #define TYPE_TRANSFORM_H_
 
 #include <algorithm>
+#include <array>
+#include <functional>
 #include <type/storage.h>
 #include <type/supplier.h>
 
@@ -44,15 +46,28 @@ public:
 	typedef typename internal_storage_type::pointer pointer;
 	typedef typename internal_storage_type::const_pointer const_pointer;
 
-	template<typename ContainerT, typename FunctorT>
-	transform_type(const supplier<ContainerT> &container, FunctorT functor)
-		: update_function([container, functor](internal_writable_storage_type &&storage) {
-			auto read_container(read(*container));
-			std::transform(read_container.begin(), read_container.end(),
-				storage.begin(), functor);
-		  }),
-		  storage(container->size()),
-		  revision(REVISION_NONE) {}
+	template<typename... Containers, typename Functor>
+	static transform_type<T> make_transform(internal_storage_type &&storage, Functor functor,
+		const supplier<Containers> &... container) {
+		typedef std::array<revision_type, sizeof...(Containers)> revisions_type;
+		revisions_type revisions;
+		std::fill(std::begin(revisions), std::end(revisions), REVISION_NONE);
+		return transform_type<T>(std::forward<internal_storage_type>(storage),
+			std::bind([revisions, container...](Functor &functor,
+				internal_writable_storage_type &&storage) mutable {
+			// storage is locked in the scope of this function.
+			revisions_type container_revisions{ internal::get_revision(*container)... };
+			if (container_revisions != revisions) {
+				functor(read(*container)..., std::forward<internal_writable_storage_type>(storage));
+				revisions = container_revisions;
+			}
+		}, std::forward<Functor>(functor), std::placeholders::_1));
+	}
+
+	template<typename Function>
+	transform_type(internal_storage_type &&storage, Function &&function)
+		: update_function(function),
+		  storage(std::forward<internal_storage_type>(storage)) {}
 
 	size_type size() const {
 		return storage.size();
@@ -65,7 +80,6 @@ private:
 
 	update_function_type update_function;
 	mutable internal_storage_type storage;
-	revision_type revision;
 };
 
 template<typename T>
@@ -77,11 +91,11 @@ read_transform_type<T> read(transform_type<T> &array) {
 	return read(array.storage);
 }
 
-template<typename ContainerT, typename FunctorT>
-auto make_transform(ContainerT container, FunctorT functor)->
-		transform_type<decltype(functor(read(*make_supplier(container))[0]))> {
-	typedef decltype(functor(read(*make_supplier(container))[0])) type;
-	return transform_type<type>(make_supplier(container), functor);
+template<typename Storage, typename... Containers, typename FunctorT>
+auto make_transform(Storage &&storage, FunctorT functor, Containers... container)
+		->transform_type<typename Storage::value_type> {
+	return transform_type<typename Storage::value_type>::make_transform(std::forward<Storage>(storage),
+		std::forward<FunctorT>(functor), make_supplier(std::forward<Containers>(container))...);
 }
 
 }  // namespace type
