@@ -208,11 +208,12 @@ add_subdirectory(types)
 add_subdirectory(vcc)
 add_subdirectory(vcc-image)
 add_subdirectory(sample/cube)
+add_subdirectory(sample/heightmap)
 add_subdirectory(sample/lighting)
 add_subdirectory(sample/normal-mapping-and-cube-texture)
 add_subdirectory(sample/teapot)
 
-set(SAMPLES cube lighting normal-mapping-and-cube-texture teapot)
+set(SAMPLES cube heightmap lighting normal-mapping-and-cube-texture teapot)
 
 if(NOT DEFINED ANDROID_NDK)
 

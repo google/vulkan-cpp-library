@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/sample/cube/cube.iml" filepath="$PROJECT_DIR$/sample/cube/cube.iml" />
+      <module fileurl="file://$PROJECT_DIR$/sample/heightmap/heightmap.iml" filepath="$PROJECT_DIR$/sample/heightmap/heightmap.iml" />
       <module fileurl="file://$PROJECT_DIR$/sample/lighting/lighting.iml" filepath="$PROJECT_DIR$/sample/lighting/lighting.iml" />
       <module fileurl="file://$PROJECT_DIR$/sample/normal-mapping-and-cube-texture/normal-mapping-and-cube-texture.iml" filepath="$PROJECT_DIR$/sample/normal-mapping-and-cube-texture/normal-mapping-and-cube-texture.iml" />
       <module fileurl="file://$PROJECT_DIR$/sample/sample.iml" filepath="$PROJECT_DIR$/sample/sample.iml" />

@@ -10,6 +10,7 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/sample" />
             <option value="$PROJECT_DIR$/sample/cube" />
+            <option value="$PROJECT_DIR$/sample/heightmap" />
             <option value="$PROJECT_DIR$/sample/lighting" />
             <option value="$PROJECT_DIR$/sample/normal-mapping-and-cube-texture" />
             <option value="$PROJECT_DIR$/sample/teapot" />
