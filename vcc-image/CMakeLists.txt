@@ -15,13 +15,14 @@ include_directories(../types/include)
 include_directories(../vcc/include)
 include_directories(${CMAKE_BINARY_DIR}/vcc/include)
 include_directories(${GLI_SRC_DIR})
-include_directories(${GLM_SRC_DIR})
+include_directories(${GLI_SRC_DIR}/external)
 if(NOT PNG_INCLUDE_DIR STREQUAL "")
   include_directories(${PNG_INCLUDE_DIR})
 endif()
 if(NOT VULKAN_SDK_DIR STREQUAL "")
   include_directories(${VULKAN_SDK_DIR}/include)
 endif()
+remove_definitions(-DGLM_ENABLE_EXPERIMENTAL)
 
 set(VCC_IMAGE_INCLUDES
   "include/vcc/image_loader.h"
