@@ -67,6 +67,8 @@ int main(int argc, const char **argv) {
 			VK_KHR_WIN32_SURFACE_EXTENSION_NAME
 #elif defined(__ANDROID__)
 			VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+#else
+			VK_KHR_XCB_SURFACE_EXTENSION_NAME
 #endif // __ANDROID__
 		};
 		assert(vcc::enumerate::contains_all(
@@ -86,13 +88,13 @@ int main(int argc, const char **argv) {
 			extensions));
 
 		device = vcc::device::create(physical_device,
-		{ vcc::device::queue_create_info_type{
-			vcc::physical_device::get_queue_family_properties_with_flag(
+			{ vcc::device::queue_create_info_type{
+				vcc::physical_device::get_queue_family_properties_with_flag(
 				vcc::physical_device::queue_famility_properties(physical_device),
-				VK_QUEUE_GRAPHICS_BIT),
+					VK_QUEUE_GRAPHICS_BIT),
 				{ 0 } }
-		},
-		{}, extensions, {});
+			},
+			{}, extensions, {});
 	}
 
 	vcc::descriptor_set_layout::descriptor_set_layout_type desc_layout(
@@ -228,9 +230,11 @@ int main(int argc, const char **argv) {
 		GetModuleHandle(NULL),
 #elif defined(__ANDROID__) || defined(ANDROID)
 		state,
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+		nullptr, nullptr,
 #endif // __ANDROID__
 		std::ref(instance), std::ref(device), std::ref(queue),
-		VkExtent2D{ 500, 500 }, VK_FORMAT_A8B8G8R8_UINT_PACK32, "Terrain demo"));
+		VkExtent2D{ 500, 500 }, VK_FORMAT_A8B8G8R8_UINT_PACK32, "Heightmap demo"));
 
 	vcc::render_pass::render_pass_type render_pass(vcc::render_pass::create(
 		std::ref(device),
