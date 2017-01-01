@@ -1,4 +1,5 @@
 include 'sample:cube'
+include 'sample:heightmap'
 include 'sample:lighting'
 include 'sample:normal-mapping-and-cube-texture'
 include 'sample:teapot'

@@ -12,7 +12,7 @@
  * limitations under the License.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="vulkan.library.sample.cube"
+          package="vulkan.library.sample.heightmap"
           android:versionCode="1"
           android:versionName="1.0">
 
@@ -26,7 +26,7 @@
     <activity android:name="android.app.NativeActivity"
               android:label="@string/app_name"
               android:configChanges="orientation|keyboardHidden">
-      <meta-data android:name="android.app.lib_name" android:value="cube" />
+      <meta-data android:name="android.app.lib_name" android:value="heightmap" />
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
