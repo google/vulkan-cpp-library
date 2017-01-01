@@ -27,9 +27,9 @@ struct float2 {
 TEST(TransformTypeTest, Constructor) {
 	type::t_array<float> array({1, 2, 3});
 	auto transform(type::make_transform(type::t_array<float2>(array.size()),
-		[](type::readable_t_array<float, true> &input, type::writable_t_array<float2> &output) {
+		[](const type::readable_t_array<float, true> &input, type::writable_t_array<float2> &&output) {
 			std::transform(std::begin(input), std::end(input), std::begin(output),
-				[](const auto &value) {
+				[](float value) {
 					return float2{ 0, 0 };
 			});
 		}, std::ref(array)));
@@ -39,9 +39,9 @@ TEST(TransformTypeTest, Constructor) {
 TEST(TransformTypeTest, Iterate) {
 	type::t_array<float> array({1, 2, 3});
 	auto transform(type::make_transform(type::t_array<float2>(array.size()),
-		[](type::readable_t_array<float, true> &input, type::writable_t_array<float2> &output) {
+		[](const type::readable_t_array<float, true> &input, type::writable_t_array<float2> &&output) {
 			std::transform(std::begin(input), std::end(input), std::begin(output),
-				[](const auto &value) {
+				[](float value) {
 					return float2{ value, -value };
 			});
 		}, std::ref(array)));
@@ -55,9 +55,9 @@ TEST(TransformTypeTest, Iterate) {
 TEST(TransformTypeTest, Mutate) {
 	type::t_array<float> array({1, 2, 3});
 	auto transform(type::make_transform(type::t_array<float2>(array.size()),
-		[](type::readable_t_array<float, true> &input, type::writable_t_array<float2> &output) {
+		[](const type::readable_t_array<float, true> &input, type::writable_t_array<float2> && output) {
 			std::transform(std::begin(input), std::end(input), std::begin(output),
-				[](const auto &value) {
+				[](float value) {
 				return float2{ value, -value };
 			});
 		}, std::ref(array)));
@@ -75,13 +75,13 @@ TEST(TransformTypeTest, MultipleArguments) {
 	type::t_array<float> array1({ 1, 2, 3 }), array2({ 4, 5, 6 });
 	type::t_primitive<float> primitive(1);
 	auto transform(type::make_transform(type::t_array<float2>(array1.size()),
-		[](type::readable_t_array<float, true> &input1,
-				type::readable_t_array<float, true> &input2,
-				type::readable_t_primitive<float, true> &input3,
-				type::writable_t_array<float2> &output) {
+		[](const type::readable_t_array<float, true> &input1,
+				const type::readable_t_array<float, true> &input2,
+				const type::readable_t_primitive<float, true> &input3,
+				type::writable_t_array<float2> &&output) {
 			std::transform(std::begin(input1), std::end(input1), std::begin(input2),
 				std::begin(output),
-				[&](const auto &value1, const auto &value2) {
+				[&](float value1, float value2) {
 					return float2{ value1, -value2 + input3[0] };
 				});
 		}, std::ref(array1), std::ref(array2), std::ref(primitive)));
@@ -96,9 +96,9 @@ TEST(TransformTypeTest, RedundantFlush) {
 	type::t_array<float> array({ 1, 2, 3 });
 	int counter(0);
 	auto transform(type::make_transform(type::t_array<float2>(array.size()),
-		[&](type::readable_t_array<float, true> &input, type::writable_t_array<float2> &output) {
+		[&](const type::readable_t_array<float, true> &input, type::writable_t_array<float2> &&output) {
 		std::transform(std::begin(input), std::end(input), std::begin(output),
-			[](const auto &value) {
+			[](float value) {
 			return float2{ value, -value };
 		});
 		++counter;
