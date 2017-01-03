@@ -766,7 +766,6 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 
 #elif defined(__ANDROID__)
 	swapchain::swapchain_type swapchain;
-	std::vector<swapchain_image_type> swapchain_images;
 	std::vector<command_buffer::command_buffer_type> pre_draw_commands, post_draw_commands;
 	vcc::semaphore::semaphore_type image_acquired_semaphore(vcc::semaphore::create(window.device)),
 			present_semaphore(vcc::semaphore::create(window.device)),
@@ -785,9 +784,8 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 					vcc::window::initialize(window, app.window);
 					extent = { (uint32_t) ANativeWindow_getWidth(app.window),
 							   (uint32_t) ANativeWindow_getHeight(app.window) };
-					swapchain_images.clear();
 					swapchain = swapchain::swapchain_type();
-					std::tie(swapchain, swapchain_images, pre_draw_commands, post_draw_commands) =
+					std::tie(swapchain, pre_draw_commands, post_draw_commands) =
 						resize(window, extent, resize_callback);
 				}
 				break;
@@ -795,7 +793,7 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 				running = true;
 				render_thread = std::thread([&]() {
 					while (running) {
-						draw(window, swapchain, swapchain_images, pre_draw_commands,
+						draw(window, swapchain, pre_draw_commands,
 							 post_draw_commands, image_acquired_semaphore, present_semaphore,
 							 draw_semaphore, draw_callback, resize_callback, extent);
 					}
