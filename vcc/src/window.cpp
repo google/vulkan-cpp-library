@@ -624,7 +624,6 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 
 	swapchain::swapchain_type swapchain;
-	std::vector<swapchain_image_type> swapchain_images;
 
 	std::atomic_bool running(true);
 	std::atomic<VkExtent2D> extent(window.extent);
@@ -638,7 +637,7 @@ int run(window_type &window, const resize_callback_type &resize_callback,
       const xcb_configure_notify_event_t *cfg =
         (const xcb_configure_notify_event_t *) event.get();
       extent = VkExtent2D{ cfg->width, cfg->height };
-      std::tie(swapchain, swapchain_images, pre_draw_commands, post_draw_commands) =
+      std::tie(swapchain, pre_draw_commands, post_draw_commands) =
           resize(window, extent, resize_callback);
       break;
     }
@@ -659,7 +658,7 @@ int run(window_type &window, const resize_callback_type &resize_callback,
         const xcb_configure_notify_event_t *cfg =
           (const xcb_configure_notify_event_t *) event.get();
         extent = VkExtent2D{ cfg->width, cfg->height };
-        std::tie(swapchain, swapchain_images, pre_draw_commands, post_draw_commands) =
+        std::tie(swapchain, pre_draw_commands, post_draw_commands) =
           resize(window, extent, resize_callback);
         } break;
       case XCB_CLIENT_MESSAGE: {
@@ -696,9 +695,8 @@ int run(window_type &window, const resize_callback_type &resize_callback,
       }
     }
 
-    draw(window, swapchain, swapchain_images, pre_draw_commands,
-      post_draw_commands, image_acquired_semaphore, present_semaphore,
-      draw_semaphore, draw_callback, resize_callback, extent);
+    draw(window, swapchain, pre_draw_commands, post_draw_commands, image_acquired_semaphore,
+      present_semaphore, draw_semaphore, draw_callback, resize_callback, extent);
   }
 #else
   std::thread event_thread([&]() {
@@ -751,13 +749,12 @@ int run(window_type &window, const resize_callback_type &resize_callback,
   while (running) {
     VkExtent2D resize_extent(extent.exchange({ 0, 0 }));
     if (resize_extent.width != 0 && resize_extent.height != 0) {
-      std::tie(swapchain, swapchain_images, pre_draw_commands, post_draw_commands) =
+      std::tie(swapchain, pre_draw_commands, post_draw_commands) =
         resize(window, extent, resize_callback);
       draw_extent = resize_extent;
     }
-    draw(window, swapchain, swapchain_images, pre_draw_commands,
-      post_draw_commands, image_acquired_semaphore, present_semaphore,
-      draw_semaphore, draw_callback, resize_callback, draw_extent);
+    draw(window, swapchain, pre_draw_commands, post_draw_commands, image_acquired_semaphore,
+      present_semaphore, draw_semaphore, draw_callback, resize_callback, draw_extent);
   }
 
   event_thread.join();
