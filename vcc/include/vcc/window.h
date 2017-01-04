@@ -37,35 +37,9 @@
 namespace vcc {
 namespace window {
 
-struct swapchain_image_type {
-	friend image::image_type &get_image(swapchain_image_type &swapchain);
-	friend image_view::image_view_type &get_image_view(
-		swapchain_image_type &swapchain);
-
-	swapchain_image_type() = default;
-	swapchain_image_type(const swapchain_image_type&) = delete;
-	swapchain_image_type(swapchain_image_type&&) = default;
-	swapchain_image_type &operator=(const swapchain_image_type&) = delete;
-	swapchain_image_type &operator=(swapchain_image_type&&) = default;
-
-	swapchain_image_type(const type::supplier<image::image_type> &image,
-		image_view::image_view_type &&view)
-		: image(image), view(std::forward<image_view::image_view_type>(view)) {}
-private:
-	type::supplier<image::image_type> image;
-	type::supplier<image_view::image_view_type> view;
-};
-
-inline image::image_type &get_image(swapchain_image_type &swapchain) {
-	return *swapchain.image;
-}
-
-inline image_view::image_view_type &get_image_view(swapchain_image_type &swapchain) {
-	return *swapchain.view;
-}
-
 typedef std::function<void(VkFormat)> initialize_callback_type;
-typedef std::function<void(VkExtent2D, VkFormat, std::vector<swapchain_image_type> &)> resize_callback_type;
+typedef std::function<void(VkExtent2D, VkFormat, std::vector<std::shared_ptr<image::image_type>> &&)>
+	resize_callback_type;
 typedef std::function<void(uint32_t)> draw_callback_type;
 
 enum mouse_button_type {
@@ -142,12 +116,11 @@ struct window_type {
 		xcb_connection_t *connection
 #endif
 		);
-	friend std::tuple<swapchain::swapchain_type, std::vector<swapchain_image_type>,
-		std::vector<command_buffer::command_buffer_type>,
-		std::vector<command_buffer::command_buffer_type>> resize(
-			window_type &, VkExtent2D, const resize_callback_type &);
-	friend void draw(window_type &, swapchain::swapchain_type &,
-		std::vector<swapchain_image_type> &, std::vector<command_buffer::command_buffer_type> &,
+	friend std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer_type>,
+		std::vector<command_buffer::command_buffer_type>> resize(window_type &, VkExtent2D,
+			const resize_callback_type &);
+	friend void draw(window_type &window, swapchain::swapchain_type &,
+		std::vector<command_buffer::command_buffer_type> &,
 		std::vector<command_buffer::command_buffer_type> &, vcc::semaphore::semaphore_type &,
 		vcc::semaphore::semaphore_type &, vcc::semaphore::semaphore_type &,
 		const draw_callback_type &, const resize_callback_type &, VkExtent2D);

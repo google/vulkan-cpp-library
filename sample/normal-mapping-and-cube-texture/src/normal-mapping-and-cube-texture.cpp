@@ -477,7 +477,7 @@ int main(int argc, const char **argv) {
 #endif // __ANDROID__
 	vcc::window::run(window,
 		[&](VkExtent2D extent, VkFormat format,
-			std::vector<vcc::window::swapchain_image_type> &swapchain_images) {
+			std::vector<std::shared_ptr<vcc::image::image_type>> &&swapchain_images) {
 		type::write(projection_matrix)[0] = glm::perspective(
 			45.f, float(extent.width) / extent.height, 1.f, 100.f);
 		command_buffers.clear();
@@ -515,8 +515,10 @@ int main(int argc, const char **argv) {
 				vcc::command::render_pass(std::ref(render_pass),
 					vcc::framebuffer::create(std::ref(device), std::ref(render_pass),
 						{
-							std::ref(vcc::window::get_image_view(swapchain_images[i])),
-							vcc::image_view::create(depth_image, { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 })
+							vcc::image_view::create(swapchain_images[i],
+								{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }),
+							vcc::image_view::create(depth_image,
+								{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 })
 						}, extent, 1),
 					VkRect2D{ 0, 0, extent.width, extent.height },
 					{
