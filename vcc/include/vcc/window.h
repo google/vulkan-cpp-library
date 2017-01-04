@@ -38,8 +38,9 @@ namespace vcc {
 namespace window {
 
 typedef std::function<void(VkFormat)> initialize_callback_type;
-typedef std::function<void(VkExtent2D, VkFormat, std::vector<std::shared_ptr<image::image_type>> &&)>
-	resize_callback_type;
+typedef std::function<void(VkExtent2D, VkFormat,
+	std::vector<std::shared_ptr<image::image_type>> &&)> swapchain_create_callback_type;
+typedef std::function<void()> swapchain_destroy_callback_type;
 typedef std::function<void(uint32_t)> draw_callback_type;
 
 enum mouse_button_type {
@@ -118,13 +119,16 @@ struct window_type {
 		);
 	friend std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer_type>,
 		std::vector<command_buffer::command_buffer_type>> resize(window_type &, VkExtent2D,
-			const resize_callback_type &);
+			const swapchain_create_callback_type &, const swapchain_destroy_callback_type &,
+			swapchain::swapchain_type &);
 	friend void draw(window_type &window, swapchain::swapchain_type &,
 		std::vector<command_buffer::command_buffer_type> &,
 		std::vector<command_buffer::command_buffer_type> &, vcc::semaphore::semaphore_type &,
 		vcc::semaphore::semaphore_type &, vcc::semaphore::semaphore_type &,
-		const draw_callback_type &, const resize_callback_type &, VkExtent2D);
-	friend int run(window_type &, const resize_callback_type &, const draw_callback_type &,
+		const draw_callback_type &, const swapchain_create_callback_type &,
+		const swapchain_destroy_callback_type &, VkExtent2D);
+	friend int run(window_type &, const swapchain_create_callback_type &,
+		const swapchain_destroy_callback_type &, const draw_callback_type &,
 		const input_callbacks_type &);
 
 	window_type() = default;
@@ -205,7 +209,8 @@ VCC_LIBRARY window_type create(
 	VkExtent2D extent, VkFormat format, const std::string &title);
 
 VCC_LIBRARY int run(window_type &window,
-	const resize_callback_type &resize_callback,
+	const swapchain_create_callback_type &swapchain_create_callback,
+	const swapchain_destroy_callback_type &swapchain_destroy_callback,
 	const draw_callback_type &draw_callback,
 	const input_callbacks_type &input_callbacks = input_callbacks_type());
 

@@ -465,6 +465,7 @@ int main(int argc, const char **argv) {
 						0, 0 }));
 			}
 		},
+		[]() {},
 		[&](uint32_t index) {
 			{
 				const glm::mat4 view_matrix(glm::lookAt(glm::vec3(0, 0, camera_distance),

@@ -95,7 +95,10 @@ const char *class_name = "vcc-vulkan";
 
 std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer_type>,
 	std::vector<command_buffer::command_buffer_type>> resize(
-		window_type &window, VkExtent2D extent, const resize_callback_type &resize_callback) {
+		window_type &window, VkExtent2D extent,
+		const swapchain_create_callback_type &swapchain_create_callback,
+		const swapchain_destroy_callback_type &swapchain_destroy_callback,
+		swapchain::swapchain_type &old_swapchain) {
 	// Check the surface capabilities and formats
 	const VkPhysicalDevice physical_device(device::get_physical_device(*window.device));
 	const VkSurfaceCapabilitiesKHR surfCapabilities(vcc::surface::physical_device_capabilities(physical_device, window.surface));
@@ -132,12 +135,13 @@ std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer
 	const VkSurfaceTransformFlagBitsKHR preTransform(
 	  surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
 	    ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : surfCapabilities.currentTransform);
+	swapchain_destroy_callback();
 	swapchain::swapchain_type swapchain(vcc::swapchain::create(window.device,
 		vcc::swapchain::create_info_type{ std::ref(window.surface), desiredNumberOfSwapchainImages,
 		window.format, window.color_space, extent,
 			1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE,{}, preTransform,
 			VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-			swapchainPresentMode, VK_TRUE }));
+			swapchainPresentMode, VK_TRUE, type::make_supplier(old_swapchain) }));
 	std::vector<vcc::image::image_type> images(vcc::swapchain::get_images(swapchain));
 	std::vector<std::shared_ptr<vcc::image::image_type>> swapchain_images;
 	swapchain_images.reserve(images.size());
@@ -212,7 +216,7 @@ std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer
 		pre_draw_commands.push_back(std::move(pre_draw_command));
 		post_draw_commands.push_back(std::move(post_draw_command));
 	}
-	resize_callback(extent, window.format, std::move(swapchain_images));
+	swapchain_create_callback(extent, window.format, std::move(swapchain_images));
 	return std::make_tuple(std::move(swapchain), std::move(pre_draw_commands),
 		std::move(post_draw_commands));
 }
@@ -223,8 +227,9 @@ void draw(window_type &window, swapchain::swapchain_type &swapchain,
 		vcc::semaphore::semaphore_type &image_acquired_semaphore,
 		vcc::semaphore::semaphore_type &present_semaphore,
 		vcc::semaphore::semaphore_type &draw_semaphore,
-		const draw_callback_type &draw_callback, const resize_callback_type &resize_callback,
-		VkExtent2D extent) {
+		const draw_callback_type &draw_callback,
+		const swapchain_create_callback_type &swapchain_create_callback,
+		const swapchain_destroy_callback_type &swapchain_destroy_callback, VkExtent2D extent) {
 	VkResult err;
 	uint32_t current_buffer;
 	do {
@@ -234,8 +239,8 @@ void draw(window_type &window, swapchain::swapchain_type &swapchain,
 		case VK_ERROR_OUT_OF_DATE_KHR:
 			// swapchain is out of date (e.g. the window was resized) and
 			// must be recreated:
-			std::tie(swapchain, pre_draw_commands, post_draw_commands) =
-				resize(window, extent, resize_callback);
+			std::tie(swapchain, pre_draw_commands, post_draw_commands) = resize(window, extent,
+				swapchain_create_callback, swapchain_destroy_callback, swapchain);
 			break;
 		case VK_SUBOPTIMAL_KHR:
 			VCC_PRINT("VK_SUBOPTIMAL_KHR");
@@ -274,8 +279,8 @@ void draw(window_type &window, swapchain::swapchain_type &swapchain,
 	case VK_ERROR_OUT_OF_DATE_KHR:
 		// swapchain is out of date (e.g. the window was resized) and
 		// must be recreated:
-		std::tie(swapchain, pre_draw_commands, post_draw_commands) =
-			resize(window, extent, resize_callback);
+		std::tie(swapchain, pre_draw_commands, post_draw_commands) = resize(window, extent,
+			swapchain_create_callback, swapchain_destroy_callback, swapchain);
 		break;
 	case VK_SUBOPTIMAL_KHR:
 		// swapchain is not as optimal as it could be, but the platform's
@@ -492,7 +497,8 @@ window_type create(
 	return window;
 }
 
-int run(window_type &window, const resize_callback_type &resize_callback,
+int run(window_type &window, const swapchain_create_callback_type &swapchain_create_callback,
+	const swapchain_destroy_callback_type &swapchain_destroy_callback,
 	const draw_callback_type &draw_callback, const input_callbacks_type &input_callbacks) {
 #ifdef _WIN32
 	std::atomic<VkExtent2D> extent;
@@ -591,17 +597,14 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 			if (resize_extent.width != 0 && resize_extent.height != 0
 				&& (resize_extent.width != draw_extent.width
 					|| resize_extent.height != draw_extent.height)) {
-				// Android fails if there is a swapchain already, although the API
-				// gives us the possibility to hand the previous swapchain as argument
-				// when creating the new one.
-				swapchain = swapchain::swapchain_type();
 				std::tie(swapchain, pre_draw_commands, post_draw_commands) = resize(
-						window, resize_extent, resize_callback);
+					window, resize_extent, swapchain_create_callback,
+					swapchain_destroy_callback, swapchain);
 				draw_extent = resize_extent;
 			}
 			draw(window, swapchain, pre_draw_commands, post_draw_commands,
 				image_acquired_semaphore, present_semaphore, draw_semaphore, draw_callback,
-				resize_callback, draw_extent);
+				swapchain_create_callback, swapchain_destroy_callback, draw_extent);
 		}
 	});
 
@@ -638,7 +641,7 @@ int run(window_type &window, const resize_callback_type &resize_callback,
         (const xcb_configure_notify_event_t *) event.get();
       extent = VkExtent2D{ cfg->width, cfg->height };
       std::tie(swapchain, pre_draw_commands, post_draw_commands) =
-          resize(window, extent, resize_callback);
+          resize(window, extent, swapchain_create_callback, swapchain_destroy_callback, swapchain);
       break;
     }
   }
@@ -647,58 +650,6 @@ int run(window_type &window, const resize_callback_type &resize_callback,
   present_semaphore(vcc::semaphore::create(window.device)),
     draw_semaphore(vcc::semaphore::create(window.device));
 
-#ifdef VCC_XCB_SINGLE_THREAD_DRAWING
-  while (running) {
-    typedef std::unique_ptr<xcb_generic_event_t, decltype(&free)> event_type;
-    event_type event(nullptr, &free);
-    while (event = event_type(xcb_poll_for_event(window.connection.get()), &free)) {
-      uint8_t event_code = event->response_type & 0x7f;
-      switch (event_code) {
-      case XCB_CONFIGURE_NOTIFY: {
-        const xcb_configure_notify_event_t *cfg =
-          (const xcb_configure_notify_event_t *) event.get();
-        extent = VkExtent2D{ cfg->width, cfg->height };
-        std::tie(swapchain, pre_draw_commands, post_draw_commands) =
-          resize(window, extent, resize_callback);
-        } break;
-      case XCB_CLIENT_MESSAGE: {
-          auto message = (xcb_client_message_event_t *) event.get();
-          if (message->data.data32[0] == window.atom_wm_delete_window->atom) {
-            vcc::device::wait_idle(*window.device);
-            running = false;
-          }
-        } break;
-      case XCB_BUTTON_PRESS: {
-        auto bp = (xcb_button_press_event_t *) event.get();
-        input_callbacks.mouse_down_callback(mouse_button_type(bp->detail - 1),
-            bp->event_x, bp->event_y);
-        } break;
-      case XCB_BUTTON_RELEASE: {
-        auto br = (xcb_button_release_event_t *) event.get();
-        input_callbacks.mouse_up_callback(mouse_button_type(br->detail - 1),
-            br->event_x, br->event_y);
-        } break;
-      case XCB_MOTION_NOTIFY: {
-        auto motion = (xcb_motion_notify_event_t *) event.get();
-        input_callbacks.mouse_move_callback(motion->event_x, motion->event_y);
-        } break;
-      case XCB_KEY_PRESS: {
-        auto kp = (xcb_key_press_event_t *) event.get();
-        // TODO(gardell): Translate button
-        input_callbacks.key_down_callback(keycode_type(kp->detail));
-        } break;
-      case XCB_KEY_RELEASE: {
-        auto kr = (xcb_key_release_event_t *) event.get();
-        // TODO(gardell): Translate button
-        input_callbacks.key_up_callback(keycode_type(kr->detail));
-        } break;
-      }
-    }
-
-    draw(window, swapchain, pre_draw_commands, post_draw_commands, image_acquired_semaphore,
-      present_semaphore, draw_semaphore, draw_callback, resize_callback, extent);
-  }
-#else
   std::thread event_thread([&]() {
     while (running) {
       std::unique_ptr<xcb_generic_event_t, decltype(&free)> event(
@@ -749,18 +700,16 @@ int run(window_type &window, const resize_callback_type &resize_callback,
   while (running) {
     VkExtent2D resize_extent(extent.exchange({ 0, 0 }));
     if (resize_extent.width != 0 && resize_extent.height != 0) {
-      std::tie(swapchain, pre_draw_commands, post_draw_commands) =
-        resize(window, extent, resize_callback);
+      std::tie(swapchain, pre_draw_commands, post_draw_commands) = resize(window, extent,
+        swapchain_create_callback, swapchain_destroy_callback, swapchain);
       draw_extent = resize_extent;
     }
     draw(window, swapchain, pre_draw_commands, post_draw_commands, image_acquired_semaphore,
-      present_semaphore, draw_semaphore, draw_callback, resize_callback, draw_extent);
+      present_semaphore, draw_semaphore, draw_callback, swapchain_create_callback,
+      swapchain_destroy_callback, draw_extent);
   }
 
   event_thread.join();
-
-#endif // VCC_XCB_SINGLE_THREAD_DRAWING
-
   device::wait_idle(*window.device);
   window.extent = extent;
 
@@ -785,8 +734,8 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 					extent = { (uint32_t) ANativeWindow_getWidth(app.window),
 							   (uint32_t) ANativeWindow_getHeight(app.window) };
 					swapchain = swapchain::swapchain_type();
-					std::tie(swapchain, pre_draw_commands, post_draw_commands) =
-						resize(window, extent, resize_callback);
+					std::tie(swapchain, pre_draw_commands, post_draw_commands) = resize(window, extent,
+						swapchain_create_callback, swapchain_destroy_callback, swapchain);
 				}
 				break;
 			case APP_CMD_GAINED_FOCUS:
@@ -795,7 +744,8 @@ int run(window_type &window, const resize_callback_type &resize_callback,
 					while (running) {
 						draw(window, swapchain, pre_draw_commands,
 							 post_draw_commands, image_acquired_semaphore, present_semaphore,
-							 draw_semaphore, draw_callback, resize_callback, extent);
+							 draw_semaphore, draw_callback, swapchain_create_callback, swapchain_destroy_callback,
+							 extent);
 					}
 				});
 				break;
