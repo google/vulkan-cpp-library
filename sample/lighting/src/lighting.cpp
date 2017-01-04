@@ -375,6 +375,7 @@ int main(int argc, const char **argv) {
 							(uint32_t)teapot::indices.size(), 1, 0, 0, 0 }));
 			}
 		},
+		[]() {},
 		[&](uint32_t index) {
 			glm::mat4 view_matrix(glm::lookAt(glm::vec3(0, 0, camera_distance),
 				glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));

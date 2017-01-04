@@ -434,6 +434,7 @@ int main(int argc, const char **argv) {
 				vcc::command::draw{ num_instances, 1, 0, 0 }));
 		}
 	},
+			[]() {},
 			[&](uint32_t index) {
 		const glm::vec3 eye(num_instances_x / 2, camera_distance, num_instances_y / 2);
 		const glm::vec3 dir(glm::rotate(angle.x, glm::vec3(0, 1, 0))
