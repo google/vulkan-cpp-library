@@ -107,9 +107,6 @@ endif()
 
 add_library(vcc ${VCC_INCLUDES} ${VCC_SRCS})
 add_definitions(-D_ENABLE_ATOMIC_ALIGNMENT_FIX)
-if (${XCB_SINGLE_THREAD_DRAWING})
-  add_definitions(-DVCC_XCB_SINGLE_THREAD_DRAWING)
-endif()
 generate_export_header(vcc
   BASE_NAME vcc
   EXPORT_MACRO_NAME VCC_LIBRARY

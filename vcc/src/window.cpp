@@ -650,59 +650,6 @@ int run(window_type &window, const swapchain_create_callback_type &swapchain_cre
   present_semaphore(vcc::semaphore::create(window.device)),
     draw_semaphore(vcc::semaphore::create(window.device));
 
-#ifdef VCC_XCB_SINGLE_THREAD_DRAWING
-  while (running) {
-    typedef std::unique_ptr<xcb_generic_event_t, decltype(&free)> event_type;
-    event_type event(nullptr, &free);
-    while (event = event_type(xcb_poll_for_event(window.connection.get()), &free)) {
-      uint8_t event_code = event->response_type & 0x7f;
-      switch (event_code) {
-      case XCB_CONFIGURE_NOTIFY: {
-        const xcb_configure_notify_event_t *cfg =
-          (const xcb_configure_notify_event_t *) event.get();
-        extent = VkExtent2D{ cfg->width, cfg->height };
-        std::tie(swapchain, pre_draw_commands, post_draw_commands) =
-          resize(window, extent, swapchain_create_callback, swapchain_destroy_callback, swapchain);
-        } break;
-      case XCB_CLIENT_MESSAGE: {
-          auto message = (xcb_client_message_event_t *) event.get();
-          if (message->data.data32[0] == window.atom_wm_delete_window->atom) {
-            vcc::device::wait_idle(*window.device);
-            running = false;
-          }
-        } break;
-      case XCB_BUTTON_PRESS: {
-        auto bp = (xcb_button_press_event_t *) event.get();
-        input_callbacks.mouse_down_callback(mouse_button_type(bp->detail - 1),
-            bp->event_x, bp->event_y);
-        } break;
-      case XCB_BUTTON_RELEASE: {
-        auto br = (xcb_button_release_event_t *) event.get();
-        input_callbacks.mouse_up_callback(mouse_button_type(br->detail - 1),
-            br->event_x, br->event_y);
-        } break;
-      case XCB_MOTION_NOTIFY: {
-        auto motion = (xcb_motion_notify_event_t *) event.get();
-        input_callbacks.mouse_move_callback(motion->event_x, motion->event_y);
-        } break;
-      case XCB_KEY_PRESS: {
-        auto kp = (xcb_key_press_event_t *) event.get();
-        // TODO(gardell): Translate button
-        input_callbacks.key_down_callback(keycode_type(kp->detail));
-        } break;
-      case XCB_KEY_RELEASE: {
-        auto kr = (xcb_key_release_event_t *) event.get();
-        // TODO(gardell): Translate button
-        input_callbacks.key_up_callback(keycode_type(kr->detail));
-        } break;
-      }
-    }
-
-    draw(window, swapchain, pre_draw_commands, post_draw_commands, image_acquired_semaphore,
-      present_semaphore, draw_semaphore, draw_callback, swapchain_create_callback,
-      swapchain_destroy_callback, extent);
-  }
-#else
   std::thread event_thread([&]() {
     while (running) {
       std::unique_ptr<xcb_generic_event_t, decltype(&free)> event(
@@ -763,9 +710,6 @@ int run(window_type &window, const swapchain_create_callback_type &swapchain_cre
   }
 
   event_thread.join();
-
-#endif // VCC_XCB_SINGLE_THREAD_DRAWING
-
   device::wait_idle(*window.device);
   window.extent = extent;
 
