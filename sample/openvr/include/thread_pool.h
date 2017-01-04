@@ -32,6 +32,7 @@ private:
 				thread = std::thread([this]() {
 					for (;;) {
 						task_type task;
+						bool tasks_became_empty(false);
 						{
 							std::unique_lock<std::mutex> lk(tasks_mutex);
 							tasks_cv.wait(lk, [this] {
@@ -44,8 +45,12 @@ private:
 							}
 							task = std::move(tasks.front());
 							tasks.pop();
+							tasks_became_empty = tasks.empty();
 						}
 						task();
+						if (tasks_became_empty) {
+							tasks_empty_cv.notify_all();
+						}
 					}
 				});
 			}
@@ -69,11 +74,16 @@ private:
 			}
 		}
 
+		void wait_idle() {
+			std::unique_lock<std::mutex> lk(tasks_mutex);
+			tasks_empty_cv.wait(lk, [this] { return tasks.empty() || !running; });
+		}
+
 	private:
 		std::vector<std::thread> threads;
 		std::queue<task_type> tasks;
 		std::mutex tasks_mutex;
-		std::condition_variable tasks_cv;
+		std::condition_variable tasks_cv, tasks_empty_cv;
 		volatile bool running;
 	};
 public:
@@ -88,6 +98,10 @@ public:
 
 	void operator()(task_type &&task) const {
 		instance->operator()(std::forward<task_type>(task));
+	}
+
+	void wait_idle() const {
+		instance->wait_idle();
 	}
 
 private:
