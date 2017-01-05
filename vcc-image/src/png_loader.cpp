@@ -44,7 +44,7 @@ bool png_loader_type::can_load(std::istream &stream) {
 }
 
 image::image_type png_loader_type::load(
-	const type::supplier<vcc::queue::queue_type> &queue,
+	const type::supplier<const vcc::queue::queue_type> &queue,
 	VkImageCreateFlags flags,
 	VkImageUsageFlags usage,
 	VkFormatFeatureFlags feature_flags,
@@ -111,7 +111,7 @@ image::image_type png_loader_type::load(
 	}
 
 	const VkExtent3D extent{ width, height, 1 };
-	const type::supplier<device::device_type> device(vcc::internal::get_parent(*queue));
+	const type::supplier<const device::device_type> device(vcc::internal::get_parent(*queue));
 	image::image_type image(image::create(device, 0, VK_IMAGE_TYPE_2D,
 		format, extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR,
 		usage, sharingMode, queueFamilyIndices, VK_IMAGE_LAYOUT_UNDEFINED));

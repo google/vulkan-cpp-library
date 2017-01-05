@@ -21,12 +21,10 @@
 namespace vcc {
 namespace command_pool {
 
-struct command_pool_type
-	: public internal::movable_destructible_with_parent<VkCommandPool,
-	device::device_type, vkDestroyCommandPool> {
-	friend VCC_LIBRARY command_pool_type create(
-		const type::supplier<device::device_type> &device,
-		VkCommandPoolCreateFlags flags, uint32_t queueFamilyIndex);
+struct command_pool_type : public internal::movable_destructible_with_parent<VkCommandPool,
+		const device::device_type, vkDestroyCommandPool> {
+	friend VCC_LIBRARY command_pool_type create(const type::supplier<const device::device_type> &,
+		VkCommandPoolCreateFlags, uint32_t);
 	command_pool_type() = default;
 	command_pool_type(command_pool_type &&) = default;
 	command_pool_type(const command_pool_type &) = delete;
@@ -35,13 +33,13 @@ struct command_pool_type
 
 private:
 	command_pool_type(VkCommandPool instance,
-		const type::supplier<device::device_type> &parent)
+		const type::supplier<const device::device_type> &parent)
 		: internal::movable_destructible_with_parent<VkCommandPool,
-		device::device_type, vkDestroyCommandPool>(instance, parent) {}
+		const device::device_type, vkDestroyCommandPool>(instance, parent) {}
 };
 
 VCC_LIBRARY command_pool_type create(
-	const type::supplier<device::device_type> &device,
+	const type::supplier<const device::device_type> &device,
 	VkCommandPoolCreateFlags flags, uint32_t queueFamilyIndex);
 
 }  // namespace command_pool

@@ -57,39 +57,37 @@ std::pair<std::vector<VkPipelineShaderStageCreateInfo>, std::vector<VkSpecializa
 		std::move(converted_specializations));
 }
 
-pipeline_type create_graphics(const type::supplier<device::device_type> &device,
-	const pipeline_cache::pipeline_cache_type &pipeline_cache,
-	VkPipelineCreateFlags flags,
-	const std::vector<shader_stage_type> &stages,
-	const vertex_input_state &vertexInputState,
-	const input_assembly_state &inputAssemblyState,
-	const tessellation_state *tessellationState,
-	const viewport_state_type &viewportState,
-	const rasterization_state &rasterizationState,
-	const multisample_state &multisampleState,
-	const depth_stencil_state &depthStencilState,
-	const color_blend_state &colorBlendState,
-	const dynamic_state &dynamicState,
-	const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
-	const type::supplier<render_pass::render_pass_type> &render_pass,
-	uint32_t subpass,
-	const type::supplier<pipeline::pipeline_type> &basePipelineHandle) {
-
+pipeline_type create_graphics(const type::supplier<const device::device_type> &device,
+		const pipeline_cache::pipeline_cache_type &pipeline_cache, VkPipelineCreateFlags flags,
+		const std::vector<shader_stage_type> &stages, const vertex_input_state &vertexInputState,
+		const input_assembly_state &inputAssemblyState,
+		const tessellation_state *tessellationState, const viewport_state_type &viewportState,
+		const rasterization_state &rasterizationState, const multisample_state &multisampleState,
+		const depth_stencil_state &depthStencilState, const color_blend_state &colorBlendState,
+		const dynamic_state &dynamicState,
+		const type::supplier<const pipeline_layout::pipeline_layout_type> &layout,
+		const type::supplier<const render_pass::render_pass_type> &render_pass, uint32_t subpass,
+		const type::supplier<const pipeline::pipeline_type> &basePipelineHandle) {
 	VkPipeline pipeline;
-	VkGraphicsPipelineCreateInfo create = {VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, NULL};
+	VkGraphicsPipelineCreateInfo create =
+		{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, NULL };
 	create.flags = flags;
 	create.stageCount = (uint32_t) stages.size();
 	std::vector<VkPipelineShaderStageCreateInfo> converted_shader_stages;
 	std::vector<VkSpecializationInfo> converted_specialization_info;
-	std::tie(converted_shader_stages, converted_specialization_info) = convert_shader_stages(stages);
+	std::tie(converted_shader_stages, converted_specialization_info) =
+		convert_shader_stages(stages);
 	create.pStages = converted_shader_stages.data();
 	VkPipelineVertexInputStateCreateInfo vertex_input_state =
 			{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, NULL, 0};
 	vertex_input_state.vertexBindingDescriptionCount =
 			(uint32_t) vertexInputState.vertexBindingDescriptions.size();
-	vertex_input_state.pVertexBindingDescriptions = vertexInputState.vertexBindingDescriptions.data();
-	vertex_input_state.vertexAttributeDescriptionCount = (uint32_t) vertexInputState.vertexAttributeDescriptions.size();
-	vertex_input_state.pVertexAttributeDescriptions = vertexInputState.vertexAttributeDescriptions.data();
+	vertex_input_state.pVertexBindingDescriptions =
+		vertexInputState.vertexBindingDescriptions.data();
+	vertex_input_state.vertexAttributeDescriptionCount =
+		(uint32_t) vertexInputState.vertexAttributeDescriptions.size();
+	vertex_input_state.pVertexAttributeDescriptions =
+		vertexInputState.vertexAttributeDescriptions.data();
 	create.pVertexInputState = &vertex_input_state;
 
 	VkPipelineInputAssemblyStateCreateInfo input_assembly_state =
@@ -186,7 +184,7 @@ pipeline_type create_graphics(const type::supplier<device::device_type> &device,
 	return pipeline_type(pipeline, device, layout, render_pass);
 }
 
-pipeline_type create_graphics(const type::supplier<device::device_type> &device,
+pipeline_type create_graphics(const type::supplier<const device::device_type> &device,
 		const pipeline_cache::pipeline_cache_type &pipeline_cache,
 		VkPipelineCreateFlags flags,
 		const std::vector<shader_stage_type> &stages,
@@ -199,10 +197,10 @@ pipeline_type create_graphics(const type::supplier<device::device_type> &device,
 		const depth_stencil_state &depthStencilState,
 		const color_blend_state &colorBlendState,
 		const dynamic_state &dynamicState,
-		const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
-		const type::supplier<render_pass::render_pass_type> &render_pass,
+		const type::supplier<const pipeline_layout::pipeline_layout_type> &layout,
+		const type::supplier<const render_pass::render_pass_type> &render_pass,
 		uint32_t subpass,
-		const type::supplier<pipeline::pipeline_type> &basePipelineHandle) {
+		const type::supplier<const pipeline::pipeline_type> &basePipelineHandle) {
 	return create_graphics(device, pipeline_cache, flags, stages,
 		vertexInputState, inputAssemblyState, &tessellationState,
 		viewportState, rasterizationState, multisampleState, depthStencilState,
@@ -210,7 +208,7 @@ pipeline_type create_graphics(const type::supplier<device::device_type> &device,
 		basePipelineHandle);
 }
 
-pipeline_type create_graphics(const type::supplier<device::device_type> &device,
+pipeline_type create_graphics(const type::supplier<const device::device_type> &device,
 	const pipeline_cache::pipeline_cache_type &pipeline_cache,
 	VkPipelineCreateFlags flags,
 	const std::vector<shader_stage_type> &stages,
@@ -222,10 +220,10 @@ pipeline_type create_graphics(const type::supplier<device::device_type> &device,
 	const depth_stencil_state &depthStencilState,
 	const color_blend_state &colorBlendState,
 	const dynamic_state &dynamicState,
-	const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
-	const type::supplier<render_pass::render_pass_type> &render_pass,
+	const type::supplier<const pipeline_layout::pipeline_layout_type> &layout,
+	const type::supplier<const render_pass::render_pass_type> &render_pass,
 	uint32_t subpass,
-	const type::supplier<pipeline::pipeline_type> &basePipelineHandle) {
+	const type::supplier<const pipeline::pipeline_type> &basePipelineHandle) {
 	return create_graphics(device, pipeline_cache, flags, stages,
 		vertexInputState, inputAssemblyState, nullptr, viewportState,
 		rasterizationState, multisampleState, depthStencilState,
@@ -233,12 +231,12 @@ pipeline_type create_graphics(const type::supplier<device::device_type> &device,
 		basePipelineHandle);
 }
 
-pipeline_type create_compute(const type::supplier<device::device_type> &device,
+pipeline_type create_compute(const type::supplier<const device::device_type> &device,
 		const pipeline_cache::pipeline_cache_type &pipeline_cache,
 		VkPipelineCreateFlags flags,
 		const shader_stage_type &stage,
-		const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
-		const type::supplier<pipeline::pipeline_type> &basePipelineHandle) {
+		const type::supplier<const pipeline_layout::pipeline_layout_type> &layout,
+		const type::supplier<const pipeline::pipeline_type> &basePipelineHandle) {
 	VkComputePipelineCreateInfo create = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, NULL, };
 	create.flags = flags;
 	create.stage = convert_shader_stage(stage);

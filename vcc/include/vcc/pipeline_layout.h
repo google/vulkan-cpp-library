@@ -33,8 +33,13 @@ namespace pipeline_layout {
 namespace internal {
 
 template<typename PipelineLayoutT>
-auto get_pre_execute_callbacks(PipelineLayoutT &layout)
-		->decltype(layout.pre_execute_callbacks)& {
+auto get_pre_execute_callbacks(PipelineLayoutT &layout)->decltype(layout.pre_execute_callbacks)& {
+	return layout.pre_execute_callbacks;
+}
+
+template<typename PipelineLayoutT>
+auto get_pre_execute_callbacks(const PipelineLayoutT &layout)
+		->const decltype(layout.pre_execute_callbacks)& {
 	return layout.pre_execute_callbacks;
 }
 
@@ -46,16 +51,19 @@ auto get_set_layouts(const PipelineLayoutT &pipeline)
 
 }  // namespace internal
 
-struct pipeline_layout_type
-	: vcc::internal::movable_destructible_with_parent<VkPipelineLayout,
-		device::device_type, vkDestroyPipelineLayout> {
+struct pipeline_layout_type : vcc::internal::movable_destructible_with_parent<VkPipelineLayout,
+		const device::device_type, vkDestroyPipelineLayout> {
 	template<typename PipelineLayoutT>
 	friend auto internal::get_pre_execute_callbacks(PipelineLayoutT &layout)
 		->decltype(layout.pre_execute_callbacks)&;
+
+	template<typename PipelineLayoutT>
+	friend auto internal::get_pre_execute_callbacks(const PipelineLayoutT &layout)
+		->const decltype(layout.pre_execute_callbacks)&;
 	friend VCC_LIBRARY pipeline_layout_type create(
-		const type::supplier<device::device_type> &device,
-		const std::vector<type::supplier<vcc::descriptor_set_layout::descriptor_set_layout_type>> &set_layouts,
-		const std::vector<VkPushConstantRange> &push_constant_ranges);
+		const type::supplier<const device::device_type> &,
+		const std::vector<type::supplier<const vcc::descriptor_set_layout::descriptor_set_layout_type>> &,
+		const std::vector<VkPushConstantRange> &);
 	template<typename PipelineLayoutT>
 	friend auto internal::get_set_layouts(const PipelineLayoutT &pipeline)
 		->const decltype(pipeline.set_layouts)&;
@@ -68,37 +76,41 @@ struct pipeline_layout_type
 
 private:
 	pipeline_layout_type(VkPipelineLayout instance,
-		const type::supplier<device::device_type> &parent,
-		const std::vector<type::supplier<vcc::descriptor_set_layout::descriptor_set_layout_type>> &set_layouts)
-		: vcc::internal::movable_destructible_with_parent<VkPipelineLayout,
-				device::device_type, vkDestroyPipelineLayout>(
-			instance, type::supplier<device::device_type>(parent)),
-			set_layouts(set_layouts) {}
-	std::vector<type::supplier<vcc::descriptor_set_layout::descriptor_set_layout_type>> set_layouts;
-	vcc::internal::hook_container_type<queue::queue_type &> pre_execute_callbacks;
+		const type::supplier<const device::device_type> &parent,
+		const std::vector<type::supplier<const descriptor_set_layout::descriptor_set_layout_type>>
+			&set_layouts)
+		: movable_destructible_with_parent(instance, type::supplier<const device::device_type>(parent))
+		, set_layouts(set_layouts) {}
+	std::vector<type::supplier<const descriptor_set_layout::descriptor_set_layout_type>> set_layouts;
+	vcc::internal::hook_container_type<const queue::queue_type &> pre_execute_callbacks;
 };
 
-VCC_LIBRARY pipeline_layout_type create(const type::supplier<device::device_type> &device,
-	const std::vector<type::supplier<vcc::descriptor_set_layout::descriptor_set_layout_type>> &set_layouts,
-	const std::vector<VkPushConstantRange> &push_constant_ranges = {});
+VCC_LIBRARY pipeline_layout_type create(const type::supplier<const device::device_type> &device,
+	const std::vector<type::supplier<const descriptor_set_layout::descriptor_set_layout_type>>
+		&set_layouts, const std::vector<VkPushConstantRange> &push_constant_ranges = {});
 
 namespace internal {
 
-VCC_LIBRARY void flush(const type::supplier<type::serialize_type> &constants,
+VCC_LIBRARY void flush(const type::supplier<const type::serialize_type> &constants,
 	VkPipelineLayout pipeline_layout,
 	const std::vector<VkPushConstantRange> &push_constant_ranges,
-	queue::queue_type &queue);
+	const queue::queue_type &queue);
 
 }  // namespace internal
 
 template<typename... StorageType>
-pipeline_layout_type create(const type::supplier<device::device_type> &device,
-	const std::vector<type::supplier<descriptor_set_layout::descriptor_set_layout_type>> &set_layouts,
-	const std::vector<VkPushConstantRange> &push_constant_ranges, type::memory_layout layout, StorageType... storages) {
-	pipeline_layout_type pipeline_layout(create(type::supplier<device::device_type>(device), set_layouts, push_constant_ranges));
-	pipeline_layout::internal::get_pre_execute_callbacks(pipeline_layout).add(std::bind(&internal::flush,
-		type::supplier<type::serialize_type>(type::make_serialize(layout, std::forward<StorageType>(storages)...)),
-		vcc::internal::get_instance(pipeline_layout), push_constant_ranges, std::placeholders::_1));
+pipeline_layout_type create(const type::supplier<const device::device_type> &device,
+		const std::vector<type::supplier<const descriptor_set_layout::descriptor_set_layout_type>>
+			&set_layouts,
+		const std::vector<VkPushConstantRange> &push_constant_ranges, type::memory_layout layout,
+		StorageType... storages) {
+	pipeline_layout_type pipeline_layout(create(type::supplier<const device::device_type>(device),
+		set_layouts, push_constant_ranges));
+	pipeline_layout::internal::get_pre_execute_callbacks(pipeline_layout).add(
+		std::bind(&internal::flush, type::make_supplier(type::make_serialize(
+			layout, std::forward<StorageType>(storages)...)),
+			vcc::internal::get_instance(pipeline_layout), push_constant_ranges,
+			std::placeholders::_1));
 	return std::move(pipeline_layout);
 }
 

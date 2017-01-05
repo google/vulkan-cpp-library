@@ -21,11 +21,9 @@
 namespace vcc {
 namespace semaphore {
 
-struct semaphore_type
-	: public internal::movable_destructible_with_parent<VkSemaphore,
-	device::device_type, vkDestroySemaphore> {
-	friend VCC_LIBRARY semaphore_type create(
-		const type::supplier<device::device_type> &device);
+struct semaphore_type : internal::movable_destructible_with_parent<VkSemaphore,
+		const device::device_type, vkDestroySemaphore> {
+	friend VCC_LIBRARY semaphore_type create(const type::supplier<const device::device_type> &);
 
 	semaphore_type() = default;
 	semaphore_type(semaphore_type &&) = default;
@@ -34,14 +32,11 @@ struct semaphore_type
 	semaphore_type &operator=(const semaphore_type &) = delete;
 
 private:
-	semaphore_type(VkSemaphore instance,
-		const type::supplier<device::device_type> &parent)
-		: internal::movable_destructible_with_parent<VkSemaphore,
-		device::device_type, vkDestroySemaphore>(instance, parent) {}
+	semaphore_type(VkSemaphore instance, const type::supplier<const device::device_type> &parent)
+		: movable_destructible_with_parent(instance, parent) {}
 };
 
-VCC_LIBRARY semaphore_type create(
-	const type::supplier<device::device_type> &device);
+VCC_LIBRARY semaphore_type create(const type::supplier<const device::device_type> &device);
 
 }  // namespace semaphore
 }  // namespace vcc

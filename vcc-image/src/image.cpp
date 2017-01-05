@@ -52,7 +52,7 @@ std::string dump_physical_device_format_properties(VkPhysicalDevice physical_dev
 	return ss.str();
 }
 
-image::image_type create(const type::supplier<vcc::queue::queue_type> &queue,
+image::image_type create(const type::supplier<const vcc::queue::queue_type> &queue,
 	VkImageCreateFlags flags, VkImageUsageFlags usage,
 	VkFormatFeatureFlags feature_flags, VkSharingMode sharingMode,
 	const std::vector<uint32_t> &queueFamilyIndices, std::istream &&stream) {

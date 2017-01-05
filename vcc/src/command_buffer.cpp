@@ -22,8 +22,8 @@ namespace vcc {
 namespace command_buffer {
 
 std::vector<command_buffer_type> allocate(
-		const type::supplier<device::device_type> &device,
-		const type::supplier<command_pool::command_pool_type> &command_pool,
+		const type::supplier<const device::device_type> &device,
+		const type::supplier<const command_pool::command_pool_type> &command_pool,
 		VkCommandBufferLevel level, uint32_t commandBufferCount) {
 	std::vector<VkCommandBuffer> buffers(commandBufferCount);
 	VkCommandBufferAllocateInfo info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, NULL};
@@ -52,15 +52,15 @@ begin_type::~begin_type() {
 }
 
 begin_type::begin_type(
-	const type::supplier<command_buffer_type> &command_buffer)
+	const type::supplier<const command_buffer_type> &command_buffer)
 	: command_buffer(command_buffer),
 	  command_buffer_lock(vcc::internal::get_mutex(*command_buffer)) {}
 
-begin_type begin(const type::supplier<command_buffer_type> &command_buffer,
+begin_type begin(const type::supplier<const command_buffer_type> &command_buffer,
 	VkCommandBufferUsageFlags flags,
-	const type::supplier<render_pass::render_pass_type> &render_pass,
+	const type::supplier<const render_pass::render_pass_type> &render_pass,
 	uint32_t subpass,
-	const type::supplier<framebuffer::framebuffer_type> &framebuffer,
+	const type::supplier<const framebuffer::framebuffer_type> &framebuffer,
 	VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
 	VkQueryPipelineStatisticFlags pipelineStatistics) {
 	VkCommandBufferInheritanceInfo inheritance_info = {
@@ -78,10 +78,9 @@ begin_type begin(const type::supplier<command_buffer_type> &command_buffer,
 	return begin_type(command_buffer);
 }
 
-begin_type begin(const type::supplier<command_buffer_type> &command_buffer,
-	VkCommandBufferUsageFlags flags,
-	VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
-	VkQueryPipelineStatisticFlags pipelineStatistics) {
+begin_type begin(const type::supplier<const command_buffer_type> &command_buffer,
+		VkCommandBufferUsageFlags flags, VkBool32 occlusionQueryEnable,
+		VkQueryControlFlags queryFlags, VkQueryPipelineStatisticFlags pipelineStatistics) {
 	VkCommandBufferInheritanceInfo inheritance_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO, NULL };
 	inheritance_info.renderPass = VK_NULL_HANDLE;
 	inheritance_info.subpass = 0;

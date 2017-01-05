@@ -24,15 +24,17 @@
 namespace vcc {
 namespace pipeline_layout {
 
-pipeline_layout_type create(const type::supplier<device::device_type> &device,
-		const std::vector<type::supplier<vcc::descriptor_set_layout::descriptor_set_layout_type>> &set_layouts,
+pipeline_layout_type create(const type::supplier<const device::device_type> &device,
+		const std::vector<type::supplier<
+			const vcc::descriptor_set_layout::descriptor_set_layout_type>> &set_layouts,
 		const std::vector<VkPushConstantRange> &push_constant_ranges) {
 	VkPipelineLayoutCreateInfo create = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, NULL, 0};
 	create.setLayoutCount = (uint32_t) set_layouts.size();
 	std::vector<VkDescriptorSetLayout> converted_set_layouts;
 	converted_set_layouts.reserve(set_layouts.size());
 	std::transform(set_layouts.begin(), set_layouts.end(), std::back_inserter(converted_set_layouts),
-			[](const type::supplier<vcc::descriptor_set_layout::descriptor_set_layout_type> &set_layout){
+			[](const type::supplier<const vcc::descriptor_set_layout::descriptor_set_layout_type>
+				&set_layout) {
 		return vcc::internal::get_instance(*set_layout);
 	});
 	create.pSetLayouts = set_layouts.empty() ? NULL : &converted_set_layouts.front();
@@ -45,12 +47,12 @@ pipeline_layout_type create(const type::supplier<device::device_type> &device,
 
 namespace internal {
 
-void flush(const type::supplier<type::serialize_type> &constants,
-	VkPipelineLayout pipeline_layout,
-	const std::vector<VkPushConstantRange> &push_constant_ranges,
-	queue::queue_type &queue) {
+void flush(const type::supplier<const type::serialize_type> &constants,
+		VkPipelineLayout pipeline_layout,
+		const std::vector<VkPushConstantRange> &push_constant_ranges,
+		const queue::queue_type &queue) {
 	if (type::dirty(*constants)) {
-		const type::supplier<device::device_type> device(
+		const type::supplier<const device::device_type> device(
 			vcc::internal::get_parent(queue));
 		std::string buffer(type::size(*constants), '\0');
 		type::flush(*constants, &buffer[0]);

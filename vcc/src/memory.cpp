@@ -19,7 +19,7 @@
 namespace vcc {
 namespace memory {
 
-memory_type allocate(const type::supplier<device::device_type> &device,
+memory_type allocate(const type::supplier<const device::device_type> &device,
 		VkDeviceSize allocationSize, uint32_t memoryTypeIndex) {
 	VkMemoryAllocateInfo allocate = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, NULL};
 	allocate.allocationSize = allocationSize;
@@ -40,7 +40,7 @@ VkMemoryRequirements get_memory_requirements(const image::image_type &image) {
 	return requirements;
 }
 
-void bind(const type::supplier<memory_type> &memory, VkDeviceSize offset,
+void bind(const type::supplier<const memory_type> &memory, VkDeviceSize offset,
 		image::image_type &image) {
 	{
 		std::lock_guard<std::mutex> lock(vcc::internal::get_mutex(image));
@@ -62,7 +62,7 @@ VkMemoryRequirements get_memory_requirements(
 	return requirements;
 }
 
-void bind(const type::supplier<memory_type> &memory, VkDeviceSize offset,
+void bind(const type::supplier<const memory_type> &memory, VkDeviceSize offset,
 		buffer::buffer_type &buffer) {
 	{
 		std::lock_guard<std::mutex> lock(vcc::internal::get_mutex(buffer));
@@ -79,8 +79,9 @@ VkMemoryRequirements get_memory_requirements(const input_buffer::input_buffer_ty
 	return get_memory_requirements(input_buffer::internal::get_buffer(buffer));
 }
 
-void bind(const type::supplier<memory_type> &memory, VkDeviceSize offset, input_buffer::input_buffer_type &buffer) {
-	return bind(memory, offset, input_buffer::internal::get_buffer(buffer));
+void bind(const type::supplier<const memory_type> &memory, VkDeviceSize offset,
+		input_buffer::input_buffer_type &buffer) {
+	bind(memory, offset, input_buffer::internal::get_buffer(buffer));
 }
 
 }  // namespace internal
@@ -95,7 +96,7 @@ map_type::~map_type() {
 	}
 }
 
-map_type map(const type::supplier<memory_type> &memory, VkDeviceSize offset,
+map_type map(const type::supplier<const memory_type> &memory, VkDeviceSize offset,
 		VkDeviceSize size) {
 	map_type mapped(memory);
 	{

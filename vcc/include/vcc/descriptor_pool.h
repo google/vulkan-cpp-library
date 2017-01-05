@@ -23,11 +23,10 @@ namespace descriptor_pool {
 
 struct descriptor_pool_type
 	: public internal::movable_destructible_with_parent<VkDescriptorPool,
-	device::device_type, vkDestroyDescriptorPool> {
+		const device::device_type, vkDestroyDescriptorPool> {
 	friend VCC_LIBRARY descriptor_pool_type create(
-		const type::supplier<device::device_type> &device,
-		VkDescriptorPoolCreateFlags flags, uint32_t maxSets,
-		const std::vector<VkDescriptorPoolSize> &poolSizes);
+		const type::supplier<const device::device_type> &, VkDescriptorPoolCreateFlags, uint32_t,
+		const std::vector<VkDescriptorPoolSize> &);
 
 	descriptor_pool_type() = default;
 	descriptor_pool_type(descriptor_pool_type &&) = default;
@@ -37,13 +36,12 @@ struct descriptor_pool_type
 
 private:
 	descriptor_pool_type(VkDescriptorPool instance,
-		const type::supplier<device::device_type> &parent)
-		: internal::movable_destructible_with_parent<VkDescriptorPool,
-		device::device_type, vkDestroyDescriptorPool>(instance, parent) {}
+		const type::supplier<const device::device_type> &parent)
+		: movable_destructible_with_parent(instance, parent) {}
 };
 
 VCC_LIBRARY descriptor_pool_type create(
-	const type::supplier<device::device_type> &device,
+	const type::supplier<const device::device_type> &device,
 	VkDescriptorPoolCreateFlags flags, uint32_t maxSets,
 	const std::vector<VkDescriptorPoolSize> &poolSizes);
 

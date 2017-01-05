@@ -21,17 +21,13 @@
 namespace vcc {
 namespace sampler {
 
-struct sampler_type
-	: public internal::movable_destructible_with_parent<VkSampler,
-	device::device_type, vkDestroySampler> {
+struct sampler_type : internal::movable_destructible_with_parent<VkSampler,
+		const device::device_type, vkDestroySampler> {
+
 	friend VCC_LIBRARY sampler_type create(
-		const type::supplier<device::device_type> &device, VkFilter magFilter,
-		VkFilter minFilter, VkSamplerMipmapMode mipmapMode,
-		VkSamplerAddressMode addressModeU, VkSamplerAddressMode addressModeV,
-		VkSamplerAddressMode addressModeW, float mipLodBias,
-		VkBool32 anisotropyEnable, float maxAnisotropy, VkBool32 compareEnable,
-		VkCompareOp compareOp, float minLod, float maxLod,
-		VkBorderColor borderColor, VkBool32 unnormalizedCoordinates);
+		const type::supplier<const device::device_type> &, VkFilter, VkFilter, VkSamplerMipmapMode,
+		VkSamplerAddressMode, VkSamplerAddressMode, VkSamplerAddressMode, float, VkBool32, float,
+		VkBool32, VkCompareOp, float, float, VkBorderColor, VkBool32);
 
 	sampler_type() = default;
 	sampler_type(sampler_type &&) = default;
@@ -40,19 +36,15 @@ struct sampler_type
 	sampler_type &operator=(const sampler_type &) = delete;
 
 private:
-	sampler_type(VkSampler instance,
-		const type::supplier<device::device_type> &parent)
-		: internal::movable_destructible_with_parent<VkSampler,
-		device::device_type, vkDestroySampler>(instance, parent) {}
+	sampler_type(VkSampler instance, const type::supplier<const device::device_type> &parent)
+		: movable_destructible_with_parent(instance, parent) {}
 };
 
-VCC_LIBRARY sampler_type create(
-	const type::supplier<device::device_type> &device, VkFilter magFilter,
-	VkFilter minFilter, VkSamplerMipmapMode mipmapMode,
+VCC_LIBRARY sampler_type create(const type::supplier<const device::device_type> &device,
+	VkFilter magFilter, VkFilter minFilter, VkSamplerMipmapMode mipmapMode,
 	VkSamplerAddressMode addressModeU, VkSamplerAddressMode addressModeV,
-	VkSamplerAddressMode addressModeW, float mipLodBias,
-	VkBool32 anisotropyEnable, float maxAnisotropy, VkBool32 compareEnable,
-	VkCompareOp compareOp, float minLod, float maxLod,
+	VkSamplerAddressMode addressModeW, float mipLodBias, VkBool32 anisotropyEnable,
+	float maxAnisotropy, VkBool32 compareEnable, VkCompareOp compareOp, float minLod, float maxLod,
 	VkBorderColor borderColor, VkBool32 unnormalizedCoordinates);
 
 }  // namespace sampler

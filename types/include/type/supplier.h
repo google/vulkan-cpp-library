@@ -16,30 +16,69 @@
 #ifndef TYPE_SUPPLIER_H_
 #define TYPE_SUPPLIER_H_
 
+#include <cassert>
 #include <functional>
 #include <memory>
+#include <type_traits>
 
 namespace type {
 
+namespace internal {
+
 template<typename T>
-class supplier {
-private:
-	typedef std::function<T&()> function_type;
+class supplier_impl {
+	template<typename U>
+	friend class supplier_impl;
 public:
 	typedef T value_type;
 
-	supplier() = default;
-	supplier(const supplier &copy) = default;
-	supplier(supplier &&) = default;
-	supplier &operator=(const supplier &) = default;
-	supplier &operator=(supplier &&copy) = default;
+	supplier_impl() : pointer(nullptr) {}
+	supplier_impl(const supplier_impl<T> &copy)
+		: pointer(copy.pointer), shared_reference(copy.shared_reference) {}
+	supplier_impl(supplier_impl<T> &&copy)
+		: pointer(copy.pointer), shared_reference(std::move(copy.shared_reference)) {
+		copy.pointer = nullptr;
+	}
+	template<typename U>
+	supplier_impl(const supplier_impl<U> &copy)
+		: pointer(copy.pointer), shared_reference(copy.shared_reference) {}
+	template<typename U>
+	supplier_impl(supplier_impl<U> &&copy)
+		: pointer(copy.pointer), shared_reference(std::move(copy.shared_reference)) {
+		copy.pointer = nullptr;
+	}
 
-	bool operator==(std::nullptr_t) const {
-		return function;
+	supplier_impl &operator=(const supplier_impl &copy) {
+		pointer = copy.pointer;
+		shared_reference = copy.shared_reference;
+		return *this;
+	}
+
+	supplier_impl &operator=(supplier_impl &&copy) {
+		pointer = copy.pointer;
+		copy.pointer = nullptr;
+		shared_reference = std::move(copy.shared_reference);
+		return *this;
+	}
+
+	template<typename U>
+	supplier_impl<T> &operator=(const supplier_impl<U> &copy) {
+		pointer = copy.pointer;
+		shared_reference = copy.shared_reference;
+		return *this;
+	}
+
+	template<typename U>
+	supplier_impl<T> &operator=(supplier_impl<U> &&copy) {
+		pointer = copy.pointer;
+		copy.pointer = nullptr;
+		shared_reference = std::move(copy.shared_reference);
+		return *this;
 	}
 
 	T &get() const {
-		return function();
+		assert(pointer);
+		return *pointer;
 	}
 
 	T &operator*() const {
@@ -51,32 +90,82 @@ public:
 	}
 
 	operator bool() const {
-		return (bool) function;
+		return !!pointer;
 	}
 
 	template<typename... Args>
 	auto operator() (Args... values) const
-			->decltype(this->get()(std::forward<Args>(values)...)) {
+			->decltype(std::declval<T&>()(std::forward<Args>(values)...)) {
 		return get()(std::forward<Args>(values)...);
 	}
 
-	supplier(function_type &&functor)
-		: function(std::forward<function_type>(functor)) {}
+	template<typename U>
+	supplier_impl(const std::shared_ptr<U> &supplier)
+		: pointer(supplier.get()), shared_reference(supplier) {}
 
-	supplier(const std::shared_ptr<T> &supplier)
-		: function([supplier]()->T& {return *supplier;}) {}
+	template<typename U>
+	supplier_impl(std::unique_ptr<U> &&s)
+		: supplier_impl(std::shared_ptr<T>(std::forward<std::unique_ptr<T>>(s))) {}
 
-	supplier(std::unique_ptr<T> &&s)
-		: supplier(std::shared_ptr<T>(std::forward<std::unique_ptr<T>>(s))) {}
+	supplier_impl(const std::reference_wrapper<T> &reference) : pointer(&reference.get()) {}
+	template<typename U>
+	supplier_impl(const std::reference_wrapper<U> &reference) : pointer(&reference.get()) {}
 
-	supplier(const std::reference_wrapper<T> &reference)
-		: function([reference]()->T& {return reference.get();}) {}
-
-	supplier(T &&instance)
-		: supplier<T>(std::make_shared<T>(std::forward<T>(instance))) {}
+	supplier_impl(typename std::remove_const<T>::type &&instance)
+		: supplier_impl(std::make_shared<T>(
+			std::forward<typename std::remove_const<T>::type>(instance))) {}
 
 private:
-	function_type function;
+	T *pointer;
+	std::shared_ptr<T> shared_reference;
+};
+
+} // namespace internal
+
+template<typename T>
+struct supplier : internal::supplier_impl<T> {
+
+	supplier() = default;
+	supplier(const supplier<T> &copy) = default;
+	supplier(supplier<T> &&copy) = default;
+	supplier(const std::shared_ptr<T> &supplier)
+		: internal::supplier_impl<T>(supplier) {}
+	supplier(std::unique_ptr<T> &&s)
+		: internal::supplier_impl<T>(std::forward<std::unique_ptr<T>>(s)) {}
+	supplier(const std::reference_wrapper<T> &reference)
+		: internal::supplier_impl<T>(reference) {}
+	supplier(T &&instance) : internal::supplier_impl<T>(
+		std::forward<typename std::remove_const<T>::type>(instance)) {}
+
+	supplier &operator=(const supplier &) = default;
+	supplier &operator=(supplier &&) = default;
+};
+
+template<typename T>
+struct supplier<const T> : internal::supplier_impl<const T> {
+
+	supplier() = default;
+	supplier(const supplier<const T> &copy) = default;
+	supplier(supplier<const T> &&copy) = default;
+	supplier(const supplier<T> &copy) : internal::supplier_impl<const T>(copy) {}
+	supplier(supplier<T> &&copy)
+		: internal::supplier_impl<const T>(std::forward<supplier<T>>(copy)) {}
+	supplier(const std::shared_ptr<const T> &supplier)
+		: internal::supplier_impl<const T>(supplier) {}
+	supplier(const std::shared_ptr<T> &supplier) : internal::supplier_impl<const T>(supplier) {}
+	supplier(std::unique_ptr<const T> &&s)
+		: internal::supplier_impl<const T>(std::forward<std::unique_ptr<T>>(s)) {}
+	supplier(std::unique_ptr<T> &&s)
+		: internal::supplier_impl<const T>(std::forward<std::unique_ptr<T>>(s)) {}
+	supplier(const std::reference_wrapper<const T> &reference)
+		: internal::supplier_impl<const T>(reference) {}
+	supplier(const std::reference_wrapper<T> &reference)
+		: internal::supplier_impl<const T>(reference) {}
+	supplier(T &&instance) : internal::supplier_impl<const T>(
+		std::forward<typename std::remove_const<T>::type>(instance)) {}
+
+	supplier &operator=(const supplier &) = default;
+	supplier &operator=(supplier &&) = default;
 };
 
 namespace internal {
@@ -115,20 +204,17 @@ struct supplier_lookup_type<const std::reference_wrapper<T>> {
 template<typename T>
 supplier<typename internal::supplier_lookup_type<T>::type> make_supplier(
 		const T &instance) {
-	return supplier<typename internal::supplier_lookup_type<T>::type>(
-		instance);
+	return supplier<typename internal::supplier_lookup_type<T>::type>(instance);
 }
 template<typename T>
 supplier<typename internal::supplier_lookup_type<T>::type> make_supplier(
 		T &instance) {
-	return supplier<typename internal::supplier_lookup_type<T>::type>(
-		instance);
+	return supplier<typename internal::supplier_lookup_type<T>::type>(instance);
 }
 template<typename T>
 supplier<typename internal::supplier_lookup_type<T>::type> make_supplier(
 		T &&instance) {
-	return supplier<typename internal::supplier_lookup_type<T>::type>(
-		std::forward<T>(instance));
+	return supplier<typename internal::supplier_lookup_type<T>::type>(std::forward<T>(instance));
 }
 
 }

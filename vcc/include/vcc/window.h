@@ -103,18 +103,18 @@ struct window_type {
 #elif defined(__ANDROID__)
 		android_app* state,
 #endif // __ANDROID__
-		const type::supplier<instance::instance_type> &instance,
-		const type::supplier<device::device_type> &device,
-		const type::supplier<queue::queue_type> &graphics_queue,
+		const type::supplier<const instance::instance_type> &instance,
+		const type::supplier<const device::device_type> &device,
+		const type::supplier<const queue::queue_type> &graphics_queue,
 		VkExtent2D extent, VkFormat format, const std::string &title);
-	friend void initialize(window_type &window,
+	friend void initialize(window_type &,
 #ifdef _WIN32
-		HINSTANCE connection,
-		HWND window_handle
+		HINSTANCE,
+		HWND
 #elif defined(__ANDROID__)
-		ANativeWindow *window_handle
+		ANativeWindow *
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-		xcb_connection_t *connection
+		xcb_connection_t *
 #endif
 		);
 	friend std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer_type>,
@@ -154,9 +154,9 @@ private:
 		window_handle_type &&window,
 		VkExtent2D extent,
 #endif // __ANDROID__
-		type::supplier<instance::instance_type> instance,
-		const type::supplier<device::device_type> &device,
-		const type::supplier<queue::queue_type> &graphics_queue)
+		type::supplier<const instance::instance_type> instance,
+		const type::supplier<const device::device_type> &device,
+		const type::supplier<const queue::queue_type> &graphics_queue)
 		: instance(instance)
 #if defined(__ANDROID__)
 		, state(state)
@@ -180,10 +180,10 @@ private:
 	atom_reply_t atom_wm_delete_window;
 	VkExtent2D extent;
 #endif // __ANDROID__
-	type::supplier<instance::instance_type> instance;
+	type::supplier<const instance::instance_type> instance;
 	surface::surface_type surface;
-	type::supplier<device::device_type> device;
-	type::supplier<queue::queue_type> graphics_queue;
+	type::supplier<const device::device_type> device;
+	type::supplier<const queue::queue_type> graphics_queue;
 	queue::queue_type present_queue;
 	VkFormat format;
 	VkColorSpaceKHR color_space;
@@ -203,9 +203,9 @@ VCC_LIBRARY window_type create(
 #elif defined(__ANDROID__)
 		android_app* state,
 #endif // __ANDROID__
-	const type::supplier<instance::instance_type> &instance,
-	const type::supplier<device::device_type> &device,
-	const type::supplier<queue::queue_type> &graphics_queue,
+	const type::supplier<const instance::instance_type> &instance,
+	const type::supplier<const device::device_type> &device,
+	const type::supplier<const queue::queue_type> &graphics_queue,
 	VkExtent2D extent, VkFormat format, const std::string &title);
 
 VCC_LIBRARY int run(window_type &window,

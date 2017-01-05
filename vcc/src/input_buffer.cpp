@@ -23,7 +23,7 @@
 namespace vcc {
 namespace input_buffer {
 
-bool flush(input_buffer_type &buffer) {
+bool flush(const input_buffer_type &buffer) {
 	if (type::dirty(buffer.serialize)) {
 		std::unique_lock<std::mutex> lock(buffer.mutex);
 		if (type::dirty(buffer.serialize)) {
@@ -40,10 +40,11 @@ bool flush(input_buffer_type &buffer) {
 	}
 }
 
-bool flush(queue::queue_type &queue, input_buffer_type &buffer) {
+bool flush(const queue::queue_type &queue, const input_buffer_type &buffer) {
 	if (flush(buffer)) {
 		command_pool::command_pool_type command_pool(command_pool::create(
-			vcc::internal::get_parent(queue), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, queue::get_family_index(queue)));
+			vcc::internal::get_parent(queue), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+			queue::get_family_index(queue)));
 		command_buffer::command_buffer_type cmd(std::move(
 			command_buffer::allocate(vcc::internal::get_parent(queue),
 				std::ref(command_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1)
@@ -58,13 +59,13 @@ bool flush(queue::queue_type &queue, input_buffer_type &buffer) {
 					command::buffer_memory_barrier_type{
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
 						VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-						std::ref(buffer.buffer)}
+						std::ref(buffer.buffer) }
 				},
 				{}
 		});
 		// Must block until our command finish executing.
 		fence::fence_type fence(vcc::fence::create(vcc::internal::get_parent(queue)));
-		queue::submit(queue, {}, { std::move(cmd) }, {}, fence);
+		queue::submit(queue, {}, { type::make_supplier(std::move(cmd)) }, {}, fence);
 		fence::wait(*vcc::internal::get_parent(queue), { std::ref(fence) }, true,
 			std::chrono::nanoseconds::max());
 		return true;

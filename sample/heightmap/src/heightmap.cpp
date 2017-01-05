@@ -169,7 +169,7 @@ int main(int argc, const char **argv) {
 #endif  // __ANDROID__
 
 		auto diffuse_image_view(vcc::image_view::create(std::move(diffuse_image),
-		{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }));
+			{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }));
 
 		auto diffuse_sampler(vcc::sampler::create(
 			std::ref(device), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
@@ -188,7 +188,7 @@ int main(int argc, const char **argv) {
 			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			{
 				vcc::descriptor_set::image_info{ std::move(diffuse_sampler),
-				std::move(diffuse_image_view), VK_IMAGE_LAYOUT_GENERAL }
+					std::move(diffuse_image_view), VK_IMAGE_LAYOUT_GENERAL }
 			} });
 	}
 	{
@@ -205,7 +205,7 @@ int main(int argc, const char **argv) {
 #endif  // __ANDROID__
 
 		auto height_image_view(vcc::image_view::create(std::move(height_image),
-		{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }));
+			{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }));
 
 		auto height_sampler(vcc::sampler::create(
 			std::ref(device), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
@@ -221,7 +221,7 @@ int main(int argc, const char **argv) {
 			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			{
 				vcc::descriptor_set::image_info{ std::move(height_sampler),
-				std::move(height_image_view), VK_IMAGE_LAYOUT_GENERAL }
+					std::move(height_image_view), VK_IMAGE_LAYOUT_GENERAL }
 			} });
 	}
 
@@ -401,16 +401,14 @@ int main(int argc, const char **argv) {
 		vcc::queue::wait_idle(queue);
 
 		for (std::size_t i = 0; i < swapchain_images.size(); ++i) {
-			auto framebuffer(vcc::framebuffer::create(std::ref(device),
-				std::ref(render_pass),
+			auto framebuffer(vcc::framebuffer::create(std::ref(device), std::ref(render_pass),
 				{
 					vcc::image_view::create(swapchain_images[i],
 						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }),
 					vcc::image_view::create(depth_image,
 						{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 })
 				}, extent, 1));
-			vcc::command_buffer::compile(command_buffers[i], 0, VK_FALSE,
-				0, 0,
+			vcc::command_buffer::compile(command_buffers[i], 0, VK_FALSE, 0, 0,
 				vcc::command::render_pass(std::ref(render_pass),
 					std::move(framebuffer), VkRect2D{ { 0, 0 }, extent },
 					{
@@ -419,19 +417,16 @@ int main(int argc, const char **argv) {
 					},
 					VK_SUBPASS_CONTENTS_INLINE,
 					vcc::command::bind_pipeline{
-				VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
-				vcc::command::bind_vertex_buffers(0,
-			{ std::ref(vertex_buffer) }, { 0, 0 }),
+						VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
+					vcc::command::bind_vertex_buffers(0, { std::ref(vertex_buffer) }, { 0, 0 }),
 					vcc::command::bind_descriptor_sets{
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				std::ref(pipeline_layout), 0,
-				{ std::ref(desc_set) },{} },
-				vcc::command::set_viewport{
-				0, { { 0.f, 0.f, float(extent.width),
-				float(extent.height), near_z, far_z } } },
-				vcc::command::set_scissor{
-				0,{ { { 0, 0 }, extent } } },
-				vcc::command::draw{ num_instances, 1, 0, 0 }));
+						VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline_layout), 0,
+						{ std::ref(desc_set) },{} },
+					vcc::command::set_viewport{
+						0, { { 0.f, 0.f, float(extent.width),
+						float(extent.height), near_z, far_z } } },
+					vcc::command::set_scissor{ 0,{ { { 0, 0 }, extent } } },
+					vcc::command::draw{ num_instances, 1, 0, 0 }));
 		}
 	},
 			[]() {},

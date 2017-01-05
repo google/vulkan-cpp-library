@@ -19,7 +19,7 @@
 namespace vcc {
 namespace image {
 
-image_type create(const type::supplier<device::device_type> &device,
+image_type create(const type::supplier<const device::device_type> &device,
 		VkImageCreateFlags flags,
 		VkImageType imageType,
 		VkFormat format,

@@ -20,9 +20,9 @@
 namespace vcc {
 namespace framebuffer {
 
-framebuffer_type create(const type::supplier<device::device_type> &device,
-	const type::supplier<render_pass::render_pass_type> &render_pass,
-	const std::vector<type::supplier<image_view::image_view_type>> &image_views,
+framebuffer_type create(const type::supplier<const device::device_type> &device,
+	const type::supplier<const render_pass::render_pass_type> &render_pass,
+	const std::vector<type::supplier<const image_view::image_view_type>> &image_views,
 	VkExtent2D extent, uint32_t layers) {
 
 	VkFramebufferCreateInfo create = {
@@ -33,9 +33,9 @@ framebuffer_type create(const type::supplier<device::device_type> &device,
 	converted_image_views.reserve(image_views.size());
 	std::transform(image_views.begin(), image_views.end(),
 		std::back_inserter(converted_image_views),
-		[](const type::supplier<image_view::image_view_type> &image_view) {
-		return internal::get_instance(*image_view);
-	});
+		[](const type::supplier<const image_view::image_view_type> &image_view) {
+			return internal::get_instance(*image_view);
+		});
 	create.pAttachments = &converted_image_views.front();
 	create.width = extent.width;
 	create.height = extent.height;

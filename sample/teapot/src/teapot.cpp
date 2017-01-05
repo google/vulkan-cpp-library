@@ -276,11 +276,13 @@ int main(int argc, const char **argv) {
 			{ vcc::descriptor_set::buffer_info(std::ref(matrix_uniform_buffer)) }),
 		vcc::descriptor_set::write_buffer(desc_set, 2, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			{ vcc::descriptor_set::buffer_info(std::ref(light_uniform_buffer)) }),
-		vcc::descriptor_set::write_image{ desc_set, 1, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		vcc::descriptor_set::write_image{ desc_set, 1, 0,
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			{
 				vcc::descriptor_set::image_info{
 					std::ref(sampler),
-					vcc::image_view::create(std::move(image), VK_IMAGE_VIEW_TYPE_CUBE, image_format,
+					vcc::image_view::create(std::move(image),
+						VK_IMAGE_VIEW_TYPE_CUBE, image_format,
 						{
 							VK_COMPONENT_SWIZZLE_IDENTITY,
 							VK_COMPONENT_SWIZZLE_IDENTITY,

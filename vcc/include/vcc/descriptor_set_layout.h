@@ -27,14 +27,13 @@ struct descriptor_set_layout_binding {
 	VkDescriptorType descriptorType;
 	uint32_t descriptorCount;
 	VkShaderStageFlags stageFlags;
-	std::vector<type::supplier<sampler::sampler_type>> immutableSamplers;
+	std::vector<type::supplier<const sampler::sampler_type>> immutableSamplers;
 };
 
-struct descriptor_set_layout_type
-	: public internal::movable_destructible_with_parent<VkDescriptorSetLayout,
-	  device::device_type, vkDestroyDescriptorSetLayout> {
+struct descriptor_set_layout_type : internal::movable_destructible_with_parent<
+		VkDescriptorSetLayout, const device::device_type, vkDestroyDescriptorSetLayout> {
 	friend VCC_LIBRARY descriptor_set_layout_type create(
-		const type::supplier<device::device_type> &device,
+		const type::supplier<const device::device_type> &device,
 		const std::vector<descriptor_set_layout_binding> &bindings);
 
 	descriptor_set_layout_type() = default;
@@ -45,13 +44,12 @@ struct descriptor_set_layout_type
 
 private:
 	descriptor_set_layout_type(VkDescriptorSetLayout instance,
-		const type::supplier<device::device_type> &parent)
-		: internal::movable_destructible_with_parent<VkDescriptorSetLayout,
-		device::device_type, vkDestroyDescriptorSetLayout>(instance, parent) {}
+		const type::supplier<const device::device_type> &parent)
+		: movable_destructible_with_parent(instance, parent) {}
 };
 
 VCC_LIBRARY descriptor_set_layout_type create(
-		const type::supplier<device::device_type> &device,
+		const type::supplier<const device::device_type> &device,
 		const std::vector<descriptor_set_layout_binding> &bindings);
 
 }  // namespace descriptor_set_layout

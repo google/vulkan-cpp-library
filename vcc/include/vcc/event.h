@@ -21,11 +21,9 @@
 namespace vcc {
 namespace event {
 
-struct event_type
-	: public internal::movable_destructible_with_parent<VkEvent,
-	device::device_type, vkDestroyEvent> {
-	friend VCC_LIBRARY event_type create(
-		const type::supplier<device::device_type> &device);
+struct event_type : internal::movable_destructible_with_parent<VkEvent, const device::device_type,
+		vkDestroyEvent> {
+	friend VCC_LIBRARY event_type create(const type::supplier<const device::device_type> &device);
 
 	event_type() = default;
 	event_type(event_type &&) = default;
@@ -34,16 +32,14 @@ struct event_type
 	event_type &operator=(const event_type &) = delete;
 
 private:
-	event_type(VkEvent instance,
-		const type::supplier<device::device_type> &parent)
-		: internal::movable_destructible_with_parent<VkEvent,
-		device::device_type, vkDestroyEvent>(instance, parent) {}
+	event_type(VkEvent instance, const type::supplier<const device::device_type> &parent)
+		: movable_destructible_with_parent(instance, parent) {}
 };
 
-VCC_LIBRARY event_type create(const type::supplier<device::device_type> &device);
-VCC_LIBRARY VkResult status(event_type &event);
-VCC_LIBRARY void set(event_type &event);
-VCC_LIBRARY void reset(event_type &event);
+VCC_LIBRARY event_type create(const type::supplier<const device::device_type> &device);
+VCC_LIBRARY VkResult status(const event_type &event);
+VCC_LIBRARY void set(const event_type &event);
+VCC_LIBRARY void reset(const event_type &event);
 
 }  // namespace event
 }  // namespace vcc

@@ -18,7 +18,7 @@
 namespace vcc {
 namespace image_view {
 
-image_view_type create(const type::supplier<image::image_type> &image,
+image_view_type create(const type::supplier<const image::image_type> &image,
 	VkImageViewType viewType, VkFormat format,
 	const VkComponentMapping &components,
 	const VkImageSubresourceRange &subresourceRange) {
@@ -48,7 +48,7 @@ VkImageViewType view_type_from_image_type(VkImageType image_type) {
 	}
 }
 
-image_view_type create(const type::supplier<image::image_type> &image,
+image_view_type create(const type::supplier<const image::image_type> &image,
 	const VkImageSubresourceRange &subresourceRange) {
 	return create(image, view_type_from_image_type(image::get_type(*image)),
 		image::get_format(*image),

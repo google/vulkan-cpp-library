@@ -27,9 +27,9 @@ namespace buffer {
 
 struct buffer_type
 	: public internal::movable_destructible_with_parent_and_memory<VkBuffer,
-		device::device_type, memory::memory_type, vkDestroyBuffer> {
+		const device::device_type, const memory::memory_type, vkDestroyBuffer> {
 	friend VCC_LIBRARY buffer_type create(
-		const type::supplier<device::device_type> &device,
+		const type::supplier<const device::device_type> &device,
 		VkBufferCreateFlags flags, VkDeviceSize size,
 		VkBufferUsageFlags usage, VkSharingMode sharingMode,
 		const std::vector<uint32_t> &queueFamilyIndices);
@@ -41,15 +41,12 @@ struct buffer_type
 	buffer_type &operator=(const buffer_type &) = delete;
 
 private:
-	buffer_type(VkBuffer instance,
-		const type::supplier<device::device_type> &parent)
-		: internal::movable_destructible_with_parent_and_memory<VkBuffer,
-		device::device_type, memory::memory_type, vkDestroyBuffer>(instance,
-			parent) {}
+	buffer_type(VkBuffer instance, const type::supplier<const device::device_type> &parent)
+		: movable_destructible_with_parent_and_memory(instance, parent) {}
 };
 
 VCC_LIBRARY buffer_type create(
-	const type::supplier<device::device_type> &device,
+	const type::supplier<const device::device_type> &device,
 	VkBufferCreateFlags flags, VkDeviceSize size,
 	VkBufferUsageFlags usage, VkSharingMode sharingMode,
 	const std::vector<uint32_t> &queueFamilyIndices);

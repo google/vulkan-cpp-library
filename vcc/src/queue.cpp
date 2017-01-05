@@ -21,7 +21,7 @@
 namespace vcc {
 namespace queue {
 
-queue_type get_device_queue(const type::supplier<device::device_type> &device,
+queue_type get_device_queue(const type::supplier<const device::device_type> &device,
 		uint32_t queue_family_index, uint32_t queue_index) {
 	VkQueue queue;
 	vkGetDeviceQueue(internal::get_instance(*device), queue_family_index,
@@ -29,7 +29,7 @@ queue_type get_device_queue(const type::supplier<device::device_type> &device,
 	return queue_type(queue, device, queue_family_index);
 }
 
-queue_type get_queue(const type::supplier<device::device_type> &device, VkQueueFlags flags) {
+queue_type get_queue(const type::supplier<const device::device_type> &device, VkQueueFlags flags) {
 	const std::vector<VkQueueFamilyProperties> queue_props(
 		physical_device::queue_famility_properties(device::get_physical_device(*device)));
 	for (std::size_t i = 0; i < queue_props.size(); ++i) {
@@ -40,23 +40,22 @@ queue_type get_queue(const type::supplier<device::device_type> &device, VkQueueF
 	throw vcc_exception("Failed to find queue");
 }
 
-queue_type get_present_queue(const type::supplier<device::device_type> &device,
-		surface::surface_type &surface) {
+queue_type get_present_queue(const type::supplier<const device::device_type> &device,
+		const surface::surface_type &surface) {
 	const std::vector<VkQueueFamilyProperties> queue_props(
 		physical_device::queue_famility_properties(
 			device::get_physical_device(*device)));
 	for (std::size_t i = 0; i < queue_props.size(); ++i) {
 		if (vcc::surface::physical_device_support(device::get_physical_device(*device),
 				surface, (uint32_t) i)) {
-			return get_device_queue(type::supplier<device::device_type>(device),
-				(uint32_t) i, 0);
+			return get_device_queue(device, (uint32_t) i, 0);
 		}
 	}
 	throw vcc_exception("Failed to find a present queue");
 }
 
 std::pair<queue_type, queue_type> get_graphics_and_present_queues(
-		const type::supplier<device::device_type> &device,
+		const type::supplier<const device::device_type> &device,
 		surface::surface_type &surface) {
 	const std::vector<VkQueueFamilyProperties> queue_props(
 		physical_device::queue_famility_properties(device::get_physical_device(*device)));
@@ -84,14 +83,16 @@ std::pair<queue_type, queue_type> get_graphics_and_present_queues(
 		get_device_queue(device, (uint32_t) present_index, 0));
 }
 
-void submit(queue_type &queue,
+void submit(const queue_type &queue,
 		const std::vector<wait_semaphore> &wait_semaphores,
-		const std::vector<type::supplier<command_buffer::command_buffer_type>> &command_buffers,
-		const std::vector<type::supplier<semaphore::semaphore_type>> &signal_semaphores,
+		const std::vector<type::supplier<const command_buffer::command_buffer_type>>
+			&command_buffers,
+		const std::vector<type::supplier<const semaphore::semaphore_type>> &signal_semaphores,
 		const fence::fence_type *fence) {
 	std::vector<VkCommandBuffer> converted_command_buffers;
 	converted_command_buffers.reserve(command_buffers.size());
-	for (const type::supplier<command_buffer::command_buffer_type> &command_buffer : command_buffers) {
+	for (const type::supplier<const command_buffer::command_buffer_type> &command_buffer
+			: command_buffers) {
 		converted_command_buffers.push_back(internal::get_instance(*command_buffer));
 		command_buffer::internal::get_pre_execute_hook(*command_buffer)(queue);
 	}
@@ -105,7 +106,7 @@ void submit(queue_type &queue,
 	}
 	std::vector<VkSemaphore> converted_signal_semaphores;
 	converted_signal_semaphores.reserve(signal_semaphores.size());
-	for (const type::supplier<semaphore::semaphore_type> &semaphore : signal_semaphores) {
+	for (const type::supplier<const semaphore::semaphore_type> &semaphore : signal_semaphores) {
 		converted_signal_semaphores.push_back(internal::get_instance(*semaphore));
 	}
 	VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO, NULL };
@@ -121,7 +122,7 @@ void submit(queue_type &queue,
 	for (const wait_semaphore &semaphore : wait_semaphores) {
 		locks.emplace_back(internal::get_mutex(*semaphore.semaphore), std::defer_lock);
 	}
-	for (const type::supplier<semaphore::semaphore_type> &semaphore : signal_semaphores) {
+	for (const type::supplier<const semaphore::semaphore_type> &semaphore : signal_semaphores) {
 		locks.emplace_back(internal::get_mutex(*semaphore), std::defer_lock);
 	}
 	util::lock(locks);
@@ -137,28 +138,29 @@ void submit(queue_type &queue,
 	}
 }
 
-void submit(queue_type &queue,
+void submit(const queue_type &queue,
 		const std::vector<wait_semaphore> &wait_semaphores,
-		const std::vector<type::supplier<command_buffer::command_buffer_type>> &command_buffers,
-		const std::vector<type::supplier<semaphore::semaphore_type>> &signal_semaphores,
+		const std::vector<type::supplier<const command_buffer::command_buffer_type>>
+			&command_buffers,
+		const std::vector<type::supplier<const semaphore::semaphore_type>> &signal_semaphores,
 		const fence::fence_type &fence) {
 	submit(queue, wait_semaphores, command_buffers, signal_semaphores, &fence);
 }
 
-void submit(queue_type &queue,
+void submit(const queue_type &queue,
 	const std::vector<wait_semaphore> &wait_semaphores,
-	const std::vector<type::supplier<command_buffer::command_buffer_type>> &command_buffers,
-	const std::vector<type::supplier<semaphore::semaphore_type>> &signal_semaphores) {
+	const std::vector<type::supplier<const command_buffer::command_buffer_type>> &command_buffers,
+	const std::vector<type::supplier<const semaphore::semaphore_type>> &signal_semaphores) {
 	submit(queue, wait_semaphores, command_buffers, signal_semaphores, nullptr);
 }
 
-void wait_idle(queue_type &queue) {
+void wait_idle(const queue_type &queue) {
 	VKCHECK(vkQueueWaitIdle(internal::get_instance(queue)));
 }
 
-VkResult present(queue_type &queue,
-		const std::vector<type::supplier<semaphore::semaphore_type>> &semaphores,
-		const std::vector<type::supplier<swapchain::swapchain_type>> &swapchains,
+VkResult present(const queue_type &queue,
+		const std::vector<type::supplier<const semaphore::semaphore_type>> &semaphores,
+		const std::vector<type::supplier<const swapchain::swapchain_type>> &swapchains,
 		const std::vector<uint32_t> &image_indices) {
 	VkPresentInfoKHR info = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, NULL};
 	info.waitSemaphoreCount = (uint32_t) semaphores.size();
@@ -167,7 +169,7 @@ VkResult present(queue_type &queue,
 	locks.emplace_back(internal::get_mutex(queue), std::defer_lock);
 	std::vector<VkSemaphore> converted_semaphores;
 	converted_semaphores.reserve(semaphores.size());
-	for (const type::supplier<semaphore::semaphore_type> &semaphore : semaphores) {
+	for (const type::supplier<const semaphore::semaphore_type> &semaphore : semaphores) {
 		converted_semaphores.push_back(internal::get_instance(*semaphore));
 		locks.emplace_back(internal::get_mutex(*semaphore), std::defer_lock);
 	}
@@ -175,7 +177,7 @@ VkResult present(queue_type &queue,
 	info.swapchainCount = (uint32_t) swapchains.size();
 	std::vector<VkSwapchainKHR> converted_swapchains;
 	converted_swapchains.reserve(swapchains.size());
-	for (const type::supplier<swapchain::swapchain_type> &swapchain : swapchains) {
+	for (const type::supplier<const swapchain::swapchain_type> &swapchain : swapchains) {
 		converted_swapchains.push_back(internal::get_instance(*swapchain));
 		locks.emplace_back(internal::get_mutex(*swapchain), std::defer_lock);
 	}

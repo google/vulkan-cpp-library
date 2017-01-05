@@ -350,14 +350,15 @@ int main(int argc, const char **argv) {
 		{
 			vcc::descriptor_set::image_info{
 				std::ref(sampler),
-				vcc::image_view::create(std::move(image), VK_IMAGE_VIEW_TYPE_CUBE, image_format,
-						{
-							VK_COMPONENT_SWIZZLE_IDENTITY,
-							VK_COMPONENT_SWIZZLE_IDENTITY,
-							VK_COMPONENT_SWIZZLE_IDENTITY,
-							VK_COMPONENT_SWIZZLE_IDENTITY
-						},
-						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 6 }),
+				vcc::image_view::create(std::move(image),
+					VK_IMAGE_VIEW_TYPE_CUBE, image_format,
+					{
+						VK_COMPONENT_SWIZZLE_IDENTITY,
+						VK_COMPONENT_SWIZZLE_IDENTITY,
+						VK_COMPONENT_SWIZZLE_IDENTITY,
+						VK_COMPONENT_SWIZZLE_IDENTITY
+					},
+					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 6 }),
 				VK_IMAGE_LAYOUT_GENERAL
 			}
 		} });
@@ -367,8 +368,8 @@ int main(int argc, const char **argv) {
 			{
 				vcc::descriptor_set::image_info{
 					std::ref(normal_sampler),
-					vcc::image_view::create(std::move(normal_image), VK_IMAGE_VIEW_TYPE_2D,
-						normal_image_format,
+					vcc::image_view::create(std::move(normal_image),
+						VK_IMAGE_VIEW_TYPE_2D, normal_image_format,
 						{
 							VK_COMPONENT_SWIZZLE_IDENTITY,
 							VK_COMPONENT_SWIZZLE_IDENTITY,

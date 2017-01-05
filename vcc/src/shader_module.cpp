@@ -20,7 +20,8 @@
 namespace vcc {
 namespace shader_module {
 
-shader_module_type create(const type::supplier<device::device_type> &device, std::istream &&stream) {
+shader_module_type create(const type::supplier<const device::device_type> &device,
+		std::istream &&stream) {
 	std::ostringstream ss;
 	ss << stream.rdbuf();
 	const std::string string(ss.str());

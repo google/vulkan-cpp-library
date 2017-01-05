@@ -21,11 +21,11 @@
 namespace vcc {
 namespace shader_module {
 
-struct shader_module_type
-	: public internal::movable_destructible_with_parent<VkShaderModule,
-	device::device_type, vkDestroyShaderModule> {
-	friend VCC_LIBRARY shader_module_type create(
-		const type::supplier<device::device_type> &device, std::istream &&stream);
+struct shader_module_type : internal::movable_destructible_with_parent<VkShaderModule,
+		const device::device_type, vkDestroyShaderModule> {
+
+	friend VCC_LIBRARY shader_module_type create(const type::supplier<const device::device_type> &,
+		std::istream &&);
 
 	shader_module_type() = default;
 	shader_module_type(shader_module_type &&) = default;
@@ -35,13 +35,12 @@ struct shader_module_type
 
 private:
 	shader_module_type(VkShaderModule instance,
-		const type::supplier<device::device_type> &parent)
-		: internal::movable_destructible_with_parent<VkShaderModule,
-		device::device_type, vkDestroyShaderModule>(instance, parent) {}
+		const type::supplier<const device::device_type> &parent)
+		: movable_destructible_with_parent(instance, parent) {}
 };
 
-VCC_LIBRARY shader_module_type create(
-	const type::supplier<device::device_type> &device, std::istream &&stream);
+VCC_LIBRARY shader_module_type create(const type::supplier<const device::device_type> &device,
+	std::istream &&stream);
 
 }  // namespace shader_module
 }  // namespace vcc

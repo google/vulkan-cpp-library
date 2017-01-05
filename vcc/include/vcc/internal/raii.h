@@ -130,7 +130,17 @@ auto get_memory(T &value)->decltype(value.memory)& {
 }
 
 template<typename T>
+auto get_memory(const T &value)->const decltype(value.memory)& {
+	return value.memory;
+}
+
+template<typename T>
 VkDeviceSize &get_offset(T &value) {
+	return value.offset;
+}
+
+template<typename T>
+const VkDeviceSize &get_offset(const T &value) {
 	return value.offset;
 }
 
@@ -419,7 +429,11 @@ struct movable_destructible_with_parent_and_memory {
 	template<typename U>
 	friend auto get_memory(U &value)->decltype(value.memory)&;
 	template<typename U>
+	friend auto get_memory(const U &value)->const decltype(value.memory)&;
+	template<typename U>
 	friend VkDeviceSize &get_offset(U &value);
+	template<typename U>
+	friend const VkDeviceSize &get_offset(const U &value);
 
 	typedef T value_type;
 
@@ -486,7 +500,11 @@ struct movable_conditional_destructible_with_parent_and_memory {
 	template<typename U>
 	friend auto get_memory(U &value)->decltype(value.memory)&;
 	template<typename U>
+	friend auto get_memory(const U &value)->const decltype(value.memory)&;
+	template<typename U>
 	friend VkDeviceSize &get_offset(U &value);
+	template<typename U>
+	friend const VkDeviceSize &get_offset(const U &value);
 
 	typedef T value_type;
 

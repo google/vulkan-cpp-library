@@ -21,12 +21,11 @@
 namespace vcc {
 namespace pipeline_cache {
 
-struct pipeline_cache_type
-	: public internal::movable_destructible_with_parent<VkPipelineCache,
-		device::device_type, vkDestroyPipelineCache> {
+struct pipeline_cache_type : internal::movable_destructible_with_parent<VkPipelineCache,
+		const device::device_type, vkDestroyPipelineCache> {
+
 	friend VCC_LIBRARY pipeline_cache_type create(
-		const type::supplier<device::device_type> &device,
-		const std::string &data);
+		const type::supplier<const device::device_type> &, const std::string &);
 
 	pipeline_cache_type() = default;
 	pipeline_cache_type(pipeline_cache_type &&) = default;
@@ -36,16 +35,17 @@ struct pipeline_cache_type
 
 private:
 	pipeline_cache_type(VkPipelineCache instance,
-		const type::supplier<device::device_type> &parent)
-		: internal::movable_destructible_with_parent<VkPipelineCache,
-			device::device_type, vkDestroyPipelineCache>(instance, parent) {}
+		const type::supplier<const device::device_type> &parent)
+		: movable_destructible_with_parent(instance, parent) {}
 };
 
-VCC_LIBRARY pipeline_cache_type create(const type::supplier<device::device_type> &device, const std::string &data = std::string());
+VCC_LIBRARY pipeline_cache_type create(const type::supplier<const device::device_type> &device,
+	const std::string &data = std::string());
 
 VCC_LIBRARY std::string serialize(const pipeline_cache_type &pipeline_cache);
 
-VCC_LIBRARY void merge(const pipeline_cache_type &pipeline_cache, const std::vector<type::supplier<pipeline_cache_type>> &source_caches);
+VCC_LIBRARY void merge(const pipeline_cache_type &pipeline_cache,
+	const std::vector<type::supplier<const pipeline_cache_type>> &source_caches);
 
 }  // namespace pipeline_cache
 }  // namespace vcc

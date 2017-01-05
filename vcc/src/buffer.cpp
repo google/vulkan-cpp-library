@@ -18,8 +18,9 @@
 namespace vcc {
 namespace buffer {
 
-buffer_type create(const type::supplier<device::device_type> &device, VkBufferCreateFlags flags, VkDeviceSize size,
-		VkBufferUsageFlags usage, VkSharingMode sharingMode, const std::vector<uint32_t> &queueFamilyIndices) {
+buffer_type create(const type::supplier<const device::device_type> &device,
+		VkBufferCreateFlags flags, VkDeviceSize size, VkBufferUsageFlags usage,
+		VkSharingMode sharingMode, const std::vector<uint32_t> &queueFamilyIndices) {
 	VkBufferCreateInfo create = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, NULL};
 	create.flags = flags;
 	create.size = size;

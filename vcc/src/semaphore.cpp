@@ -18,7 +18,7 @@
 namespace vcc {
 namespace semaphore {
 
-semaphore_type create(const type::supplier<device::device_type> &device) {
+semaphore_type create(const type::supplier<const device::device_type> &device) {
 	VkSemaphoreCreateInfo create = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
 		NULL, 0};
 	VkSemaphore semaphore;

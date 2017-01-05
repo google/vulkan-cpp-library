@@ -20,7 +20,8 @@
 namespace vcc {
 namespace pipeline_cache {
 
-pipeline_cache_type create(const type::supplier<device::device_type> &device, const std::string &data) {
+pipeline_cache_type create(const type::supplier<const device::device_type> &device,
+		const std::string &data) {
 	VkPipelineCacheCreateInfo create = {VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO, NULL, 0};
 	// TODO(gardell): Support
 	create.initialDataSize = data.size();
@@ -43,11 +44,11 @@ std::string serialize(const pipeline_cache_type &pipeline_cache) {
 }
 
 void merge(const pipeline_cache_type &pipeline_cache,
-		const std::vector<type::supplier<pipeline_cache_type>> &source_caches) {
+		const std::vector<type::supplier<const pipeline_cache_type>> &source_caches) {
 	std::vector<VkPipelineCache> caches;
 	caches.reserve(source_caches.size());
 	std::transform(source_caches.begin(), source_caches.end(), std::back_inserter(caches),
-			[](const type::supplier<pipeline_cache_type> &cache){
+			[](const type::supplier<const pipeline_cache_type> &cache){
 		return internal::get_instance(*cache);
 	});
 	std::lock_guard<std::mutex> lock(internal::get_mutex(pipeline_cache));

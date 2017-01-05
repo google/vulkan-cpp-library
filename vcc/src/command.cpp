@@ -90,15 +90,16 @@ void cmd(cmd_args &args, const set_stencil_reference &ssr) {
 void cmd(cmd_args &args, const bind_descriptor_sets &bds) {
 	std::vector<VkDescriptorSet> descriptor_sets;
 	descriptor_sets.reserve(bds.descriptor_sets.size());
-	type::supplier<pipeline_layout::pipeline_layout_type> layout(bds.layout);
+	type::supplier<const pipeline_layout::pipeline_layout_type> layout(bds.layout);
 	args.references.add(layout);
-	args.pre_execute_callbacks.add([layout](queue::queue_type &queue) {
+	args.pre_execute_callbacks.add([layout](const queue::queue_type &queue) {
 		pipeline_layout::internal::get_pre_execute_callbacks(*layout)(queue);
 	});
-	for (const type::supplier<descriptor_set::descriptor_set_type> &descriptor_set : bds.descriptor_sets) {
+	for (const type::supplier<const descriptor_set::descriptor_set_type> &descriptor_set
+			: bds.descriptor_sets) {
 		descriptor_sets.push_back(vcc::internal::get_instance(*descriptor_set));
 		args.references.add(descriptor_set);
-		args.pre_execute_callbacks.add([descriptor_set](queue::queue_type &queue) {
+		args.pre_execute_callbacks.add([descriptor_set](const queue::queue_type &queue) {
 			descriptor_set->pre_execute_callbacks(queue);
 		});
 	}
@@ -121,9 +122,9 @@ void cmd(cmd_args &args, const bind_vertex_buffers_type &bvb) {
 	buffers.reserve(bvb.buffers.size());
 	std::vector<VkDeviceSize> offsets;
 	offsets.reserve(bvb.buffers.size());
-	//for (const type::supplier<buffer::buffer_type> &buffer : bvb.buffers) {
+	//for (const type::supplier<const buffer::buffer_type> &buffer : bvb.buffers) {
 	for (std::size_t i = 0; i < bvb.buffers.size(); ++i) {
-		const type::supplier<buffer::buffer_type> &buffer(bvb.buffers[i]);
+		const type::supplier<const buffer::buffer_type> &buffer(bvb.buffers[i]);
 		buffers.push_back(vcc::internal::get_instance(*buffer));
 		args.references.add(buffer);
 		// TODO(gardell): The bottom seem more correct when mapping multiple objects to the same target,
@@ -287,7 +288,7 @@ void cmd(cmd_args &args, const reset_event &re) {
 void cmd(cmd_args &args, const wait_events &we) {
 	std::vector<VkEvent> events;
 	events.reserve(we.events.size());
-	for (const type::supplier<event::event_type> &event : we.events) {
+	for (const type::supplier<const event::event_type> &event : we.events) {
 		events.push_back(vcc::internal::get_instance(*event));
 		args.references.add(event);
 	}
@@ -388,29 +389,34 @@ void cmd(cmd_args &args, const next_subpass &ns) {
 void cmd(cmd_args &args, const execute_commands &ec) {
 	std::vector<VkCommandBuffer> command_buffers;
 	command_buffers.reserve(ec.commandBuffers.size());
-	for (const type::supplier<command_buffer::command_buffer_type> &command : ec.commandBuffers) {
+	for (const type::supplier<const command_buffer::command_buffer_type> &command
+			: ec.commandBuffers) {
 		command_buffers.push_back(vcc::internal::get_instance(*command));
 		args.references.add(command);
-		args.pre_execute_callbacks.add([command](queue::queue_type &queue) {
+		args.pre_execute_callbacks.add([command](const queue::queue_type &queue) {
 			command_buffer::internal::get_pre_execute_hook(*command)(queue);
 		});
 	}
-	VKTRACE(vkCmdExecuteCommands(
-		vcc::internal::get_instance(args.buffer.get()),
-		(uint32_t)command_buffers.size(), command_buffers.data()));
+	VKTRACE(vkCmdExecuteCommands(vcc::internal::get_instance(args.buffer.get()),
+		(uint32_t) command_buffers.size(), command_buffers.data()));
 }
 
 void cmd(cmd_args &args, const bind_index_data_buffer_type&bidb) {
-	const type::supplier<input_buffer::input_buffer_type> &buffer(bidb.buffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
-	cmd(args, bind_index_buffer_type{ std::ref(input_buffer::internal::get_buffer(*buffer)), bidb.offset, bidb.indexType });
+	const type::supplier<const input_buffer::input_buffer_type> &buffer(bidb.buffer);
+	args.pre_execute_callbacks.add([buffer](const queue::queue_type &queue) {
+		input_buffer::flush(queue, *buffer);
+	});
+	cmd(args, bind_index_buffer_type{ std::ref(input_buffer::internal::get_buffer(*buffer)),
+		bidb.offset, bidb.indexType });
 }
 
 void cmd(cmd_args &args, const bind_vertex_data_buffers_type&bvdb) {
-	std::vector<type::supplier<buffer::buffer_type>> buffers;
+	std::vector<type::supplier<const buffer::buffer_type>> buffers;
 	buffers.reserve(bvdb.buffers.size());
-	for (const type::supplier<input_buffer::input_buffer_type> &buffer : bvdb.buffers) {
-		args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
+	for (const type::supplier<const input_buffer::input_buffer_type> &buffer : bvdb.buffers) {
+		args.pre_execute_callbacks.add([buffer](const queue::queue_type &queue) {
+			input_buffer::flush(queue, *buffer);
+		});
 		buffers.push_back(std::ref(input_buffer::internal::get_buffer(*buffer)));
 	}
 	cmd(args, bind_vertex_buffers_type{ bvdb.first_binding, std::move(buffers),
@@ -418,33 +424,48 @@ void cmd(cmd_args &args, const bind_vertex_data_buffers_type&bvdb) {
 }
 
 void cmd(cmd_args &args, const draw_indirect_data_type&did) {
-	const type::supplier<input_buffer::input_buffer_type> &buffer(did.buffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
-	cmd(args, draw_indirect_type{ std::ref(input_buffer::internal::get_buffer(*buffer)), did.offset, did.drawCount, did.stride });
+	const type::supplier<const input_buffer::input_buffer_type> &buffer(did.buffer);
+	args.pre_execute_callbacks.add([buffer](const queue::queue_type &queue) {
+		input_buffer::flush(queue, *buffer);
+	});
+	cmd(args, draw_indirect_type{ std::ref(input_buffer::internal::get_buffer(*buffer)),
+		did.offset, did.drawCount, did.stride });
 }
 
 void cmd(cmd_args &args, const draw_indexed_indirect_data_type&diid) {
-	const type::supplier<input_buffer::input_buffer_type> &buffer(diid.buffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
-	cmd(args, draw_indexed_indirect_type{ std::ref(input_buffer::internal::get_buffer(*buffer)), diid.offset, diid.drawCount, diid.stride });
+	const type::supplier<const input_buffer::input_buffer_type> &buffer(diid.buffer);
+	args.pre_execute_callbacks.add([buffer](const queue::queue_type &queue) {
+		input_buffer::flush(queue, *buffer);
+	});
+	cmd(args, draw_indexed_indirect_type{ std::ref(input_buffer::internal::get_buffer(*buffer)),
+		diid.offset, diid.drawCount, diid.stride });
 }
 
 void cmd(cmd_args &args, const dispatch_indirect_data_type&did) {
-	const type::supplier<input_buffer::input_buffer_type> &buffer(did.buffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
-	cmd(args, dispatch_indirect_type{ std::ref(input_buffer::internal::get_buffer(*buffer)), did.offset });
+	const type::supplier<const input_buffer::input_buffer_type> &buffer(did.buffer);
+	args.pre_execute_callbacks.add([buffer](const queue::queue_type &queue) {
+		input_buffer::flush(queue, *buffer);
+	});
+	cmd(args, dispatch_indirect_type{ std::ref(input_buffer::internal::get_buffer(*buffer)),
+		did.offset });
 }
 
 void cmd(cmd_args &args, const copy_data_buffer_type&cdb) {
-	const type::supplier<input_buffer::input_buffer_type> &buffer(cdb.srcBuffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
-	cmd(args, copy_buffer_type{ std::ref(input_buffer::internal::get_buffer(*buffer)), cdb.dstBuffer, cdb.regions });
+	const type::supplier<const input_buffer::input_buffer_type> &buffer(cdb.srcBuffer);
+	args.pre_execute_callbacks.add([buffer](const queue::queue_type &queue) {
+		input_buffer::flush(queue, *buffer);
+	});
+	cmd(args, copy_buffer_type{ std::ref(input_buffer::internal::get_buffer(*buffer)),
+		cdb.dstBuffer, cdb.regions });
 }
 
 void cmd(cmd_args &args, const copy_data_buffer_to_image_type&cdbti) {
-	const type::supplier<input_buffer::input_buffer_type> &buffer(cdbti.srcBuffer);
-	args.pre_execute_callbacks.add([buffer](queue::queue_type &queue) {input_buffer::flush(queue, *buffer); });
-	cmd(args, copy_buffer_to_image_type{ std::ref(input_buffer::internal::get_buffer(*buffer)), cdbti.dstImage, cdbti.dstImageLayout, cdbti.regions });
+	const type::supplier<const input_buffer::input_buffer_type> &buffer(cdbti.srcBuffer);
+	args.pre_execute_callbacks.add([buffer](const queue::queue_type &queue) {
+		input_buffer::flush(queue, *buffer);
+	});
+	cmd(args, copy_buffer_to_image_type{ std::ref(input_buffer::internal::get_buffer(*buffer)),
+		cdbti.dstImage, cdbti.dstImageLayout, cdbti.regions });
 }
 
 }  // namespace internal

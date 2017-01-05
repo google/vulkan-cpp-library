@@ -28,14 +28,14 @@ namespace pipeline {
 
 struct shader_stage_type {
 	VkShaderStageFlagBits stage;
-	type::supplier<shader_module::shader_module_type> module;
+	type::supplier<const shader_module::shader_module_type> module;
 	std::string name;
 	std::vector<VkSpecializationMapEntry> map_entries;
 	std::string data;
 };
 
 inline shader_stage_type shader_stage(VkShaderStageFlagBits stage,
-		const type::supplier<shader_module::shader_module_type> &module,
+		const type::supplier<const shader_module::shader_module_type> &module,
 		const std::string &name,
 		const std::vector<VkSpecializationMapEntry> &map_entries = {},
 		const std::string &data = std::string()) {
@@ -44,7 +44,7 @@ inline shader_stage_type shader_stage(VkShaderStageFlagBits stage,
 
 template<typename... StorageType>
 shader_stage_type shader_stage(VkShaderStageFlagBits stage,
-	const type::supplier<shader_module::shader_module_type> &module,
+	const type::supplier<const shader_module::shader_module_type> &module,
 	const std::string &name,
 	const std::vector<VkSpecializationMapEntry> &map_entries,
 	StorageType... storages) {
@@ -144,33 +144,24 @@ struct dynamic_state {
 	std::vector<VkDynamicState> dynamicStates;
 };
 
-struct pipeline_type
-	: internal::movable_destructible_with_parent<VkPipeline,
-		device::device_type, vkDestroyPipeline> {
-	friend pipeline_type create_graphics(const type::supplier<device::device_type> &device,
-		const pipeline_cache::pipeline_cache_type &pipeline_cache,
-		VkPipelineCreateFlags flags,
-		const std::vector<shader_stage_type> &stages,
-		const vertex_input_state &vertexInputState,
-		const input_assembly_state &inputAssemblyState,
-		const tessellation_state *tessellationState,
-		const viewport_state_type &viewportState,
-		const rasterization_state &rasterizationState,
-		const multisample_state &multisampleState,
-		const depth_stencil_state &depthStencilState,
-		const color_blend_state &colorBlendState,
-		const dynamic_state &dynamicState,
-		const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
-		const type::supplier<render_pass::render_pass_type> &render_pass,
-		uint32_t subpass,
-		const type::supplier<pipeline::pipeline_type> &basePipelineHandle);
+struct pipeline_type : internal::movable_destructible_with_parent<VkPipeline,
+		const device::device_type, vkDestroyPipeline> {
+
+	friend pipeline_type create_graphics(const type::supplier<const device::device_type> &,
+		const pipeline_cache::pipeline_cache_type &, VkPipelineCreateFlags,
+		const std::vector<shader_stage_type> &, const vertex_input_state &,
+		const input_assembly_state &, const tessellation_state *, const viewport_state_type &,
+		const rasterization_state &, const multisample_state &, const depth_stencil_state &,
+		const color_blend_state &, const dynamic_state &,
+		const type::supplier<const pipeline_layout::pipeline_layout_type> &,
+		const type::supplier<const render_pass::render_pass_type> &, uint32_t,
+		const type::supplier<const pipeline::pipeline_type> &);
 	friend VCC_LIBRARY pipeline_type create_compute(
-		const type::supplier<device::device_type> &device,
-		const pipeline_cache::pipeline_cache_type &pipeline_cache,
-		VkPipelineCreateFlags flags,
-		const shader_stage_type &stage,
-		const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
-		const type::supplier<pipeline::pipeline_type> &basePipelineHandle);
+		const type::supplier<const device::device_type> &,
+		const pipeline_cache::pipeline_cache_type &, VkPipelineCreateFlags,
+		const shader_stage_type &,
+		const type::supplier<const pipeline_layout::pipeline_layout_type> &,
+		const type::supplier<const pipeline::pipeline_type> &);
 
 	pipeline_type() = default;
 	pipeline_type(pipeline_type &&) = default;
@@ -180,24 +171,22 @@ struct pipeline_type
 
 private:
 	pipeline_type(VkPipeline instance,
-		const type::supplier<device::device_type> &parent,
-		const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
-		const type::supplier<render_pass::render_pass_type> &render_pass)
-		: internal::movable_destructible_with_parent<VkPipeline,
-			device::device_type, vkDestroyPipeline>(instance, parent),
-		layout(layout), render_pass(render_pass) {}
+		const type::supplier<const device::device_type> &parent,
+		const type::supplier<const pipeline_layout::pipeline_layout_type> &layout,
+		const type::supplier<const render_pass::render_pass_type> &render_pass)
+		: movable_destructible_with_parent(instance, parent)
+		, layout(layout), render_pass(render_pass) {}
 	pipeline_type(VkPipeline instance,
-		const type::supplier<device::device_type> &parent,
-		const type::supplier<pipeline_layout::pipeline_layout_type> &layout)
-		: internal::movable_destructible_with_parent<VkPipeline,
-		device::device_type, vkDestroyPipeline>(instance, parent),
-		layout(layout) {}
-	type::supplier<pipeline_layout::pipeline_layout_type> layout;
+		const type::supplier<const device::device_type> &parent,
+		const type::supplier<const pipeline_layout::pipeline_layout_type> &layout)
+		: movable_destructible_with_parent(instance, parent)
+		, layout(layout) {}
+	type::supplier<const pipeline_layout::pipeline_layout_type> layout;
 	// TODO(gardell): Remove render_pass, move into generic reference.
-	type::supplier<render_pass::render_pass_type> render_pass;
+	type::supplier<const render_pass::render_pass_type> render_pass;
 };
 
-VCC_LIBRARY pipeline_type create_graphics(const type::supplier<device::device_type> &device,
+VCC_LIBRARY pipeline_type create_graphics(const type::supplier<const device::device_type> &device,
 	const pipeline_cache::pipeline_cache_type &pipeline_cache,
 	VkPipelineCreateFlags flags,
 	const std::vector<shader_stage_type> &stages,
@@ -210,13 +199,13 @@ VCC_LIBRARY pipeline_type create_graphics(const type::supplier<device::device_ty
 	const depth_stencil_state &depthStencilState,
 	const color_blend_state &colorBlendState,
 	const dynamic_state &dynamicState,
-	const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
-	const type::supplier<render_pass::render_pass_type> &render_pass,
+	const type::supplier<const pipeline_layout::pipeline_layout_type> &layout,
+	const type::supplier<const render_pass::render_pass_type> &render_pass,
 	uint32_t subpass,
-	const type::supplier<pipeline::pipeline_type> &basePipelineHandle =
-		type::supplier<pipeline::pipeline_type>());
+	const type::supplier<const pipeline::pipeline_type> &basePipelineHandle =
+		type::supplier<const pipeline::pipeline_type>());
 
-VCC_LIBRARY pipeline_type create_graphics(const type::supplier<device::device_type> &device,
+VCC_LIBRARY pipeline_type create_graphics(const type::supplier<const device::device_type> &device,
 	const pipeline_cache::pipeline_cache_type &pipeline_cache,
 	VkPipelineCreateFlags flags,
 	const std::vector<shader_stage_type> &stages,
@@ -228,17 +217,18 @@ VCC_LIBRARY pipeline_type create_graphics(const type::supplier<device::device_ty
 	const depth_stencil_state &depthStencilState,
 	const color_blend_state &colorBlendState,
 	const dynamic_state &dynamicState,
-	const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
-	const type::supplier<render_pass::render_pass_type> &render_pass,
+	const type::supplier<const pipeline_layout::pipeline_layout_type> &layout,
+	const type::supplier<const render_pass::render_pass_type> &render_pass,
 	uint32_t subpass,
-	const type::supplier<pipeline::pipeline_type> &basePipelineHandle = type::supplier<pipeline::pipeline_type>());
+	const type::supplier<const pipeline::pipeline_type> &basePipelineHandle =
+		type::supplier<const pipeline::pipeline_type>());
 
-VCC_LIBRARY pipeline_type create_compute(const type::supplier<device::device_type> &device,
-	const pipeline_cache::pipeline_cache_type &pipeline_cache,
-	VkPipelineCreateFlags flags,
+VCC_LIBRARY pipeline_type create_compute(const type::supplier<const device::device_type> &device,
+	const pipeline_cache::pipeline_cache_type &pipeline_cache, VkPipelineCreateFlags flags,
 	const shader_stage_type &stage,
-	const type::supplier<pipeline_layout::pipeline_layout_type> &layout,
-	const type::supplier<pipeline::pipeline_type> &basePipelineHandle = type::supplier<pipeline::pipeline_type>());
+	const type::supplier<const pipeline_layout::pipeline_layout_type> &layout,
+	const type::supplier<const pipeline::pipeline_type> &basePipelineHandle =
+		type::supplier<const pipeline::pipeline_type>());
 
 }  // namespace pipeline_cache
 }  // namespace vcc

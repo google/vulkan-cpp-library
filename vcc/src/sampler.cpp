@@ -18,7 +18,7 @@
 namespace vcc {
 namespace sampler {
 
-sampler_type create(const type::supplier<device::device_type> &device,
+sampler_type create(const type::supplier<const device::device_type> &device,
 		VkFilter magFilter, VkFilter minFilter, VkSamplerMipmapMode mipmapMode,
 		VkSamplerAddressMode addressModeU, VkSamplerAddressMode addressModeV,
 		VkSamplerAddressMode addressModeW, float mipLodBias,

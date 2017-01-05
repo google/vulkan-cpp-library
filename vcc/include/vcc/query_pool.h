@@ -21,14 +21,11 @@
 namespace vcc {
 namespace query_pool {
 
-struct query_pool_type
-	: public internal::movable_destructible_with_parent<VkQueryPool,
-	device::device_type, vkDestroyQueryPool> {
-	friend VCC_LIBRARY query_pool_type create(
-		type::supplier<device::device_type> &device,
-		VkQueryType queryType,
-		uint32_t queryCount,
-		VkQueryPipelineStatisticFlags pipelineStatistics);
+struct query_pool_type : internal::movable_destructible_with_parent<VkQueryPool,
+		const device::device_type, vkDestroyQueryPool> {
+
+	friend VCC_LIBRARY query_pool_type create(const type::supplier<const device::device_type> &,
+		VkQueryType, uint32_t, VkQueryPipelineStatisticFlags);
 
 	query_pool_type() = default;
 	query_pool_type(query_pool_type &&) = default;
@@ -37,16 +34,12 @@ struct query_pool_type
 	query_pool_type &operator=(const query_pool_type &) = delete;
 
 private:
-	query_pool_type(VkQueryPool instance,
-		const type::supplier<device::device_type> &parent)
-		: internal::movable_destructible_with_parent<VkQueryPool,
-		device::device_type, vkDestroyQueryPool>(instance, parent) {}
+	query_pool_type(VkQueryPool instance, const type::supplier<const device::device_type> &parent)
+		: movable_destructible_with_parent(instance, parent) {}
 };
 
-VCC_LIBRARY query_pool_type create(type::supplier<device::device_type> &device,
-		VkQueryType queryType,
-		uint32_t queryCount,
-		VkQueryPipelineStatisticFlags pipelineStatistics);
+VCC_LIBRARY query_pool_type create(const type::supplier<const device::device_type> &device,
+	VkQueryType queryType, uint32_t queryCount, VkQueryPipelineStatisticFlags pipelineStatistics);
 
 VCC_LIBRARY void get_results(uint32_t firstQuery, uint32_t queryCount, size_t dataSize,
 		void* pData, VkDeviceSize stride, VkQueryResultFlags flags);

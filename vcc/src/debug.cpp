@@ -65,9 +65,8 @@ VkBool32 VKAPI_PTR dbgFunc(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeE
 	return (*static_cast<const callback_type *>(pUserData))(flags, objectType, object, location, messageCode, pLayerPrefix, pMessage) ? VK_TRUE : VK_FALSE;
 }
 
-debug_type create(const type::supplier<instance::instance_type> &instance,
-		VkDebugReportFlagsEXT flags,
-		std::unique_ptr<callback_type> &&callback_ptr,
+debug_type create(const type::supplier<const instance::instance_type> &instance,
+		VkDebugReportFlagsEXT flags, std::unique_ptr<callback_type> &&callback_ptr,
 		PFN_vkDebugReportCallbackEXT callback) {
 	const PFN_vkCreateDebugReportCallbackEXT dbgCreateMsgCallback =
 		(PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(
@@ -94,8 +93,10 @@ debug_type create(const type::supplier<instance::instance_type> &instance,
 		dbgDestroyMsgCallback);
 }
 
-debug_type create(type::supplier<instance::instance_type> &&instance, VkFlags msgFlags, const callback_type &callback) {
-	return create(std::forward<type::supplier<instance::instance_type>>(instance), msgFlags, std::unique_ptr<callback_type>(new callback_type(callback)), &dbgFunc);
+debug_type create(const type::supplier<const instance::instance_type> &instance, VkFlags msgFlags,
+		const callback_type &callback) {
+	return create(instance, msgFlags, std::unique_ptr<callback_type>(new callback_type(callback)),
+		&dbgFunc);
 }
 
 }  // namespace debug
