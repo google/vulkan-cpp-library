@@ -127,9 +127,9 @@ image::image_type gli_loader_type::load(
 						VK_QUEUE_FAMILY_IGNORED,
 						std::ref(staging_image),
 						{ aspect_mask, 0, 1, 0, 1 } } }));
-					fence::reset(*device, { std::ref(fence) });
-					queue::submit(*queue, {}, { std::ref(command_buffer) }, {}, fence);
-					fence::wait(*device, { std::ref(fence) }, true);
+					fence::reset(*device, { fence });
+					queue::submit(*queue, {}, { command_buffer }, {}, fence);
+					fence::wait(*device, { fence }, true);
 
 					copy_to_linear_image(format, aspect_mask,
 						VkExtent2D{ uint32_t(copy_extent.x), uint32_t(copy_extent.y) },
@@ -173,9 +173,9 @@ image::image_type gli_loader_type::load(
 							{ 0, 0, int32_t(z) },
 							{ uint32_t(extent.x), uint32_t(extent.y), 1 }
 					} } });
-					fence::reset(*device, { std::ref(fence) });
-					queue::submit(*queue, {}, { std::ref(command_buffer) }, {}, fence);
-					fence::wait(*device, { std::ref(fence) }, true);
+					fence::reset(*device, { fence });
+					queue::submit(*queue, {}, { command_buffer }, {}, fence);
+					fence::wait(*device, { fence }, true);
 				}
 			}
 		}

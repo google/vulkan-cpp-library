@@ -140,10 +140,8 @@ TEST(ComputeShaderIntegrationTest, ComputeShaderIntegrationTest1) {
 			},
 			{}));
 	vcc::fence::fence_type fence(vcc::fence::create(std::ref(device)));
-	vcc::queue::submit(queue, {},
-		{ std::ref(command_buffer) }, {}, fence);
-	vcc::fence::wait(std::ref(device), { std::ref(fence) }, true,
-		std::chrono::nanoseconds::max());
+	vcc::queue::submit(queue, {}, { command_buffer }, {}, fence);
+	vcc::fence::wait(device, { fence }, true, std::chrono::nanoseconds::max());
 	vcc::queue::wait_idle(queue);
 
 	{

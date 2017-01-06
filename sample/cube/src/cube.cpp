@@ -397,7 +397,7 @@ int main(int argc, const char **argv) {
 					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
 					depth_image, { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 } } }));
 
-			vcc::queue::submit(queue, {}, { std::ref(command_buffer) }, {});
+			vcc::queue::submit(queue, {}, { command_buffer }, {});
 			vcc::queue::wait_idle(queue);
 
 			for (std::size_t i = 0; i < swapchain_images.size(); ++i) {
@@ -443,8 +443,7 @@ int main(int argc, const char **argv) {
 			type::write(projection_modelview_matrix)[0] = projection_matrix
 				* view_matrix * glm::rotate(angle.y, glm::vec3(1, 0, 0))
 				* glm::rotate(angle.x, glm::vec3(0, 1, 0));
-			vcc::queue::submit(queue, {},
-			{ std::ref(command_buffers[index]) }, {});
+			vcc::queue::submit(queue, {}, { command_buffers[index] }, {});
 		},
 		vcc::window::input_callbacks_type()
 		.set_mouse_down_callback([&](

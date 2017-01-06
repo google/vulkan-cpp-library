@@ -74,9 +74,8 @@ void flush(const type::supplier<const type::serialize_type> &constants,
 		}
 		// Must block until our command finish executing.
 		fence::fence_type fence(fence::create(device));
-		queue::submit(queue, {}, { std::ref(cmd) }, {}, fence);
-		fence::wait(*device, { std::ref(fence) }, true,
-			std::chrono::nanoseconds::max());
+		queue::submit(queue, {}, { cmd }, {}, fence);
+		fence::wait(*device, { fence }, true, std::chrono::nanoseconds::max());
 	}
 }
 
