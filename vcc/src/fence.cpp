@@ -28,12 +28,12 @@ fence_type create(const type::supplier<const device::device_type> &device,
 }
 
 VkResult wait(const device::device_type &device,
-		const std::vector<std::reference_wrapper<fence_type>> &fences,
+		const std::vector<std::reference_wrapper<const fence_type>> &fences,
 		bool wait_all, uint64_t timeout) {
 	std::vector<VkFence> converted_fences;
 	converted_fences.reserve(fences.size());
-	for (const std::reference_wrapper<fence_type> &fence : fences) {
-		converted_fences.push_back(internal::get_instance(fence.get()));
+	for (const fence_type &fence : fences) {
+		converted_fences.push_back(internal::get_instance(fence));
 	}
 	VkResult result = vkWaitForFences(internal::get_instance(device),
 		(uint32_t)fences.size(), converted_fences.data(), !!wait_all, timeout);
@@ -44,28 +44,28 @@ VkResult wait(const device::device_type &device,
 }
 
 VkResult wait(const device::device_type &device,
-		const std::vector<std::reference_wrapper<fence_type>> &fences,
+		const std::vector<std::reference_wrapper<const fence_type>> &fences,
 		bool wait_all,
 		std::chrono::nanoseconds timeout) {
 	return wait(device, fences, wait_all, timeout.count());
 }
 
 VkResult wait(const device::device_type &device,
-		const std::vector<std::reference_wrapper<fence_type>> &fences, bool wait_all) {
+		const std::vector<std::reference_wrapper<const fence_type>> &fences, bool wait_all) {
 	return wait(device, fences, wait_all, UINT64_MAX);
 }
 
 void reset(const device::device_type &device,
-	const std::vector<type::supplier<const fence_type>> &fences) {
+	const std::vector<std::reference_wrapper<const fence_type>> &fences) {
 	std::vector<VkFence> converted_fences;
 	converted_fences.reserve(fences.size());
-	for (const type::supplier<const fence_type> &fence : fences) {
-		converted_fences.push_back(internal::get_instance(*fence));
+	for (const fence_type &fence : fences) {
+		converted_fences.push_back(internal::get_instance(fence));
 	}
 	std::vector<std::unique_lock<std::mutex>> locks;
 	locks.reserve(fences.size());
-	for (const type::supplier<const fence_type> &fence : fences) {
-		locks.emplace_back(internal::get_mutex(*fence), std::defer_lock);
+	for (const fence_type &fence : fences) {
+		locks.emplace_back(internal::get_mutex(fence), std::defer_lock);
 	}
 	util::lock(locks);
 	VKCHECK(vkResetFences(internal::get_instance(device), uint32_t(fences.size()),

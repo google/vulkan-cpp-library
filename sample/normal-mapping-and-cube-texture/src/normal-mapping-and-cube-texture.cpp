@@ -506,8 +506,8 @@ int main(int argc, const char **argv) {
 					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
 					depth_image, { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 } } }));
 		vcc::fence::fence_type fence(vcc::fence::create(std::ref(device)));
-		vcc::queue::submit(queue, {}, { std::ref(command_buffer) }, {}, fence);
-		vcc::fence::wait(device, { std::ref(fence) }, true);
+		vcc::queue::submit(queue, {}, { command_buffer }, {}, fence);
+		vcc::fence::wait(device, { fence }, true);
 
 		command_buffers = vcc::command_buffer::allocate(std::ref(device), std::ref(cmd_pool),
 			VK_COMMAND_BUFFER_LEVEL_PRIMARY, (uint32_t) swapchain_images.size());
@@ -549,7 +549,7 @@ int main(int argc, const char **argv) {
 			type::write(modelview_matrix_array)[0] = modelview_matrix;
 			type::write(normal_matrix_array)[0] =
 				glm::mat3(glm::transpose(glm::inverse(modelview_matrix)));
-			vcc::queue::submit(queue, {}, { std::ref(command_buffers[index]) }, {});
+			vcc::queue::submit(queue, {}, { command_buffers[index] }, {});
 		},
 		vcc::window::input_callbacks_type()
 		.set_mouse_down_callback([&](

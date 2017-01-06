@@ -201,11 +201,11 @@ int vr_type::run(const draw_callback_type &draw_callback,
 		type::supplier<const vcc::device::device_type> device(
 			vcc::internal::get_parent(*queue));
 
-		vcc::queue::submit(*queue, { }, { std::ref(pre_draw_command_buffer) }, {});
+		vcc::queue::submit(*queue, { }, { pre_draw_command_buffer }, {});
 
 		draw_callback(mat4DevicePose);
 
-		vcc::queue::submit(*queue, {}, { std::ref(post_draw_command_buffer) }, { });
+		vcc::queue::submit(*queue, {}, { post_draw_command_buffer }, { });
 
 		vr::VRVulkanTextureData_t texture_data{
 			uint64_t(VkImage(vcc::internal::get_instance(image))),

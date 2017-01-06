@@ -74,20 +74,20 @@ struct wait_semaphore {
 // TODO(gardell): Support multiple submits
 VCC_LIBRARY void submit(const queue_type &queue,
 	const std::vector<wait_semaphore> &wait_semaphores,
-	const std::vector<type::supplier<const command_buffer::command_buffer_type>> &command_buffers,
-	const std::vector<type::supplier<const semaphore::semaphore_type>> &signal_semaphores,
+	const std::vector<std::reference_wrapper<const command_buffer::command_buffer_type>> &command_buffers,
+	const std::vector<std::reference_wrapper<const semaphore::semaphore_type>> &signal_semaphores,
 	const fence::fence_type &fence);
 
 VCC_LIBRARY void submit(const queue_type &queue,
 	const std::vector<wait_semaphore> &wait_semaphores,
-	const std::vector<type::supplier<const command_buffer::command_buffer_type>> &command_buffers,
-	const std::vector<type::supplier<const semaphore::semaphore_type>> &signal_semaphores);
+	const std::vector<std::reference_wrapper<const command_buffer::command_buffer_type>> &command_buffers,
+	const std::vector<std::reference_wrapper<const semaphore::semaphore_type>> &signal_semaphores);
 
 VCC_LIBRARY void wait_idle(const queue_type &queue);
 
 VCC_LIBRARY VkResult present(const queue_type &queue,
-	const std::vector<type::supplier<const semaphore::semaphore_type>> &semaphores,
-	const std::vector<type::supplier<const swapchain::swapchain_type>> &swapchains,
+	const std::vector<std::reference_wrapper<const semaphore::semaphore_type>> &semaphores,
+	const std::vector<std::reference_wrapper<const swapchain::swapchain_type>> &swapchains,
 	const std::vector<uint32_t> &image_indices);
 
 inline uint32_t get_family_index(const queue_type &queue) {

@@ -47,14 +47,14 @@ VCC_LIBRARY fence_type create(
 	VkFenceCreateFlags flags = 0);
 
 VCC_LIBRARY VkResult wait(const device::device_type &device,
-		const std::vector<std::reference_wrapper<fence_type>> &fences,
+		const std::vector<std::reference_wrapper<const fence_type>> &fences,
 		bool wait_all, std::chrono::nanoseconds timeout);
 
 VkResult wait(const device::device_type &device,
-	const std::vector<std::reference_wrapper<fence_type>> &fences, bool wait_all);
+	const std::vector<std::reference_wrapper<const fence_type>> &fences, bool wait_all);
 
 VCC_LIBRARY void reset(const device::device_type &device,
-	const std::vector<type::supplier<const fence_type>> &fences);
+	const std::vector<std::reference_wrapper<const fence_type>> &fences);
 
 }  // namespace fence
 }  // namespace vcc

@@ -452,7 +452,7 @@ int main(int argc, char **argv) {
 				VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
 				depth_image,{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 } } }));
 
-		vcc::queue::submit(queue, {}, { std::ref(command_buffer) }, {});
+		vcc::queue::submit(queue, {}, { command_buffer }, {});
 	}
 	vcc::queue::wait_idle(queue);
 
@@ -527,10 +527,10 @@ int main(int argc, char **argv) {
 			const glm::mat4 hmd_matrix(glm::inverse(glm::mat4(
 				mat4DevicePose[vr::k_unTrackedDeviceIndex_Hmd])));
 			update_matrix_callback(hmd_matrix, mat4DevicePose);
-			std::shared_ptr<vcc::command_buffer::command_buffer_type>
+			std::shared_ptr<const vcc::command_buffer::command_buffer_type>
 				command_buffer(shared_command_buffer);
 			if (command_buffer) {
-				vcc::queue::submit(queue, {}, { command_buffer }, {});
+				vcc::queue::submit(queue, {}, { *command_buffer }, {});
 			}
 		},
 		[&](const vr::VREvent_t &event) {

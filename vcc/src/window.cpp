@@ -171,7 +171,7 @@ std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer
 						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
 					}
 				}));
-		vcc::queue::submit(window.present_queue, {}, { std::ref(command_buffer) }, {});
+		vcc::queue::submit(window.present_queue, {}, { command_buffer }, {});
 
 		vcc::command_buffer::command_buffer_type pre_draw_command(std::move(
 			vcc::command_buffer::allocate(window.device, std::ref(window.cmd_pool),
@@ -258,23 +258,21 @@ void draw(window_type &window, swapchain::swapchain_type &swapchain,
 	// Assume the command buffer has been run on current_buffer before so
 	// we need to set the image layout back to COLOR_ATTACHMENT_OPTIMAL
 	vcc::queue::submit(*window.graphics_queue,
-	  { vcc::queue::wait_semaphore{ std::ref(image_acquired_semaphore),
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } },
-		{ std::ref(pre_draw_commands[current_buffer]) }, {});
+		{ vcc::queue::wait_semaphore{ std::ref(image_acquired_semaphore),
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } },
+		{ pre_draw_commands[current_buffer] }, {});
 
 	draw_callback(current_buffer);
 
-  vcc::queue::submit(*window.graphics_queue, {}, {}, { std::ref(draw_semaphore) });
+  vcc::queue::submit(*window.graphics_queue, {}, {}, { draw_semaphore });
 
 	vcc::queue::submit(window.present_queue,
 		{ vcc::queue::wait_semaphore{ std::ref(draw_semaphore),
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } },
-		{ std::ref(post_draw_commands[current_buffer]) },
-		{ std::ref(present_semaphore) });
+		{ post_draw_commands[current_buffer] }, { present_semaphore });
 
-	err = vcc::queue::present(window.present_queue,
-		{ std::ref(present_semaphore) },
-		{ std::ref(swapchain) }, { current_buffer });
+	err = vcc::queue::present(window.present_queue, { present_semaphore }, { swapchain },
+		{ current_buffer });
 	switch (err) {
 	case VK_ERROR_OUT_OF_DATE_KHR:
 		// swapchain is out of date (e.g. the window was resized) and
