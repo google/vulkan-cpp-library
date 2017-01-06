@@ -157,7 +157,7 @@ std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer
 		vcc::command_buffer::command_buffer_type command_buffer(std::move(
 		  vcc::command_buffer::allocate(window.device, std::ref(window.cmd_pool),
 			  VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-		vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
+		vcc::command::compile(vcc::command::build(std::ref(command_buffer), 0, VK_FALSE, 0, 0),
 			vcc::command::pipeline_barrier(
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
@@ -176,7 +176,7 @@ std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer
 		vcc::command_buffer::command_buffer_type pre_draw_command(std::move(
 			vcc::command_buffer::allocate(window.device, std::ref(window.cmd_pool),
 				VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-		vcc::command_buffer::compile(pre_draw_command, 0, VK_FALSE, 0, 0,
+		vcc::command::compile(vcc::command::build(std::ref(pre_draw_command), 0, VK_FALSE, 0, 0),
 			vcc::command::pipeline_barrier(
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, {}, {},
@@ -196,7 +196,7 @@ std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer
 		vcc::command_buffer::command_buffer_type post_draw_command(std::move(
 			vcc::command_buffer::allocate(window.device, std::ref(window.cmd_pool),
 				VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-		vcc::command_buffer::compile(post_draw_command, 0, VK_FALSE, 0, 0,
+		vcc::command::compile(vcc::command::build(std::ref(post_draw_command), 0, VK_FALSE, 0, 0),
 			vcc::command::pipeline_barrier(
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, {}, {},

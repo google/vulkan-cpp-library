@@ -386,7 +386,7 @@ int main(int argc, const char **argv) {
 		vcc::command_buffer::command_buffer_type command_buffer(
 			std::move(vcc::command_buffer::allocate(std::ref(device),
 				std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-		vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
+		vcc::command::compile(vcc::command::build(std::ref(command_buffer), 0, VK_FALSE, 0, 0),
 			vcc::command::pipeline_barrier(
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
@@ -408,7 +408,8 @@ int main(int argc, const char **argv) {
 					vcc::image_view::create(depth_image,
 						{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 })
 				}, extent, 1));
-			vcc::command_buffer::compile(command_buffers[i], 0, VK_FALSE, 0, 0,
+			vcc::command::compile(
+				vcc::command::build(std::ref(command_buffers[i]), 0, VK_FALSE, 0, 0),
 				vcc::command::render_pass(std::ref(render_pass),
 					std::move(framebuffer), VkRect2D{ { 0, 0 }, extent },
 					{

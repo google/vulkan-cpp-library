@@ -121,8 +121,7 @@ TEST(ComputeShaderIntegrationTest, ComputeShaderIntegrationTest1) {
 		vcc::command_buffer::allocate(std::ref(device),
 			std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 
-	vcc::command_buffer::compile(command_buffer, 0, VK_FALSE,
-		0, 0,
+	vcc::command::compile(vcc::command::build(std::ref(command_buffer), 0, VK_FALSE, 0, 0),
 		vcc::command::bind_pipeline{
 			VK_PIPELINE_BIND_POINT_COMPUTE, std::ref(pipeline) },
 		vcc::command::bind_descriptor_sets{
