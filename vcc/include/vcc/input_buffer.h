@@ -139,7 +139,7 @@ VCC_LIBRARY bool flush(const input_buffer_type &buffer);
 
 // Flushes content of the buffer to the GPU if there is data with an old revision.
 // A memory barrier is pushed on the queue.
-VCC_LIBRARY bool flush(const queue::queue_type &queue, input_buffer_type &buffer);
+VCC_LIBRARY bool flush(const queue::queue_type &queue, const input_buffer_type &buffer);
 
 }  // namespace input_buffer
 }  // namespace vcc
