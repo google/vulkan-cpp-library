@@ -24,7 +24,8 @@
 namespace vcc {
 namespace swapchain {
 
-swapchain_type create(const type::supplier<device::device_type> &device, const create_info_type &create_info) {
+swapchain_type create(const type::supplier<const device::device_type> &device,
+		const create_info_type &create_info) {
 	VkSwapchainCreateInfoKHR create = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, NULL, 0 };
 	create.minImageCount = create_info.minImageCount;
 	create.imageFormat = create_info.imageFormat;

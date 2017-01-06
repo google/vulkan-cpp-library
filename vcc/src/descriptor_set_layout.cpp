@@ -20,7 +20,8 @@
 namespace vcc {
 namespace descriptor_set_layout {
 
-std::pair<std::vector<VkDescriptorSetLayoutBinding>, std::vector<std::vector<VkSampler>>> convert_bindings(const std::vector<descriptor_set_layout_binding> &bindings) {
+std::pair<std::vector<VkDescriptorSetLayoutBinding>, std::vector<std::vector<VkSampler>>>
+		convert_bindings(const std::vector<descriptor_set_layout_binding> &bindings) {
 	std::vector<VkDescriptorSetLayoutBinding> converted_bindings;
 	std::vector<std::vector<VkSampler>> converted_samplers;
 	converted_bindings.reserve(bindings.size());
@@ -34,9 +35,10 @@ std::pair<std::vector<VkDescriptorSetLayoutBinding>, std::vector<std::vector<VkS
 		std::vector<VkSampler> samplers;
 		samplers.reserve(binding.immutableSamplers.size());
 		std::transform(binding.immutableSamplers.begin(), binding.immutableSamplers.end(),
-			std::back_inserter(samplers), [](const type::supplier<sampler::sampler_type> &sampler) {
-			return internal::get_instance(*sampler);
-		});
+			std::back_inserter(samplers),
+			[](const type::supplier<const sampler::sampler_type> &sampler) {
+				return internal::get_instance(*sampler);
+			});
 		converted_binding.pImmutableSamplers = samplers.data();
 		converted_bindings.emplace_back(converted_binding);
 		converted_samplers.push_back(std::move(samplers));
@@ -44,16 +46,17 @@ std::pair<std::vector<VkDescriptorSetLayoutBinding>, std::vector<std::vector<VkS
 	return std::make_pair(std::move(converted_bindings), std::move(converted_samplers));
 }
 
-descriptor_set_layout_type create(const type::supplier<device::device_type> &device, const std::vector<descriptor_set_layout_binding> &bindings) {
-	VkDescriptorSetLayoutCreateInfo create = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, NULL, 0};
+descriptor_set_layout_type create(const type::supplier<const device::device_type> &device,
+		const std::vector<descriptor_set_layout_binding> &bindings) {
+	VkDescriptorSetLayoutCreateInfo create = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, NULL, 0 };
 	create.bindingCount = (uint32_t) bindings.size();
 	std::vector<VkDescriptorSetLayoutBinding> converted_bindings;
 	std::vector<std::vector<VkSampler>> converted_samplers;
 	std::tie(converted_bindings, converted_samplers) = (convert_bindings(bindings));
 	create.pBindings = converted_bindings.data();
 	VkDescriptorSetLayout layout;
-	VKCHECK(vkCreateDescriptorSetLayout(internal::get_instance(*device),
-		&create, NULL, &layout));
+	VKCHECK(vkCreateDescriptorSetLayout(internal::get_instance(*device), &create, NULL, &layout));
 	return descriptor_set_layout_type(layout, device);
 }
 

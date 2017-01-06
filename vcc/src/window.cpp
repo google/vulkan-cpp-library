@@ -155,8 +155,8 @@ std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer
 		// Render loop will expect image to have been used before and in VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 		// layout and will change to COLOR_ATTACHMENT_OPTIMAL, so init the image to that state
 		vcc::command_buffer::command_buffer_type command_buffer(std::move(
-		  vcc::command_buffer::allocate(type::supplier<device::device_type>(window.device),
-		    std::ref(window.cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
+		  vcc::command_buffer::allocate(window.device, std::ref(window.cmd_pool),
+			  VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 		vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
 			vcc::command::pipeline_barrier(
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -398,9 +398,9 @@ window_type create(
 #elif defined(__ANDROID__)
 	android_app* state,
 #endif // __ANDROID__
-	const type::supplier<instance::instance_type> &instance,
-	const type::supplier<device::device_type> &device,
-	const type::supplier<queue::queue_type> &graphics_queue,
+	const type::supplier<const instance::instance_type> &instance,
+	const type::supplier<const device::device_type> &device,
+	const type::supplier<const queue::queue_type> &graphics_queue,
 	VkExtent2D extent, VkFormat format, const std::string &title) {
 
 #ifdef VK_USE_PLATFORM_XCB_KHR

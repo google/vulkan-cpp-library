@@ -27,7 +27,7 @@ namespace vcc {
 namespace swapchain {
 
 struct create_info_type {
-	type::supplier<surface::surface_type> surface;
+	type::supplier<const surface::surface_type> surface;
 	uint32_t minImageCount;
 	VkFormat imageFormat;
 	VkColorSpaceKHR imageColorSpace;
@@ -40,15 +40,13 @@ struct create_info_type {
 	VkCompositeAlphaFlagsKHR compositeAlpha;
 	VkPresentModeKHR presentMode;
 	VkBool32 clipped;
-	type::supplier<swapchain_type> oldSwapchain;
+	type::supplier<const swapchain_type> oldSwapchain;
 };
 
-struct swapchain_type
-	: public internal::movable_destructible_with_parent<VkSwapchainKHR,
-		device::device_type, vkDestroySwapchainKHR> {
-	friend VCC_LIBRARY swapchain_type create(
-		const type::supplier<device::device_type> &device,
-		const create_info_type &swapchain_create_info);
+struct swapchain_type : internal::movable_destructible_with_parent<VkSwapchainKHR,
+		const device::device_type, vkDestroySwapchainKHR> {
+	friend VCC_LIBRARY swapchain_type create(const type::supplier<const device::device_type> &,
+		const create_info_type &);
 	friend VkFormat get_format(swapchain_type &swapchain);
 
 	swapchain_type() = default;
@@ -59,33 +57,26 @@ struct swapchain_type
 
 private:
 	swapchain_type(VkSwapchainKHR instance,
-		const type::supplier<device::device_type> &parent, VkFormat format)
-		: internal::movable_destructible_with_parent<VkSwapchainKHR,
-			device::device_type, vkDestroySwapchainKHR>(instance, parent),
-		  format(format) {}
+		const type::supplier<const device::device_type> &parent, VkFormat format)
+		: movable_destructible_with_parent(instance, parent), format(format) {}
 
 	VkFormat format;
 };
 
-VCC_LIBRARY swapchain_type create(
-	const type::supplier<device::device_type> &device,
+VCC_LIBRARY swapchain_type create(const type::supplier<const device::device_type> &device,
 	const create_info_type &swapchain_create_info);
 
-VCC_LIBRARY std::vector<image::image_type> get_images(
-	swapchain_type &swapchain);
+VCC_LIBRARY std::vector<image::image_type> get_images(swapchain_type &swapchain);
 
-VCC_LIBRARY std::tuple<VkResult, uint32_t> acquire_next_image(
-	swapchain_type &swapchain, std::chrono::nanoseconds timeout,
-	const semaphore::semaphore_type &semaphore,
+VCC_LIBRARY std::tuple<VkResult, uint32_t> acquire_next_image(swapchain_type &swapchain,
+	std::chrono::nanoseconds timeout, const semaphore::semaphore_type &semaphore,
 	const fence::fence_type &fence);
-VCC_LIBRARY std::tuple<VkResult, uint32_t> acquire_next_image(
-	swapchain_type &swapchain, std::chrono::nanoseconds timeout,
+VCC_LIBRARY std::tuple<VkResult, uint32_t> acquire_next_image(swapchain_type &swapchain,
+	std::chrono::nanoseconds timeout, const semaphore::semaphore_type &semaphore);
+VCC_LIBRARY std::tuple<VkResult, uint32_t> acquire_next_image(swapchain_type &swapchain,
+	std::chrono::nanoseconds timeout, const fence::fence_type &fence);
+VCC_LIBRARY std::tuple<VkResult, uint32_t> acquire_next_image(swapchain_type &swapchain,
 	const semaphore::semaphore_type &semaphore);
-VCC_LIBRARY std::tuple<VkResult, uint32_t> acquire_next_image(
-	swapchain_type &swapchain, std::chrono::nanoseconds timeout,
-	const fence::fence_type &fence);
-VCC_LIBRARY std::tuple<VkResult, uint32_t> acquire_next_image(
-	swapchain_type &swapchain, const semaphore::semaphore_type &semaphore);
 
 inline VkFormat get_format(swapchain_type &swapchain) {
 	return swapchain.format;

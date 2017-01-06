@@ -29,11 +29,10 @@ struct subpass_description_type {
 	std::vector<uint32_t> preserveAttachments;
 };
 
-struct render_pass_type
-	: public internal::movable_destructible_with_parent<VkRenderPass,
-	device::device_type, vkDestroyRenderPass> {
+struct render_pass_type : internal::movable_destructible_with_parent<VkRenderPass,
+		const device::device_type, vkDestroyRenderPass> {
 	friend VCC_LIBRARY render_pass_type create(
-		const type::supplier<device::device_type> &device,
+		const type::supplier<const device::device_type> &device,
 		const std::vector<VkAttachmentDescription> &attachment_descriptions,
 		const std::vector<subpass_description_type> &subpass_descriptions,
 		const std::vector<VkSubpassDependency> &subpass_dependency);
@@ -46,13 +45,12 @@ struct render_pass_type
 
 private:
 	render_pass_type(VkRenderPass instance,
-		const type::supplier<device::device_type> &parent)
-		: internal::movable_destructible_with_parent<VkRenderPass,
-		device::device_type, vkDestroyRenderPass>(instance, parent) {}
+		const type::supplier<const device::device_type> &parent)
+		: movable_destructible_with_parent(instance, parent) {}
 };
 
 VCC_LIBRARY render_pass_type create(
-	const type::supplier<device::device_type> &device,
+	const type::supplier<const device::device_type> &device,
 	const std::vector<VkAttachmentDescription> &attachment_descriptions,
 	const std::vector<subpass_description_type> &subpass_descriptions,
 	const std::vector<VkSubpassDependency> &subpass_dependency);

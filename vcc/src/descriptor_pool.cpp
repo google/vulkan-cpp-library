@@ -18,9 +18,8 @@
 namespace vcc {
 namespace descriptor_pool {
 
-descriptor_pool_type create(const type::supplier<device::device_type> &device,
-		VkDescriptorPoolCreateFlags flags,
-		uint32_t maxSets,
+descriptor_pool_type create(const type::supplier<const device::device_type> &device,
+		VkDescriptorPoolCreateFlags flags, uint32_t maxSets,
 		const std::vector<VkDescriptorPoolSize> &poolSizes) {
 	VkDescriptorPoolCreateInfo create = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, NULL};

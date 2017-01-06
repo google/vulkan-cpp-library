@@ -43,7 +43,7 @@ std::vector<VkSubpassDescription> subpass_descriptions_convert(
 	return std::move(descriptions);
 }
 
-render_pass_type create(const type::supplier<device::device_type> &device,
+render_pass_type create(const type::supplier<const device::device_type> &device,
 		const std::vector<VkAttachmentDescription> &attachment_descriptions,
 		const std::vector<subpass_description_type> &subpass_descriptions,
 		const std::vector<VkSubpassDependency> &subpass_dependency) {

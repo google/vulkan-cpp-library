@@ -18,7 +18,7 @@
 namespace vcc {
 namespace command_pool {
 
-command_pool_type create(const type::supplier<device::device_type> &device,
+command_pool_type create(const type::supplier<const device::device_type> &device,
 		VkCommandPoolCreateFlags flags, uint32_t queueFamilyIndex) {
 	VkCommandPoolCreateInfo create = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 		NULL};

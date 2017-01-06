@@ -39,7 +39,13 @@ namespace command_buffer {
 namespace internal {
 
 template<typename T>
-vcc::internal::hook_container_type<queue::queue_type&> &get_pre_execute_hook(T &value) {
+vcc::internal::hook_container_type<const queue::queue_type &> &get_pre_execute_hook(T &value) {
+	return value.pre_execute_hook;
+}
+
+template<typename T>
+const vcc::internal::hook_container_type<const queue::queue_type &> &get_pre_execute_hook(
+		const T &value) {
 	return value.pre_execute_hook;
 }
 
@@ -47,18 +53,18 @@ vcc::internal::hook_container_type<queue::queue_type&> &get_pre_execute_hook(T &
 
 struct command_buffer_type
 	: public vcc::internal::movable_allocated_with_pool_parent1<VkCommandBuffer,
-		device::device_type, command_pool::command_pool_type,
+		const device::device_type, const command_pool::command_pool_type,
 		vkFreeCommandBuffers> {
 	friend VCC_LIBRARY std::vector<command_buffer_type> allocate(
-		const type::supplier<device::device_type> &device,
-		const type::supplier<command_pool::command_pool_type> &command_pool,
+		const type::supplier<const device::device_type> &device,
+		const type::supplier<const command_pool::command_pool_type> &command_pool,
 		VkCommandBufferLevel level, uint32_t commandBufferCount);
 	template<typename... CommandsT>
 	friend void compile(command_buffer_type &command_buffer,
 		VkCommandBufferUsageFlags flags,
-		const type::supplier<render_pass::render_pass_type> &render_pass,
+		const type::supplier<const render_pass::render_pass_type> &render_pass,
 		uint32_t subpass,
-		const type::supplier<framebuffer::framebuffer_type> &framebuffer,
+		const type::supplier<const framebuffer::framebuffer_type> &framebuffer,
 		VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
 		VkQueryPipelineStatisticFlags pipelineStatistics,
 		CommandsT&&... commands);
@@ -69,8 +75,11 @@ struct command_buffer_type
 		VkQueryPipelineStatisticFlags pipelineStatistics,
 		CommandsT&&... commands);
 	template<typename T>
-	friend vcc::internal::hook_container_type<queue::queue_type&>
+	friend vcc::internal::hook_container_type<const queue::queue_type &>
 		&internal::get_pre_execute_hook(T &value);
+	template<typename T>
+	friend const vcc::internal::hook_container_type<const queue::queue_type &>
+		&internal::get_pre_execute_hook(const T &value);
 
 	command_buffer_type() = default;
 	command_buffer_type(command_buffer_type &&) = default;
@@ -79,17 +88,17 @@ struct command_buffer_type
 
 private:
 	command_buffer_type(VkCommandBuffer instance,
-		const type::supplier<command_pool::command_pool_type> &pool,
-		const type::supplier<device::device_type> &parent)
+		const type::supplier<const command_pool::command_pool_type> &pool,
+		const type::supplier<const device::device_type> &parent)
 		: movable_allocated_with_pool_parent1(instance, pool, parent) {}
 
-	vcc::internal::hook_container_type<queue::queue_type&> pre_execute_hook;
+	vcc::internal::hook_container_type<const queue::queue_type&> pre_execute_hook;
 	vcc::internal::reference_container_type references;
 };
 
 VCC_LIBRARY std::vector<command_buffer_type> allocate(
-	const type::supplier<device::device_type> &device,
-	const type::supplier<command_pool::command_pool_type> &command_pool,
+	const type::supplier<const device::device_type> &device,
+	const type::supplier<const command_pool::command_pool_type> &command_pool,
 	VkCommandBufferLevel level, uint32_t commandBufferCount);
 
 struct begin_type {
@@ -101,23 +110,23 @@ struct begin_type {
 
 	VCC_LIBRARY ~begin_type();
 
-	explicit begin_type(const type::supplier<command_buffer_type> &command_buffer);
+	explicit begin_type(const type::supplier<const command_buffer_type> &command_buffer);
 private:
-	type::supplier<command_buffer_type> command_buffer;
+	type::supplier<const command_buffer_type> command_buffer;
 	std::unique_lock<std::mutex> command_buffer_lock;
 };
 
 VCC_LIBRARY begin_type begin(
-	const type::supplier<command_buffer_type> &command_buffer,
+	const type::supplier<const command_buffer_type> &command_buffer,
 	VkCommandBufferUsageFlags flags,
-	const type::supplier<render_pass::render_pass_type> &render_pass,
+	const type::supplier<const render_pass::render_pass_type> &render_pass,
 	uint32_t subpass,
-	const type::supplier<framebuffer::framebuffer_type> &framebuffer,
+	const type::supplier<const framebuffer::framebuffer_type> &framebuffer,
 	VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
 	VkQueryPipelineStatisticFlags pipelineStatistics);
 
 VCC_LIBRARY begin_type begin(
-	const type::supplier<command_buffer_type> &command_buffer,
+	const type::supplier<const command_buffer_type> &command_buffer,
 	VkCommandBufferUsageFlags flags,
 	VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
 	VkQueryPipelineStatisticFlags pipelineStatistics);

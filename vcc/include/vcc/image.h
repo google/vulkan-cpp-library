@@ -38,15 +38,13 @@ namespace image {
 
 struct image_type
 	: public internal::movable_conditional_destructible_with_parent_and_memory<
-		VkImage, device::device_type, memory::memory_type, vkDestroyImage> {
-	friend VCC_LIBRARY image_type create(
-		const type::supplier<device::device_type> &device,
-		VkImageCreateFlags flags, VkImageType imageType, VkFormat format,
-		const VkExtent3D &extent, uint32_t mipLevels, uint32_t arrayLayers,
-		VkSampleCountFlags samples, VkImageTiling tiling, VkImageUsageFlags usage,
-		VkSharingMode sharingMode, const std::vector<uint32_t> &queueFamilyIndices,
-		VkImageLayout initialLayout);
-	friend VCC_LIBRARY std::vector<image::image_type> swapchain::get_images(swapchain::swapchain_type &swapchain);
+		VkImage, const device::device_type, const memory::memory_type, vkDestroyImage> {
+	friend VCC_LIBRARY image_type create(const type::supplier<const device::device_type> &,
+		VkImageCreateFlags, VkImageType, VkFormat, const VkExtent3D &, uint32_t, uint32_t,
+		VkSampleCountFlags, VkImageTiling, VkImageUsageFlags, VkSharingMode,
+		const std::vector<uint32_t> &, VkImageLayout);
+	friend VCC_LIBRARY std::vector<image::image_type> swapchain::get_images(
+		swapchain::swapchain_type &swapchain);
 	friend VkImageType get_type(const image_type &image);
 	friend VkImageType get_type(const image_type &image);
 	friend VkFormat get_format(const image_type &image);
@@ -60,14 +58,11 @@ struct image_type
 	image_type &operator=(image_type&&copy) = default;
 
 private:
-	image_type(VkImage instance, const type::supplier<device::device_type> &parent,
+	image_type(VkImage instance, const type::supplier<const device::device_type> &parent,
 		bool destructible, VkImageType type, VkFormat format, uint32_t mipLevels,
 		uint32_t arrayLayers)
-		:  internal::movable_conditional_destructible_with_parent_and_memory<
-			VkImage, device::device_type, memory::memory_type, vkDestroyImage>(
-			instance, parent, destructible),
-		  type(type), format(format), mipLevels(mipLevels),
-		  arrayLayers(arrayLayers) {}
+		:  movable_conditional_destructible_with_parent_and_memory(instance, parent, destructible)
+		, type(type), format(format), mipLevels(mipLevels), arrayLayers(arrayLayers) {}
 
 	VkImageType type;
 	VkFormat format;
@@ -75,7 +70,7 @@ private:
 };
 
 VCC_LIBRARY image_type create(
-	const type::supplier<device::device_type> &device,
+	const type::supplier<const device::device_type> &device,
 	VkImageCreateFlags flags, VkImageType imageType, VkFormat format,
 	const VkExtent3D &extent, uint32_t mipLevels, uint32_t arrayLayers,
 	VkSampleCountFlags samples, VkImageTiling tiling, VkImageUsageFlags usage,

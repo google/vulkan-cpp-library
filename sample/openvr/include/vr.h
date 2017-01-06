@@ -59,8 +59,8 @@ struct vr_type {
 		draw_callback_type;
 
 	vr_type(hmd_type &&hmd,
-		const type::supplier<vcc::instance::instance_type> &instance,
-		const type::supplier<vcc::queue::queue_type> &queue);
+		const type::supplier<const vcc::instance::instance_type> &instance,
+		const type::supplier<const vcc::queue::queue_type> &queue);
 	~vr_type();
 
 	int run(const draw_callback_type &draw_callback,
@@ -95,8 +95,8 @@ struct vr_type {
 
 	hmd_type hmd;
 private:
-	type::supplier<vcc::instance::instance_type> instance;
-	type::supplier<vcc::queue::queue_type> queue;
+	type::supplier<const vcc::instance::instance_type> instance;
+	type::supplier<const vcc::queue::queue_type> queue;
 	vcc::image::image_type image;
 	vcc::image_view::image_view_type image_view;
 	VkExtent2D extent;

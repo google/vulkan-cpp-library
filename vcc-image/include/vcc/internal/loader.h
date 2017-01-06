@@ -27,7 +27,7 @@ namespace internal {
 struct loader_type {
 	virtual bool can_load(std::istream &stream) = 0;
 	virtual image::image_type load(
-		const type::supplier<vcc::queue::queue_type> &queue,
+		const type::supplier<const vcc::queue::queue_type> &queue,
 		VkImageCreateFlags flags,
 		VkImageUsageFlags usage,
 		VkFormatFeatureFlags feature_flags,
@@ -41,7 +41,7 @@ struct loader_type {
 struct png_loader_type : public loader_type {
 	bool can_load(std::istream &stream);
 	image::image_type load(
-		const type::supplier<vcc::queue::queue_type> &queue,
+		const type::supplier<const vcc::queue::queue_type> &queue,
 		VkImageCreateFlags flags,
 		VkImageUsageFlags usage,
 		VkFormatFeatureFlags feature_flags,
@@ -55,7 +55,7 @@ struct png_loader_type : public loader_type {
 struct gli_loader_type : public loader_type {
 	bool can_load(std::istream &stream);
 	image::image_type load(
-		const type::supplier<vcc::queue::queue_type> &queue,
+		const type::supplier<const vcc::queue::queue_type> &queue,
 		VkImageCreateFlags flags,
 		VkImageUsageFlags usage,
 		VkFormatFeatureFlags feature_flags,

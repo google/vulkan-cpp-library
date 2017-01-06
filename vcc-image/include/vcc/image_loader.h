@@ -28,7 +28,7 @@ namespace image {
  * In other words, .png, .ktx and .dds are supported.
  */
 VCC_LIBRARY image::image_type create(
-	const type::supplier<vcc::queue::queue_type> &queue,
+	const type::supplier<const vcc::queue::queue_type> &queue,
 	VkImageCreateFlags flags,
 	VkImageUsageFlags usage,
 	VkFormatFeatureFlags feature_flags,
@@ -44,7 +44,7 @@ VCC_LIBRARY image::image_type create(
  * Note: AAssetManager can be obtained from ANativeActivity.
  */
 VCC_LIBRARY image::image_type create(
-	const type::supplier<vcc::queue::queue_type> &queue, VkImageCreateFlags flags,
+	const type::supplier<const vcc::queue::queue_type> &queue, VkImageCreateFlags flags,
 	VkImageUsageFlags usage, VkFormatFeatureFlags feature_flags,
 	VkSharingMode sharingMode, const std::vector<uint32_t> &queueFamilyIndices,
 	JNIEnv *env, jobject context, const char *resource_identifier);

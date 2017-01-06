@@ -21,20 +21,19 @@
 namespace vcc {
 namespace descriptor_set {
 
-std::vector<descriptor_set_type> create(
-	const type::supplier<device::device_type> &device,
-	const type::supplier<descriptor_pool::descriptor_pool_type> &descriptor_pool,
-	const std::vector<type::supplier<
-		descriptor_set_layout::descriptor_set_layout_type>> &setLayouts) {
-	std::vector<VkDescriptorSet> descriptor_sets(setLayouts.size());
+std::vector<descriptor_set_type> create(const type::supplier<const device::device_type> &device,
+	const type::supplier<const descriptor_pool::descriptor_pool_type> &descriptor_pool,
+	const std::vector<type::supplier<const descriptor_set_layout::descriptor_set_layout_type>>
+		&set_layouts) {
+	std::vector<VkDescriptorSet> descriptor_sets(set_layouts.size());
 	VkDescriptorSetAllocateInfo allocate = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, NULL };
-	allocate.descriptorSetCount = (uint32_t) setLayouts.size();
+	allocate.descriptorSetCount = (uint32_t) set_layouts.size();
 	std::vector<VkDescriptorSetLayout> converted_set_layouts;
-	converted_set_layouts.reserve(setLayouts.size());
-	std::transform(setLayouts.begin(), setLayouts.end(),
+	converted_set_layouts.reserve(set_layouts.size());
+	std::transform(set_layouts.begin(), set_layouts.end(),
 		std::back_inserter(converted_set_layouts),
-		[](const type::supplier<descriptor_set_layout::descriptor_set_layout_type>
+		[](const type::supplier<const descriptor_set_layout::descriptor_set_layout_type>
 			&set_layout) {
 		return vcc::internal::get_instance(*set_layout);
 	});
@@ -129,10 +128,10 @@ void add(update_storage &storage, const write_buffer_data_type &wbdt) {
 		buffer_infos.push_back(buffer_info_type{
 			std::ref(input_buffer::internal::get_buffer(*buffer.buffer)),
 			buffer.offset, buffer.range });
-		const type::supplier<input_buffer::input_buffer_type> &buf(buffer.buffer);
+		const type::supplier<const input_buffer::input_buffer_type> &buf(buffer.buffer);
 		wbdt.dst_set.pre_execute_callbacks.put(
 			std::make_pair(wbdt.dst_binding, uint32_t(wbdt.dst_array_element + i)),
-			[buf](queue::queue_type &queue) {input_buffer::flush(queue, *buf); });
+			[buf](const queue::queue_type &queue) { input_buffer::flush(queue, *buf); });
 	}
 	add(storage, write_buffer_type{ wbdt.dst_set, wbdt.dst_binding,
 		wbdt.dst_array_element, wbdt.descriptor_type,
@@ -148,7 +147,7 @@ void add(update_storage &storage, const write_buffer_view_type &write) {
 	set.descriptorType = write.descriptor_type;
 	std::vector<VkBufferView> buffer_views;
 	buffer_views.reserve(write.buffers.size());
-	for (const type::supplier<buffer_view::buffer_view_type> &view : write.buffers) {
+	for (const type::supplier<const buffer_view::buffer_view_type> &view : write.buffers) {
 		buffer_views.push_back(vcc::internal::get_instance(*view));
 	}
 	set.pTexelBufferView = buffer_views.data();
@@ -191,12 +190,13 @@ void update_storage::reserve() {
 }  // namespace internal
 
 buffer_info_data_type buffer_info(
-	const type::supplier<input_buffer::input_buffer_type> &buffer, VkDeviceSize offset,
+		const type::supplier<const input_buffer::input_buffer_type> &buffer, VkDeviceSize offset,
 	VkDeviceSize range) {
 	return buffer_info_data_type{ buffer, offset, range };
 }
 
-buffer_info_data_type buffer_info(const type::supplier<input_buffer::input_buffer_type> &buffer) {
+buffer_info_data_type buffer_info(
+		const type::supplier<const input_buffer::input_buffer_type> &buffer) {
 	const std::size_t size(type::size(input_buffer::internal::get_serialize(*buffer)));
 	return buffer_info_data_type{ buffer, 0, size };
 }

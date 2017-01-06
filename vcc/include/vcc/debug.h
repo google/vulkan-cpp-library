@@ -26,7 +26,7 @@ typedef std::function<bool(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT,
 
 struct debug_type {
 	friend VCC_LIBRARY debug_type create(
-		const type::supplier<instance::instance_type> &instance,
+		const type::supplier<const instance::instance_type> &instance,
 		VkDebugReportFlagsEXT flags,
 		std::unique_ptr<callback_type> &&callback_ptr,
 		PFN_vkDebugReportCallbackEXT callback);
@@ -50,7 +50,7 @@ struct debug_type {
 		return *this;
 	}
 
-	type::supplier<instance::instance_type> instance;
+	type::supplier<const instance::instance_type> instance;
 	VkDebugReportCallbackEXT msg_callback;
 	std::unique_ptr<callback_type> callback;
 	PFN_vkDestroyDebugReportCallbackEXT dbgDestroyMsgCallback;
@@ -63,7 +63,7 @@ struct debug_type {
 	}
 
 private:
-	debug_type(const type::supplier<instance::instance_type> &instance,
+	debug_type(const type::supplier<const instance::instance_type> &instance,
 		VkDebugReportCallbackEXT msg_callback,
 		std::unique_ptr<callback_type> &&callback,
 		PFN_vkDestroyDebugReportCallbackEXT dbgDestroyMsgCallback)
@@ -78,9 +78,8 @@ VCC_LIBRARY bool print_function(VkDebugReportFlagsEXT,
 	VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*,
 	const char*);
 
-VCC_LIBRARY debug_type create(
-	type::supplier<instance::instance_type> &&instance, VkFlags msgFlags,
-	const callback_type &callback = &print_function);
+VCC_LIBRARY debug_type create(const type::supplier<const instance::instance_type> &instance,
+	VkFlags msgFlags, const callback_type &callback = &print_function);
 
 }  // namespace debug
 }  // namespace vcc

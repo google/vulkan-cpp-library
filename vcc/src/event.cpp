@@ -18,25 +18,28 @@
 namespace vcc {
 namespace event {
 
-event_type create(const type::supplier<device::device_type> &device) {
+event_type create(const type::supplier<const device::device_type> &device) {
 	VkEventCreateInfo create = {VK_STRUCTURE_TYPE_EVENT_CREATE_INFO, NULL, 0};
 	VkEvent event;
 	VKCHECK(vkCreateEvent(internal::get_instance(*device), &create, NULL, &event));
 	return event_type(event, device);
 }
 
-VkResult status(event_type &event) {
-	return vkGetEventStatus(internal::get_instance(*internal::get_parent(event)), internal::get_instance(event));
+VkResult status(const event_type &event) {
+	return vkGetEventStatus(internal::get_instance(*internal::get_parent(event)),
+		internal::get_instance(event));
 }
 
-void set(event_type &event) {
+void set(const event_type &event) {
 	std::lock_guard<std::mutex> lock(internal::get_mutex(event));
-	VKCHECK(vkSetEvent(internal::get_instance(*internal::get_parent(event)), internal::get_instance(event)));
+	VKCHECK(vkSetEvent(internal::get_instance(*internal::get_parent(event)),
+		internal::get_instance(event)));
 }
 
-void reset(event_type &event) {
+void reset(const event_type &event) {
 	std::lock_guard<std::mutex> lock(internal::get_mutex(event));
-	VKCHECK(vkResetEvent(internal::get_instance(*internal::get_parent(event)), internal::get_instance(event)));
+	VKCHECK(vkResetEvent(internal::get_instance(*internal::get_parent(event)),
+		internal::get_instance(event)));
 }
 
 }  // namespace event

@@ -49,7 +49,7 @@ glm::ivec3 compressed_extent(const gli::texture &texture) {
 }
 
 image::image_type gli_loader_type::load(
-	const type::supplier<vcc::queue::queue_type> &queue,
+	const type::supplier<const vcc::queue::queue_type> &queue,
 	VkImageCreateFlags flags,
 	VkImageUsageFlags usage,
 	VkFormatFeatureFlags feature_flags,
@@ -65,7 +65,7 @@ image::image_type gli_loader_type::load(
 		VCC_PRINT("failed to load texture");
 		throw vcc_exception("failed to load texture");
 	}
-	const type::supplier<device::device_type> device(
+	const type::supplier<const device::device_type> device(
 		vcc::internal::get_parent(*queue));
 	const VkPhysicalDevice physical_device(device::get_physical_device(*device));
 	const VkFormat format(convert_format(texture.format()));

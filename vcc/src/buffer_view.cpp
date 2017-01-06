@@ -18,7 +18,7 @@
 namespace vcc {
 namespace buffer_view {
 
-buffer_view_type create(const type::supplier<buffer::buffer_type> &buffer,
+buffer_view_type create(const type::supplier<const buffer::buffer_type> &buffer,
 		VkFormat format, VkDeviceSize offset, VkDeviceSize range) {
 	VkBufferViewCreateInfo create = {VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO, NULL, 0};
 	create.buffer = vcc::internal::get_instance(*buffer);

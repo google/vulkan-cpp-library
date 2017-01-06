@@ -27,11 +27,11 @@
 namespace vcc {
 namespace queue {
 
-struct queue_type : public internal::movable_with_parent<VkQueue, device::device_type> {
+struct queue_type : public internal::movable_with_parent<VkQueue, const device::device_type> {
 	friend VCC_LIBRARY queue_type get_device_queue(
-		const type::supplier<device::device_type> &device,
+		const type::supplier<const device::device_type> &device,
 		uint32_t queue_family_index, uint32_t queue_index);
-	friend uint32_t get_family_index(queue_type &queue);
+	friend uint32_t get_family_index(const queue_type &queue);
 
 	queue_type() = default;
 	queue_type(queue_type &&queue) = default;
@@ -40,57 +40,57 @@ struct queue_type : public internal::movable_with_parent<VkQueue, device::device
 
 private:
 	queue_type(VkQueue instance,
-		const type::supplier<device::device_type> &parent, uint32_t family_index)
+		const type::supplier<const device::device_type> &parent, uint32_t family_index)
 		: movable_with_parent(instance, parent),
 		  family_index(family_index) {}
 	uint32_t family_index;
 };
 
 VCC_LIBRARY queue_type get_device_queue(
-	const type::supplier<device::device_type> &device,
+	const type::supplier<const device::device_type> &device,
 	uint32_t queue_family_index, uint32_t queue_index);
 
 VCC_LIBRARY queue_type get_queue(
-		const type::supplier<device::device_type> &device, VkQueueFlags flags);
+		const type::supplier<const device::device_type> &device, VkQueueFlags flags);
 inline queue_type get_graphics_queue(
-		const type::supplier<device::device_type> &device) {
+		const type::supplier<const device::device_type> &device) {
 	return get_queue(device, VK_QUEUE_GRAPHICS_BIT);
 }
 VCC_LIBRARY queue_type get_present_queue(
-	const type::supplier<device::device_type> &device,
-	surface::surface_type &surface);
+	const type::supplier<const device::device_type> &device,
+	const surface::surface_type &surface);
 
 // Helper method that returns two queues (possibly the same) where the first supports graphics and the other present.
 // Tries to return the same queue twice if it finds one capable of both.
 VCC_LIBRARY std::pair<queue_type, queue_type> get_graphics_and_present_queues(
-	const type::supplier<device::device_type> &device,
+	const type::supplier<const device::device_type> &device,
 	surface::surface_type &surface);
 
 struct wait_semaphore {
-	type::supplier<semaphore::semaphore_type> semaphore;
+	type::supplier<const semaphore::semaphore_type> semaphore;
 	VkPipelineStageFlags wait_dst_stage_mask;
 };
 
 // TODO(gardell): Support multiple submits
-VCC_LIBRARY void submit(queue_type &queue,
+VCC_LIBRARY void submit(const queue_type &queue,
 	const std::vector<wait_semaphore> &wait_semaphores,
-	const std::vector<type::supplier<command_buffer::command_buffer_type>> &command_buffers,
-	const std::vector<type::supplier<semaphore::semaphore_type>> &signal_semaphores,
+	const std::vector<type::supplier<const command_buffer::command_buffer_type>> &command_buffers,
+	const std::vector<type::supplier<const semaphore::semaphore_type>> &signal_semaphores,
 	const fence::fence_type &fence);
 
-VCC_LIBRARY void submit(queue_type &queue,
+VCC_LIBRARY void submit(const queue_type &queue,
 	const std::vector<wait_semaphore> &wait_semaphores,
-	const std::vector<type::supplier<command_buffer::command_buffer_type>> &command_buffers,
-	const std::vector<type::supplier<semaphore::semaphore_type>> &signal_semaphores);
+	const std::vector<type::supplier<const command_buffer::command_buffer_type>> &command_buffers,
+	const std::vector<type::supplier<const semaphore::semaphore_type>> &signal_semaphores);
 
-VCC_LIBRARY void wait_idle(queue_type &queue);
+VCC_LIBRARY void wait_idle(const queue_type &queue);
 
-VCC_LIBRARY VkResult present(queue_type &queue,
-	const std::vector<type::supplier<semaphore::semaphore_type>> &semaphores,
-	const std::vector<type::supplier<swapchain::swapchain_type>> &swapchains,
+VCC_LIBRARY VkResult present(const queue_type &queue,
+	const std::vector<type::supplier<const semaphore::semaphore_type>> &semaphores,
+	const std::vector<type::supplier<const swapchain::swapchain_type>> &swapchains,
 	const std::vector<uint32_t> &image_indices);
 
-inline uint32_t get_family_index(queue_type &queue) {
+inline uint32_t get_family_index(const queue_type &queue) {
 	return queue.family_index;
 }
 

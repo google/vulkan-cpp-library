@@ -24,17 +24,20 @@
 namespace vcc {
 namespace surface {
 
-struct surface_type
-	: public internal::movable_destructible_with_parent<VkSurfaceKHR,
-		instance::instance_type, vkDestroySurfaceKHR> {
+struct surface_type : internal::movable_destructible_with_parent<VkSurfaceKHR,
+		const instance::instance_type, vkDestroySurfaceKHR> {
+
 #ifdef VK_USE_PLATFORM_XCB_KHR
-		friend surface_type create(const type::supplier<instance::instance_type> &instance, xcb_connection_t *connection, xcb_window_t window);
+	friend surface_type create(const type::supplier<const instance::instance_type> &,
+		xcb_connection_t *, xcb_window_t);
 #endif // VK_USE_PLATFORM_XCB_KHR
 #ifdef __ANDROID__
-		friend surface_type create(const type::supplier<instance::instance_type> &instance, ANativeWindow *window);
+	friend surface_type create(const type::supplier<const instance::instance_type> &,
+		ANativeWindow *);
 #endif // __ANDROID__
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-		friend VCC_LIBRARY surface_type create(const type::supplier<instance::instance_type> &instance, HINSTANCE hinstance, HWND hwnd);
+	friend VCC_LIBRARY surface_type create(const type::supplier<const instance::instance_type> &,
+		HINSTANCE, HWND);
 #endif // VK_USE_PLATFORM_WIN32_KHR
 
 	surface_type() = default;
@@ -45,35 +48,41 @@ struct surface_type
 
 private:
 	surface_type(VkSurfaceKHR instance,
-		const type::supplier<instance::instance_type> &parent)
-		: internal::movable_destructible_with_parent<VkSurfaceKHR,
-		  instance::instance_type, vkDestroySurfaceKHR>(instance, parent) {}
+		const type::supplier<const instance::instance_type> &parent)
+		: movable_destructible_with_parent(instance, parent) {}
 };
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
 
-surface_type create(const type::supplier<instance::instance_type> &instance, xcb_connection_t *connection, xcb_window_t window);
+surface_type create(const type::supplier<const instance::instance_type> &instance,
+	xcb_connection_t *connection, xcb_window_t window);
 
 #endif // VK_USE_PLATFORM_XCB_KHR
 
 #ifdef __ANDROID__
 
-surface_type create(const type::supplier<instance::instance_type> &instance, ANativeWindow *window);
+surface_type create(const type::supplier<const instance::instance_type> &instance,
+	ANativeWindow *window);
 
 #endif // __ANDROID__
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 
-VCC_LIBRARY surface_type create(const type::supplier<instance::instance_type> &instance, HINSTANCE hinstance, HWND hwnd);
+VCC_LIBRARY surface_type create(const type::supplier<const instance::instance_type> &instance,
+	HINSTANCE hinstance, HWND hwnd);
 
 #endif // VK_USE_PLATFORM_WIN32_KHR
 
-VCC_LIBRARY bool physical_device_support(VkPhysicalDevice device, surface_type &surface, uint32_t queueFamilyIndex);
+VCC_LIBRARY bool physical_device_support(VkPhysicalDevice device, const surface_type &surface,
+	uint32_t queueFamilyIndex);
 
-VCC_LIBRARY std::vector<VkSurfaceFormatKHR> physical_device_formats(VkPhysicalDevice device, surface_type &surface);
+VCC_LIBRARY std::vector<VkSurfaceFormatKHR> physical_device_formats(VkPhysicalDevice device,
+	const surface_type &surface);
 
-VCC_LIBRARY VkSurfaceCapabilitiesKHR physical_device_capabilities(VkPhysicalDevice device, surface_type &surface);
-VCC_LIBRARY std::vector<VkPresentModeKHR> physical_device_present_modes(VkPhysicalDevice device, surface_type &surface);
+VCC_LIBRARY VkSurfaceCapabilitiesKHR physical_device_capabilities(VkPhysicalDevice device,
+	const surface_type &surface);
+VCC_LIBRARY std::vector<VkPresentModeKHR> physical_device_present_modes(VkPhysicalDevice device,
+	const surface_type &surface);
 
 }  // namespace surface
 }  // namespace vcc

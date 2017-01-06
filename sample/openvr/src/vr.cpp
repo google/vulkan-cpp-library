@@ -79,7 +79,7 @@ std::vector<std::string> string_split(const std::string &string, const char *del
 std::vector<std::string> hmd_type::get_vulkan_instance_extensions_required() const {
 	vr::IVRCompositor *compositor(vr::VRCompositor());
 	std::string extensions(compositor->GetVulkanInstanceExtensionsRequired(nullptr, 0), '\0');
-	compositor->GetVulkanInstanceExtensionsRequired(&extensions[0], extensions.size());
+	compositor->GetVulkanInstanceExtensionsRequired(&extensions[0], uint32_t(extensions.size()));
 	return string_split(trim_null_characters(std::move(extensions)), " ");
 }
 
@@ -89,13 +89,13 @@ std::vector<std::string> hmd_type::get_vulkan_device_extensions_required(
 	std::string extensions(compositor->GetVulkanDeviceExtensionsRequired(physical_device,
 		nullptr, 0), '\0');
 	compositor->GetVulkanDeviceExtensionsRequired(physical_device, &extensions[0],
-		extensions.size());
+		uint32_t(extensions.size()));
 	return string_split(trim_null_characters(std::move(extensions)), " ");
 }
 
 vr_type::vr_type(hmd_type &&hmd,
-		const type::supplier<vcc::instance::instance_type> &instance,
-		const type::supplier<vcc::queue::queue_type> &queue)
+		const type::supplier<const vcc::instance::instance_type> &instance,
+		const type::supplier<const vcc::queue::queue_type> &queue)
 	: hmd(std::forward<hmd_type>(hmd)), instance(instance), queue(queue)
 	, extent(get_recommended_render_target_size()) {
 
@@ -110,7 +110,7 @@ vr_type::vr_type(hmd_type &&hmd,
 		throw std::runtime_error("VRCompositor failed");
 	}
 
-	type::supplier<vcc::device::device_type> device(
+	type::supplier<const vcc::device::device_type> device(
 		vcc::internal::get_parent(*queue));
 	image = vcc::image::image_type(vcc::image::create(device, 0,
 		VK_IMAGE_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM,
@@ -198,7 +198,7 @@ int vr_type::run(const draw_callback_type &draw_callback,
 			}
 		}
 
-		type::supplier<vcc::device::device_type> device(
+		type::supplier<const vcc::device::device_type> device(
 			vcc::internal::get_parent(*queue));
 
 		vcc::queue::submit(*queue, { }, { std::ref(pre_draw_command_buffer) }, {});

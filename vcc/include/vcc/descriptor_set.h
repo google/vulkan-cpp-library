@@ -35,38 +35,31 @@ struct queue_type;
 
 namespace descriptor_set {
 
-struct descriptor_set_type
-	: public internal::movable_allocated_with_pool_parent2<VkDescriptorSet,
-	  device::device_type, descriptor_pool::descriptor_pool_type,
-	  vkFreeDescriptorSets> {
+struct descriptor_set_type : public internal::movable_allocated_with_pool_parent2<VkDescriptorSet,
+		const device::device_type, const descriptor_pool::descriptor_pool_type, vkFreeDescriptorSets> {
+
 	descriptor_set_type() = default;
 	descriptor_set_type(const descriptor_set_type &) = delete;
 	descriptor_set_type(descriptor_set_type &&copy)
-		: internal::movable_allocated_with_pool_parent2<VkDescriptorSet,
-			device::device_type, descriptor_pool::descriptor_pool_type,
-			vkFreeDescriptorSets>(std::forward<descriptor_set_type>(copy)),
+		: movable_allocated_with_pool_parent2(std::forward<descriptor_set_type>(copy)),
 		  pre_execute_callbacks(std::move(copy.pre_execute_callbacks)) {}
 	descriptor_set_type &operator=(const descriptor_set_type&) = delete;
 	descriptor_set_type(VkDescriptorSet instance,
-		const type::supplier<descriptor_pool::descriptor_pool_type> &pool,
-		const type::supplier<device::device_type> &parent)
-		: internal::movable_allocated_with_pool_parent2<VkDescriptorSet,
-			device::device_type, descriptor_pool::descriptor_pool_type,
-			vkFreeDescriptorSets>(instance, pool, parent) {}
+		const type::supplier<const descriptor_pool::descriptor_pool_type> &pool,
+		const type::supplier<const device::device_type> &parent)
+		: movable_allocated_with_pool_parent2(instance, pool, parent) {}
 
 	internal::hook_map_type<std::pair<uint32_t, uint32_t>,
-		util::hash_pair<uint32_t, uint32_t>, queue::queue_type &> pre_execute_callbacks;
+		util::hash_pair<uint32_t, uint32_t>, const queue::queue_type &> pre_execute_callbacks;
 	internal::reference_map_type<std::pair<uint32_t, uint32_t>,
 		util::hash_pair<uint32_t, uint32_t>> references;
-
 };
 
 VCC_LIBRARY std::vector<descriptor_set_type> create(
-	const type::supplier<device::device_type> &device,
-	const type::supplier<vcc::descriptor_pool::descriptor_pool_type>
-		&descriptor_pool,
-	const std::vector<type::supplier<
-		vcc::descriptor_set_layout::descriptor_set_layout_type>> &setLayouts);
+	const type::supplier<const device::device_type> &device,
+	const type::supplier<const descriptor_pool::descriptor_pool_type> &descriptor_pool,
+	const std::vector<type::supplier<const descriptor_set_layout::descriptor_set_layout_type>>
+		&set_layouts);
 
 struct copy {
 	descriptor_set_type &src_set;
@@ -76,32 +69,32 @@ struct copy {
 };
 
 struct image_info {
-	type::supplier<sampler::sampler_type> sampler;
-	type::supplier<image_view::image_view_type> image_view;
+	type::supplier<const sampler::sampler_type> sampler;
+	type::supplier<const image_view::image_view_type> image_view;
 	VkImageLayout image_layout;
 };
 
 struct buffer_info_type {
-	type::supplier<buffer::buffer_type> buffer;
+	type::supplier<const buffer::buffer_type> buffer;
 	VkDeviceSize offset, range;
 };
 
 inline buffer_info_type buffer_info(
-		const type::supplier<buffer::buffer_type> &buffer,
+		const type::supplier<const buffer::buffer_type> &buffer,
 		VkDeviceSize offset, VkDeviceSize range) {
 	return buffer_info_type{buffer, offset, range};
 }
 
 struct buffer_info_data_type {
-	type::supplier<input_buffer::input_buffer_type> buffer;
+	type::supplier<const input_buffer::input_buffer_type> buffer;
 	VkDeviceSize offset, range;
 };
 
 VCC_LIBRARY buffer_info_data_type buffer_info(
-	const type::supplier<input_buffer::input_buffer_type> &buffer,
+	const type::supplier<const input_buffer::input_buffer_type> &buffer,
 	VkDeviceSize offset, VkDeviceSize range);
 VCC_LIBRARY buffer_info_data_type buffer_info(
-	const type::supplier<input_buffer::input_buffer_type> &buffer);
+	const type::supplier<const input_buffer::input_buffer_type> &buffer);
 
 struct write_image {
 	descriptor_set_type &dst_set;
@@ -161,14 +154,14 @@ struct write_buffer_view_type {
 	// VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER or VK_DESCRIPTOR_
 	// TYPE_STORAGE_TEXEL_BUFFER
 	VkDescriptorType descriptor_type;
-	std::vector<type::supplier<buffer_view::buffer_view_type>> buffers;
+	std::vector<type::supplier<const buffer_view::buffer_view_type>> buffers;
 };
 
 inline write_buffer_view_type write_buffer_view(
 		descriptor_set_type &dst_set,
 		uint32_t dst_binding, uint32_t dst_array_element,
 		VkDescriptorType descriptor_type,
-		const std::vector<type::supplier<buffer_view::buffer_view_type>> &buffers) {
+		const std::vector<type::supplier<const buffer_view::buffer_view_type>> &buffers) {
 	return write_buffer_view_type{ dst_set,
 		dst_binding, dst_array_element, descriptor_type, buffers };
 }
@@ -203,7 +196,7 @@ VCC_LIBRARY void count(update_storage &storage, const write_buffer_data_type &);
 
 // takes device plus a list of copy and write_* items.
 template <typename... ArgsT>
-void update(device::device_type &device, const ArgsT &... args) {
+void update(const device::device_type &device, const ArgsT &... args) {
 	internal::update_storage storage;
 	util::internal::pass((internal::count(storage, args), 1)...);
 	storage.reserve();

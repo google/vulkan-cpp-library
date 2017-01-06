@@ -18,7 +18,7 @@
 namespace vcc {
 namespace fence {
 
-fence_type create(const type::supplier<device::device_type> &device,
+fence_type create(const type::supplier<const device::device_type> &device,
 		VkFenceCreateFlags flags) {
 	VkFenceCreateInfo create = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, NULL};
 	create.flags = flags;
@@ -27,7 +27,7 @@ fence_type create(const type::supplier<device::device_type> &device,
 	return fence_type(fence, device);
 }
 
-VkResult wait(device::device_type &device,
+VkResult wait(const device::device_type &device,
 		const std::vector<std::reference_wrapper<fence_type>> &fences,
 		bool wait_all, uint64_t timeout) {
 	std::vector<VkFence> converted_fences;
@@ -43,28 +43,28 @@ VkResult wait(device::device_type &device,
 	return result;
 }
 
-VkResult wait(device::device_type &device,
+VkResult wait(const device::device_type &device,
 		const std::vector<std::reference_wrapper<fence_type>> &fences,
 		bool wait_all,
 		std::chrono::nanoseconds timeout) {
 	return wait(device, fences, wait_all, timeout.count());
 }
 
-VkResult wait(device::device_type &device,
+VkResult wait(const device::device_type &device,
 		const std::vector<std::reference_wrapper<fence_type>> &fences, bool wait_all) {
 	return wait(device, fences, wait_all, UINT64_MAX);
 }
 
-void reset(device::device_type &device,
-	const std::vector<type::supplier<fence_type>> &fences) {
+void reset(const device::device_type &device,
+	const std::vector<type::supplier<const fence_type>> &fences) {
 	std::vector<VkFence> converted_fences;
 	converted_fences.reserve(fences.size());
-	for (const type::supplier<fence_type> &fence : fences) {
+	for (const type::supplier<const fence_type> &fence : fences) {
 		converted_fences.push_back(internal::get_instance(*fence));
 	}
 	std::vector<std::unique_lock<std::mutex>> locks;
 	locks.reserve(fences.size());
-	for (const type::supplier<fence_type> &fence : fences) {
+	for (const type::supplier<const fence_type> &fence : fences) {
 		locks.emplace_back(internal::get_mutex(*fence), std::defer_lock);
 	}
 	util::lock(locks);

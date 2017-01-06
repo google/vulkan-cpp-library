@@ -77,7 +77,7 @@ TEST(ComputeShaderIntegrationTest, ComputeShaderIntegrationTest1) {
 	vcc::input_buffer::input_buffer_type input_buffer(vcc::input_buffer::create(
 		type::linear_std140, std::ref(device), 0, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		VK_SHARING_MODE_EXCLUSIVE, {}, std::ref(input_array)));
-	const type::supplier<vcc::memory::memory_type> input_memory(
+	const type::supplier<const vcc::memory::memory_type> input_memory(
 		vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 			input_buffer));
 
@@ -85,9 +85,8 @@ TEST(ComputeShaderIntegrationTest, ComputeShaderIntegrationTest1) {
 		vcc::buffer::create(std::ref(device), 0,
 			num_elements * sizeof(decltype(input_array)::value_type),
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {}));
-	const type::supplier<vcc::memory::memory_type> output_memory(
-		vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-			output_buffer));
+	const type::supplier<const vcc::memory::memory_type> output_memory(
+		vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, output_buffer));
 
 	vcc::descriptor_set::update(device,
 		vcc::descriptor_set::write_buffer(desc_set, 0, 0,
@@ -96,7 +95,7 @@ TEST(ComputeShaderIntegrationTest, ComputeShaderIntegrationTest1) {
 	vcc::descriptor_set::update(device,
 		vcc::descriptor_set::write_buffer(desc_set, 1, 0,
 			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			{ vcc::descriptor_set::buffer_info(std::ref(output_buffer), 0,
+			{ vcc::descriptor_set::buffer_info(type::make_supplier<const vcc::buffer::buffer_type>(output_buffer), 0, // TODO(gardell): Remove explicit arguments!
 				VK_WHOLE_SIZE) }));
 
 	vcc::queue::queue_type queue(vcc::queue::get_queue(
@@ -137,7 +136,7 @@ TEST(ComputeShaderIntegrationTest, ComputeShaderIntegrationTest1) {
 				vcc::command::buffer_memory_barrier(
 					VK_ACCESS_UNIFORM_READ_BIT, VK_ACCESS_HOST_READ_BIT,
 					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					std::ref(output_buffer))
+					type::make_supplier<const vcc::buffer::buffer_type>(output_buffer))	// TODO(gardell): REmove explicit arguments!
 			},
 			{}));
 	vcc::fence::fence_type fence(vcc::fence::create(std::ref(device)));
@@ -148,7 +147,7 @@ TEST(ComputeShaderIntegrationTest, ComputeShaderIntegrationTest1) {
 	vcc::queue::wait_idle(queue);
 
 	{
-		vcc::memory::map_type map(vcc::memory::map(std::ref(output_memory)));
+		vcc::memory::map_type map(vcc::memory::map(output_memory));
 		const auto output_ptr(
 			reinterpret_cast<decltype(input_array)::value_type *>(map.data));
 		auto read_input_array(type::read(input_array));

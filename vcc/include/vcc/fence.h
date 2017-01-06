@@ -25,9 +25,9 @@ namespace fence {
 
 struct fence_type
 	: public internal::movable_destructible_with_parent<VkFence,
-	device::device_type, vkDestroyFence> {
+	const device::device_type, vkDestroyFence> {
 	friend VCC_LIBRARY fence_type create(
-		const type::supplier<device::device_type> &device, VkFenceCreateFlags flags);
+		const type::supplier<const device::device_type> &device, VkFenceCreateFlags flags);
 
 	fence_type() = default;
 	fence_type(fence_type &&) = default;
@@ -37,24 +37,24 @@ struct fence_type
 
 private:
 	fence_type(VkFence instance,
-		const type::supplier<device::device_type> &parent)
+		const type::supplier<const device::device_type> &parent)
 		: internal::movable_destructible_with_parent<VkFence,
-		device::device_type, vkDestroyFence>(instance, parent) {}
+		const device::device_type, vkDestroyFence>(instance, parent) {}
 };
 
 VCC_LIBRARY fence_type create(
-	const type::supplier<device::device_type> &device,
+	const type::supplier<const device::device_type> &device,
 	VkFenceCreateFlags flags = 0);
 
-VCC_LIBRARY VkResult wait(device::device_type &device,
+VCC_LIBRARY VkResult wait(const device::device_type &device,
 		const std::vector<std::reference_wrapper<fence_type>> &fences,
 		bool wait_all, std::chrono::nanoseconds timeout);
 
-VkResult wait(device::device_type &device,
+VkResult wait(const device::device_type &device,
 	const std::vector<std::reference_wrapper<fence_type>> &fences, bool wait_all);
 
-VCC_LIBRARY void reset(device::device_type &device,
-	const std::vector<type::supplier<fence_type>> &fences);
+VCC_LIBRARY void reset(const device::device_type &device,
+	const std::vector<type::supplier<const fence_type>> &fences);
 
 }  // namespace fence
 }  // namespace vcc

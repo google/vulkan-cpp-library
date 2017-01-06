@@ -24,7 +24,7 @@ namespace surface {
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
 
-surface_type create(const type::supplier<instance::instance_type> &instance,
+surface_type create(const type::supplier<const instance::instance_type> &instance,
 		xcb_connection_t *connection, xcb_window_t window) {
 
 	VkSurfaceKHR surface;
@@ -41,7 +41,7 @@ surface_type create(const type::supplier<instance::instance_type> &instance,
 
 #ifdef __ANDROID__
 
-surface_type create(const type::supplier<instance::instance_type> &instance,
+surface_type create(const type::supplier<const instance::instance_type> &instance,
 		ANativeWindow *window) {
 	VkSurfaceKHR surface;
 	VkAndroidSurfaceCreateInfoKHR create = {
@@ -56,7 +56,8 @@ surface_type create(const type::supplier<instance::instance_type> &instance,
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 
-surface_type create(const type::supplier<instance::instance_type> &instance, HINSTANCE hinstance, HWND hwnd) {
+surface_type create(const type::supplier<const instance::instance_type> &instance,
+		HINSTANCE hinstance, HWND hwnd) {
 	VkSurfaceKHR surface;
 	VkWin32SurfaceCreateInfoKHR create = {VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, NULL, 0};
 	create.hinstance = hinstance;
@@ -67,31 +68,41 @@ surface_type create(const type::supplier<instance::instance_type> &instance, HIN
 
 #endif // VK_USE_PLATFORM_WIN32_KHR
 
-bool physical_device_support(VkPhysicalDevice device, surface_type &surface, uint32_t queueFamilyIndex) {
+bool physical_device_support(VkPhysicalDevice device, const surface_type &surface,
+		uint32_t queueFamilyIndex) {
 	VkBool32 supported;
-	VKCHECK(vkGetPhysicalDeviceSurfaceSupportKHR(device, queueFamilyIndex, internal::get_instance(surface), &supported));
+	VKCHECK(vkGetPhysicalDeviceSurfaceSupportKHR(device, queueFamilyIndex,
+		internal::get_instance(surface), &supported));
 	return !!supported;
 }
 
-std::vector<VkSurfaceFormatKHR> physical_device_formats(VkPhysicalDevice device, surface_type &surface) {
+std::vector<VkSurfaceFormatKHR> physical_device_formats(VkPhysicalDevice device,
+		const surface_type &surface) {
 	uint32_t count;
-	VKCHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device, internal::get_instance(surface), &count, NULL));
+	VKCHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device, internal::get_instance(surface), &count,
+		NULL));
 	std::vector<VkSurfaceFormatKHR> formats(count);
-	VKCHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device, internal::get_instance(surface), &count, formats.data()));
+	VKCHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device, internal::get_instance(surface), &count,
+		formats.data()));
 	return std::move(formats);
 }
 
-VkSurfaceCapabilitiesKHR physical_device_capabilities(VkPhysicalDevice device, surface_type &surface) {
+VkSurfaceCapabilitiesKHR physical_device_capabilities(VkPhysicalDevice device,
+		const surface_type &surface) {
 	VkSurfaceCapabilitiesKHR capabilities;
-	VKCHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, internal::get_instance(surface), &capabilities));
+	VKCHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, internal::get_instance(surface),
+		&capabilities));
 	return capabilities;
 }
 
-std::vector<VkPresentModeKHR> physical_device_present_modes(VkPhysicalDevice device, surface_type &surface) {
+std::vector<VkPresentModeKHR> physical_device_present_modes(VkPhysicalDevice device,
+		const surface_type &surface) {
 	uint32_t count;
-	VKCHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device, internal::get_instance(surface), &count, NULL));
+	VKCHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device, internal::get_instance(surface),
+		&count, NULL));
 	std::vector<VkPresentModeKHR> modes(count);
-	VKCHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device, internal::get_instance(surface), &count, modes.data()));
+	VKCHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device, internal::get_instance(surface),
+		&count, modes.data()));
 	return std::move(modes);
 }
 

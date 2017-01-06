@@ -68,16 +68,11 @@ auto get_serialize(const T &value)->const decltype(value.serialize)& {
 
 class input_buffer_type {
 	template<typename... StorageType>
-	friend input_buffer_type create(type::memory_layout layout,
-		const type::supplier<device::device_type> &device,
-		VkBufferCreateFlags flags,
-		VkBufferUsageFlags usage,
-		VkSharingMode sharingMode,
-		const std::vector<uint32_t> &queueFamilyIndices,
-		StorageType... storages);
-	friend VCC_LIBRARY bool flush(input_buffer_type &buffer);
-	friend VCC_LIBRARY bool flush(queue::queue_type &queue,
-		input_buffer_type &buffer);
+	friend input_buffer_type create(type::memory_layout,
+		const type::supplier<const device::device_type> &, VkBufferCreateFlags, VkBufferUsageFlags,
+		VkSharingMode, const std::vector<uint32_t> &, StorageType...);
+	friend VCC_LIBRARY bool flush(const input_buffer_type &buffer);
+	friend VCC_LIBRARY bool flush(const queue::queue_type &queue, const input_buffer_type &buffer);
 	template<typename U>
 	friend auto internal::get_mutex(const U &value)->decltype(value.mutex)&;
 	template<typename U>
@@ -109,12 +104,9 @@ public:
 private:
 	template<typename... StorageType>
 	input_buffer_type(type::memory_layout layout,
-		const type::supplier<device::device_type> &device,
-		VkBufferCreateFlags flags,
-		VkBufferUsageFlags usage,
-		VkSharingMode sharingMode,
-		const std::vector<uint32_t> &queueFamilyIndices,
-		StorageType... storages)
+		const type::supplier<const device::device_type> &device, VkBufferCreateFlags flags,
+		VkBufferUsageFlags usage, VkSharingMode sharingMode,
+		const std::vector<uint32_t> &queueFamilyIndices, StorageType... storages)
 		: serialize(type::make_serialize(layout,
 			std::forward<StorageType>(storages)...)),
 		  buffer(std::forward<buffer::buffer_type>(
@@ -132,7 +124,7 @@ private:
  */
 template<typename... StorageType>
 input_buffer_type create(type::memory_layout layout,
-		const type::supplier<device::device_type> &device,
+		const type::supplier<const device::device_type> &device,
 		VkBufferCreateFlags flags,
 		VkBufferUsageFlags usage,
 		VkSharingMode sharingMode,
@@ -143,11 +135,11 @@ input_buffer_type create(type::memory_layout layout,
 }
 
 // Flushes content of the buffer to the GPU if there is data with an old revision.
-VCC_LIBRARY bool flush(input_buffer_type &buffer);
+VCC_LIBRARY bool flush(const input_buffer_type &buffer);
 
 // Flushes content of the buffer to the GPU if there is data with an old revision.
 // A memory barrier is pushed on the queue.
-VCC_LIBRARY bool flush(queue::queue_type &queue, input_buffer_type &buffer);
+VCC_LIBRARY bool flush(const queue::queue_type &queue, const input_buffer_type &buffer);
 
 }  // namespace input_buffer
 }  // namespace vcc

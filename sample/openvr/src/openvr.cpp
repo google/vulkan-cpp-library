@@ -132,9 +132,8 @@ update_matrix_callback_type recalculate_update_matrix_callback(
 }
 
 struct model_type {
-	type::supplier<vcc::input_buffer::input_buffer_type> vertex_buffer,
-		index_buffer;
-	type::supplier<vcc::image_view::image_view_type> image_view;
+	const type::supplier<const vcc::input_buffer::input_buffer_type> vertex_buffer, index_buffer;
+	type::supplier<const vcc::image_view::image_view_type> image_view;
 	uint32_t indices_size;
 };
 
@@ -157,8 +156,8 @@ model_type load_model(vcc::device::device_type &device, vr_model &&model) {
 	vcc::image_view::image_view_type image_view(vcc::image_view::create(
 		std::move(model.image), { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }));
 
-	return model_type{ std::move(vertex_buffer), std::move(index_buffer),
-		std::move(image_view), indices_size };
+	return { std::move(vertex_buffer), std::move(index_buffer), std::move(image_view),
+		indices_size };
 }
 
 struct instance_type {
@@ -203,13 +202,12 @@ instance_type load_instance(vcc::device::device_type &device,
 	vcc::descriptor_set::update(device,
 		vcc::descriptor_set::write_buffer(desc_set, 0, 0,
 			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			{ vcc::descriptor_set::buffer_info(std::move(
-				matrix_uniform_buffer)) }),
+			{ vcc::descriptor_set::buffer_info(std::move(matrix_uniform_buffer)) }),
 		vcc::descriptor_set::write_image{ desc_set, 1, 0,
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		{
-			vcc::descriptor_set::image_info{ std::move(sampler),
-			model->image_view, VK_IMAGE_LAYOUT_GENERAL }
+			vcc::descriptor_set::image_info{ std::move(sampler), model->image_view,
+				VK_IMAGE_LAYOUT_GENERAL }
 		} });
 
 	vcc::command_buffer::command_buffer_type command_buffer(
@@ -221,15 +219,11 @@ instance_type load_instance(vcc::device::device_type &device,
 		std::ref(render_pass), 0, std::ref(framebuffer), VK_FALSE, 0, 0,
 		vcc::command::bind_pipeline{
 		VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
-		vcc::command::bind_descriptor_sets{
-		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		std::ref(pipeline_layout), 0,
-		{ std::move(desc_set) },{} },
+		vcc::command::bind_descriptor_sets{ VK_PIPELINE_BIND_POINT_GRAPHICS,
+			std::ref(pipeline_layout), 0, { std::move(desc_set) },{} },
 		vcc::command::set_scissor{
 		0,{ { { 0, 0 }, extent } } },
-		vcc::command::bind_vertex_buffers(0,
-	std::vector<type::supplier<vcc::input_buffer::input_buffer_type>>{ model->vertex_buffer },
-	{ 0, 0 }),
+		vcc::command::bind_vertex_buffers(0, { std::ref(model->vertex_buffer) }, { 0, 0 }),
 		vcc::command::bind_index_data_buffer(
 			model->index_buffer, 0, VK_INDEX_TYPE_UINT16),
 		vcc::command::set_viewport{ 0,{ viewports[0] } },
@@ -250,7 +244,7 @@ vcc::command_buffer::command_buffer_type recalculate_command_buffer(
 		vcc::command_pool::command_pool_type &cmd_pool,
 		VkExtent2D extent,
 		const std::vector<type::supplier<
-		vcc::command_buffer::command_buffer_type >> &command_buffers) {
+			const vcc::command_buffer::command_buffer_type >> &command_buffers) {
 
 	vcc::command_buffer::command_buffer_type command_buffer(
 		std::move(vcc::command_buffer::allocate(std::ref(device),
@@ -466,8 +460,7 @@ int main(int argc, char **argv) {
 		std::ref(device), std::ref(render_pass),
 		{
 			std::ref(vr_instance.get_image_view()),
-			vcc::image_view::create(depth_image,
-			{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 })
+			vcc::image_view::create(depth_image, { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 })
 		}, extent, 1));
 
 	const glm::mat4 mat4Projection[] = {
@@ -490,7 +483,7 @@ int main(int argc, char **argv) {
 		instance_map_type;
 	instance_map_type instances([&](const instance_map_type::iterator &begin,
 			const instance_map_type::iterator &end) {
-		std::vector<type::supplier<vcc::command_buffer::command_buffer_type>>
+		std::vector<type::supplier<const vcc::command_buffer::command_buffer_type>>
 			command_buffers;
 		command_buffers.reserve(std::distance(begin, end));
 		std::transform(begin, end, std::back_inserter(command_buffers),
@@ -537,7 +530,7 @@ int main(int argc, char **argv) {
 			std::shared_ptr<vcc::command_buffer::command_buffer_type>
 				command_buffer(shared_command_buffer);
 			if (command_buffer) {
-				vcc::queue::submit(queue, {}, { type::make_supplier(command_buffer) }, {});
+				vcc::queue::submit(queue, {}, { command_buffer }, {});
 			}
 		},
 		[&](const vr::VREvent_t &event) {

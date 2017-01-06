@@ -24,15 +24,15 @@ namespace image_view {
 
 struct image_view_type
 	: public internal::movable_destructible_with_parent<VkImageView,
-		device::device_type, vkDestroyImageView> {
+		const device::device_type, vkDestroyImageView> {
 	friend VCC_LIBRARY image_view_type create(
-		const type::supplier<image::image_type> &image,
+		const type::supplier<const image::image_type> &image,
 		VkImageViewType viewType, VkFormat format,
 		const VkComponentMapping &components,
 		const VkImageSubresourceRange &subresourceRange);
 
 	friend VCC_LIBRARY image_view_type create(
-		const type::supplier<image::image_type> &image,
+		const type::supplier<const image::image_type> &image,
 		const VkImageSubresourceRange &subresourceRange);
 
 	image_view_type() = default;
@@ -43,22 +43,22 @@ struct image_view_type
 
 private:
 	image_view_type(VkImageView instance,
-		const type::supplier<device::device_type> &parent,
-		const type::supplier<image::image_type> &image)
+		const type::supplier<const device::device_type> &parent,
+		const type::supplier<const image::image_type> &image)
 		: internal::movable_destructible_with_parent<VkImageView,
-		device::device_type, vkDestroyImageView>(instance, parent),
+		const device::device_type, vkDestroyImageView>(instance, parent),
 		image(image) {}
-	type::supplier<image::image_type> image;
+	type::supplier<const image::image_type> image;
 };
 
 VCC_LIBRARY image_view_type create(
-	const type::supplier<image::image_type> &image,
+	const type::supplier<const image::image_type> &image,
 	VkImageViewType viewType, VkFormat format,
 	const VkComponentMapping &components,
 	const VkImageSubresourceRange &subresourceRange);
 
 VCC_LIBRARY image_view_type create(
-	const type::supplier<image::image_type> &image,
+	const type::supplier<const image::image_type> &image,
 	const VkImageSubresourceRange &subresourceRange);
 
 }  // namespace image_view

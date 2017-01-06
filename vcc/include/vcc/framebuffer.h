@@ -23,14 +23,12 @@
 namespace vcc {
 namespace framebuffer {
 
-struct framebuffer_type
-	: public internal::movable_destructible_with_parent<VkFramebuffer,
-		device::device_type, vkDestroyFramebuffer> {
-	friend VCC_LIBRARY framebuffer_type create(
-		const type::supplier<device::device_type> &device,
-		const type::supplier<render_pass::render_pass_type> &render_pass,
-		const std::vector<type::supplier<image_view::image_view_type>> &image_views,
-		VkExtent2D extent, uint32_t layers);
+struct framebuffer_type : internal::movable_destructible_with_parent<VkFramebuffer,
+		const device::device_type, vkDestroyFramebuffer> {
+	friend VCC_LIBRARY framebuffer_type create(const type::supplier<const device::device_type> &,
+		const type::supplier<const render_pass::render_pass_type> &,
+		const std::vector<type::supplier<const image_view::image_view_type>> &, VkExtent2D,
+		uint32_t);
 
 	framebuffer_type() = default;
 	framebuffer_type(framebuffer_type &&) = default;
@@ -40,20 +38,20 @@ struct framebuffer_type
 
 private:
 	framebuffer_type(VkFramebuffer instance,
-		const type::supplier<device::device_type> &parent,
-		const type::supplier<render_pass::render_pass_type> &render_pass,
-		const std::vector<type::supplier<image_view::image_view_type>>
-		&image_views)
-		: movable_destructible_with_parent(instance, parent),
-		render_pass(render_pass), image_views(image_views) {}
-	type::supplier<render_pass::render_pass_type> render_pass;
-	std::vector<type::supplier<image_view::image_view_type>> image_views;
+		const type::supplier<const device::device_type> &parent,
+		const type::supplier<const render_pass::render_pass_type> &render_pass,
+		const std::vector<type::supplier<const image_view::image_view_type>> &image_views)
+		: movable_destructible_with_parent(instance, parent)
+		, render_pass(render_pass), image_views(image_views) {}
+
+	type::supplier<const render_pass::render_pass_type> render_pass;
+	std::vector<type::supplier<const image_view::image_view_type>> image_views;
 };
 
 VCC_LIBRARY framebuffer_type create(
-	const type::supplier<device::device_type> &device,
-	const type::supplier<render_pass::render_pass_type> &render_pass,
-	const std::vector<type::supplier<image_view::image_view_type>> &image_views,
+	const type::supplier<const device::device_type> &device,
+	const type::supplier<const render_pass::render_pass_type> &render_pass,
+	const std::vector<type::supplier<const image_view::image_view_type>> &image_views,
 	VkExtent2D extent, uint32_t layers);
 
 }  // namespace framebuffer
