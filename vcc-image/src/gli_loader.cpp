@@ -111,8 +111,8 @@ image::image_type gli_loader_type::load(
 						? compressed_extent(texture) : extent);
 					const std::size_t block_size(gli::block_size(texture.format()));
 
-					command_buffer::compile(command_buffer,
-						VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, VK_FALSE, 0, 0,
+					command::compile(vcc::command::build(std::ref(command_buffer),
+							VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, VK_FALSE, 0, 0),
 						command::pipeline_barrier(
 							VK_PIPELINE_STAGE_HOST_BIT,
 							VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
@@ -136,8 +136,8 @@ image::image_type gli_loader_type::load(
 						texture.data(layer, face, level), block_size,
 						block_size * copy_extent.x, staging_image);
 
-					command_buffer::compile(command_buffer,
-						VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, VK_FALSE, 0, 0,
+					command::compile(vcc::command::build(std::ref(command_buffer),
+							VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, VK_FALSE, 0, 0),
 						command::pipeline_barrier(
 							VK_PIPELINE_STAGE_HOST_BIT,
 							VK_PIPELINE_STAGE_TRANSFER_BIT, 0,

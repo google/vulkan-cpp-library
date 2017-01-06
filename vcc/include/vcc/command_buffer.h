@@ -35,6 +35,12 @@ struct queue_type;
 
 }  // namespace queue
 
+namespace command {
+
+struct build_type;
+
+}  // namespace command
+
 namespace command_buffer {
 namespace internal {
 
@@ -80,6 +86,7 @@ struct command_buffer_type
 	template<typename T>
 	friend const vcc::internal::hook_container_type<const queue::queue_type &>
 		&internal::get_pre_execute_hook(const T &value);
+	friend struct command::build_type;
 
 	command_buffer_type() = default;
 	command_buffer_type(command_buffer_type &&) = default;
@@ -100,36 +107,6 @@ VCC_LIBRARY std::vector<command_buffer_type> allocate(
 	const type::supplier<const device::device_type> &device,
 	const type::supplier<const command_pool::command_pool_type> &command_pool,
 	VkCommandBufferLevel level, uint32_t commandBufferCount);
-
-struct begin_type {
-	begin_type() = default;
-	begin_type(const begin_type &) = delete;
-	begin_type(begin_type &&) = default;
-	begin_type &operator=(const begin_type &) = delete;
-	begin_type &operator=(begin_type &&) = default;
-
-	VCC_LIBRARY ~begin_type();
-
-	explicit begin_type(const type::supplier<const command_buffer_type> &command_buffer);
-private:
-	type::supplier<const command_buffer_type> command_buffer;
-	std::unique_lock<std::mutex> command_buffer_lock;
-};
-
-VCC_LIBRARY begin_type begin(
-	const type::supplier<const command_buffer_type> &command_buffer,
-	VkCommandBufferUsageFlags flags,
-	const type::supplier<const render_pass::render_pass_type> &render_pass,
-	uint32_t subpass,
-	const type::supplier<const framebuffer::framebuffer_type> &framebuffer,
-	VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
-	VkQueryPipelineStatisticFlags pipelineStatistics);
-
-VCC_LIBRARY begin_type begin(
-	const type::supplier<const command_buffer_type> &command_buffer,
-	VkCommandBufferUsageFlags flags,
-	VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
-	VkQueryPipelineStatisticFlags pipelineStatistics);
 
 }  // namespace command_buffer
 }  // namespace vcc

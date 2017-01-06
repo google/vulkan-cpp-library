@@ -48,8 +48,9 @@ bool flush(const queue::queue_type &queue, const input_buffer_type &buffer) {
 			VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, queue::get_family_index(queue)));
 		command_buffer::command_buffer_type cmd(std::move(command_buffer::allocate(device,
 			std::ref(command_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-		command_buffer::compile(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-			VK_FALSE, 0, 0,
+		command::compile(
+			vcc::command::build(std::ref(cmd), VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+				VK_FALSE, 0, 0),
 			command::pipeline_barrier{ VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
 				{},

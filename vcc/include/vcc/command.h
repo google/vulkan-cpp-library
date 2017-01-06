@@ -27,6 +27,66 @@
 namespace vcc {
 namespace command {
 
+namespace internal {
+
+
+template<typename BuildT>
+command_buffer::command_buffer_type &get_command_buffer(BuildT &build) {
+	return *build.command_buffer;
+}
+
+template<typename BuildT>
+auto get_pre_execute_callbacks(BuildT &build)->decltype(build.pre_execute_callbacks)& {
+	return build.pre_execute_callbacks;
+}
+
+template<typename BuildT>
+auto get_references(BuildT &build)->decltype(build.references)& {
+	return build.references;
+}
+
+}  // namespace internal
+
+struct build_type {
+	template<typename BuildT>
+	friend command_buffer::command_buffer_type &internal::get_command_buffer(BuildT &build);
+	template<typename BuildT>
+	friend auto internal::get_pre_execute_callbacks(BuildT &build)
+		->decltype(build.pre_execute_callbacks)&;
+	template<typename BuildT>
+	friend auto internal::get_references(BuildT &build)->decltype(build.references)&;
+
+	build_type() = default;
+	build_type(const build_type &) = delete;
+	build_type(build_type &&) = default;
+	build_type &operator=(const build_type &) = delete;
+	build_type &operator=(build_type &&) = default;
+
+	VCC_LIBRARY ~build_type();
+
+	explicit build_type(const type::supplier<command_buffer::command_buffer_type> &command_buffer);
+private:
+	type::supplier<command_buffer::command_buffer_type> command_buffer;
+	std::unique_lock<std::mutex> command_buffer_lock;
+	vcc::internal::hook_container_type<const queue::queue_type&> pre_execute_callbacks;
+	vcc::internal::reference_container_type references;
+};
+
+VCC_LIBRARY build_type build(
+	const type::supplier<command_buffer::command_buffer_type> &command_buffer,
+	VkCommandBufferUsageFlags flags,
+	const type::supplier<const render_pass::render_pass_type> &render_pass,
+	uint32_t subpass,
+	const type::supplier<const framebuffer::framebuffer_type> &framebuffer,
+	VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
+	VkQueryPipelineStatisticFlags pipelineStatistics);
+
+VCC_LIBRARY build_type build(
+	const type::supplier<command_buffer::command_buffer_type> &command_buffer,
+	VkCommandBufferUsageFlags flags,
+	VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
+	VkQueryPipelineStatisticFlags pipelineStatistics);
+
 struct bind_pipeline {
 	VkPipelineBindPoint pipelineBindPoint;
 	type::supplier<const pipeline::pipeline_type> pipeline;
@@ -492,133 +552,96 @@ VCC_LIBRARY VkClearValue clear_depth_stencil(
 
 namespace internal {
 
-struct cmd_args {
-	std::reference_wrapper<command_buffer::command_buffer_type> buffer;
-	vcc::internal::hook_container_type<const queue::queue_type&> pre_execute_callbacks;
-	vcc::internal::reference_container_type references;
-};
-
-VCC_LIBRARY void cmd(cmd_args &, const bind_pipeline &);
-VCC_LIBRARY void cmd(cmd_args &, const set_viewport &);
-VCC_LIBRARY void cmd(cmd_args &, const set_scissor &);
-VCC_LIBRARY void cmd(cmd_args &, const set_line_width &);
-VCC_LIBRARY void cmd(cmd_args &, const set_depth_bias &);
-VCC_LIBRARY void cmd(cmd_args &, const set_blend_constants &);
-VCC_LIBRARY void cmd(cmd_args &, const set_depth_bounds &);
-VCC_LIBRARY void cmd(cmd_args &, const set_stencil_compare_mask &);
-VCC_LIBRARY void cmd(cmd_args &, const set_stencil_write_mask &);
-VCC_LIBRARY void cmd(cmd_args &, const set_stencil_reference &);
-VCC_LIBRARY void cmd(cmd_args &, const bind_descriptor_sets &);
-VCC_LIBRARY void cmd(cmd_args &, const bind_index_buffer_type &);
-VCC_LIBRARY void cmd(cmd_args &, const bind_vertex_buffers_type &);
-VCC_LIBRARY void cmd(cmd_args &, const draw &);
-VCC_LIBRARY void cmd(cmd_args &, const draw_indexed &);
-VCC_LIBRARY void cmd(cmd_args &, const draw_indirect_type &);
-VCC_LIBRARY void cmd(cmd_args &, const draw_indexed_indirect_type &);
-VCC_LIBRARY void cmd(cmd_args &, const dispatch &);
-VCC_LIBRARY void cmd(cmd_args &, const dispatch_indirect_type &);
-VCC_LIBRARY void cmd(cmd_args &, const copy_buffer_type &);
-VCC_LIBRARY void cmd(cmd_args &, const copy_image &);
-VCC_LIBRARY void cmd(cmd_args &, const blit_image &);
-VCC_LIBRARY void cmd(cmd_args &, const copy_buffer_to_image_type &);
-VCC_LIBRARY void cmd(cmd_args &, const copy_image_to_buffer &);
-VCC_LIBRARY void cmd(cmd_args &, const update_buffer &);
-VCC_LIBRARY void cmd(cmd_args &, const fill_buffer &);
-VCC_LIBRARY void cmd(cmd_args &, const clear_color_image &);
-VCC_LIBRARY void cmd(cmd_args &, const clear_depth_stencil_image &);
-VCC_LIBRARY void cmd(cmd_args &, const clear_attachments &);
-VCC_LIBRARY void cmd(cmd_args &, const resolve_image &);
-VCC_LIBRARY void cmd(cmd_args &, const set_event &);
-VCC_LIBRARY void cmd(cmd_args &, const reset_event &);
-VCC_LIBRARY void cmd(cmd_args &, const wait_events &);
-VCC_LIBRARY void cmd(cmd_args &, const pipeline_barrier &);
-VCC_LIBRARY void cmd(cmd_args &, const begin_query &);
-VCC_LIBRARY void cmd(cmd_args &, const end_query &);
-VCC_LIBRARY void cmd(cmd_args &, const reset_query_pool &);
-VCC_LIBRARY void cmd(cmd_args &, const write_timestamp &);
-VCC_LIBRARY void cmd(cmd_args &, const copy_query_pool_results &);
-VCC_LIBRARY void cmd(cmd_args &, const push_constants_type &);
-VCC_LIBRARY void cmd(cmd_args &, const next_subpass &);
-VCC_LIBRARY void cmd(cmd_args &, const execute_commands &);
-VCC_LIBRARY void cmd(cmd_args &, const bind_index_data_buffer_type&);
-VCC_LIBRARY void cmd(cmd_args &, const bind_vertex_data_buffers_type&);
-VCC_LIBRARY void cmd(cmd_args &, const draw_indirect_data_type&);
-VCC_LIBRARY void cmd(cmd_args &, const draw_indexed_indirect_data_type&);
-VCC_LIBRARY void cmd(cmd_args &, const dispatch_indirect_data_type&);
-VCC_LIBRARY void cmd(cmd_args &, const copy_data_buffer_type&);
-VCC_LIBRARY void cmd(cmd_args &, const copy_data_buffer_to_image_type&);
+VCC_LIBRARY void cmd(build_type &, const bind_pipeline &);
+VCC_LIBRARY void cmd(build_type &, const set_viewport &);
+VCC_LIBRARY void cmd(build_type &, const set_scissor &);
+VCC_LIBRARY void cmd(build_type &, const set_line_width &);
+VCC_LIBRARY void cmd(build_type &, const set_depth_bias &);
+VCC_LIBRARY void cmd(build_type &, const set_blend_constants &);
+VCC_LIBRARY void cmd(build_type &, const set_depth_bounds &);
+VCC_LIBRARY void cmd(build_type &, const set_stencil_compare_mask &);
+VCC_LIBRARY void cmd(build_type &, const set_stencil_write_mask &);
+VCC_LIBRARY void cmd(build_type &, const set_stencil_reference &);
+VCC_LIBRARY void cmd(build_type &, const bind_descriptor_sets &);
+VCC_LIBRARY void cmd(build_type &, const bind_index_buffer_type &);
+VCC_LIBRARY void cmd(build_type &, const bind_vertex_buffers_type &);
+VCC_LIBRARY void cmd(build_type &, const draw &);
+VCC_LIBRARY void cmd(build_type &, const draw_indexed &);
+VCC_LIBRARY void cmd(build_type &, const draw_indirect_type &);
+VCC_LIBRARY void cmd(build_type &, const draw_indexed_indirect_type &);
+VCC_LIBRARY void cmd(build_type &, const dispatch &);
+VCC_LIBRARY void cmd(build_type &, const dispatch_indirect_type &);
+VCC_LIBRARY void cmd(build_type &, const copy_buffer_type &);
+VCC_LIBRARY void cmd(build_type &, const copy_image &);
+VCC_LIBRARY void cmd(build_type &, const blit_image &);
+VCC_LIBRARY void cmd(build_type &, const copy_buffer_to_image_type &);
+VCC_LIBRARY void cmd(build_type &, const copy_image_to_buffer &);
+VCC_LIBRARY void cmd(build_type &, const update_buffer &);
+VCC_LIBRARY void cmd(build_type &, const fill_buffer &);
+VCC_LIBRARY void cmd(build_type &, const clear_color_image &);
+VCC_LIBRARY void cmd(build_type &, const clear_depth_stencil_image &);
+VCC_LIBRARY void cmd(build_type &, const clear_attachments &);
+VCC_LIBRARY void cmd(build_type &, const resolve_image &);
+VCC_LIBRARY void cmd(build_type &, const set_event &);
+VCC_LIBRARY void cmd(build_type &, const reset_event &);
+VCC_LIBRARY void cmd(build_type &, const wait_events &);
+VCC_LIBRARY void cmd(build_type &, const pipeline_barrier &);
+VCC_LIBRARY void cmd(build_type &, const begin_query &);
+VCC_LIBRARY void cmd(build_type &, const end_query &);
+VCC_LIBRARY void cmd(build_type &, const reset_query_pool &);
+VCC_LIBRARY void cmd(build_type &, const write_timestamp &);
+VCC_LIBRARY void cmd(build_type &, const copy_query_pool_results &);
+VCC_LIBRARY void cmd(build_type &, const push_constants_type &);
+VCC_LIBRARY void cmd(build_type &, const next_subpass &);
+VCC_LIBRARY void cmd(build_type &, const execute_commands &);
+VCC_LIBRARY void cmd(build_type &, const bind_index_data_buffer_type&);
+VCC_LIBRARY void cmd(build_type &, const bind_vertex_data_buffers_type&);
+VCC_LIBRARY void cmd(build_type &, const draw_indirect_data_type&);
+VCC_LIBRARY void cmd(build_type &, const draw_indexed_indirect_data_type&);
+VCC_LIBRARY void cmd(build_type &, const dispatch_indirect_data_type&);
+VCC_LIBRARY void cmd(build_type &, const copy_data_buffer_type&);
+VCC_LIBRARY void cmd(build_type &, const copy_data_buffer_to_image_type&);
 
 // Need C++14 to do auto argument lambdas.
 struct call_cmd_type {
-	cmd_args &args;
+	build_type &build;
 
 	template<typename T>
 	void operator()(T &value) {
-		cmd(args, value);
+		cmd(build, value);
 	};
 };
 
 template<typename... CommandsT>
-void cmd(cmd_args &args, render_pass_type<CommandsT...> &&render_pass) {
-	VkRenderPassBeginInfo info = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-		NULL };
+void cmd(build_type &build, render_pass_type<CommandsT...> &&render_pass) {
+	VkRenderPassBeginInfo info = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, NULL };
 	info.renderPass = vcc::internal::get_instance(*render_pass.renderPass);
 	info.framebuffer = vcc::internal::get_instance(*render_pass.framebuffer);
 	info.renderArea = render_pass.renderArea;
 	info.clearValueCount = (uint32_t)render_pass.clearValues.size();
 	info.pClearValues = render_pass.clearValues.data();
-	VKTRACE(vkCmdBeginRenderPass(
-		vcc::internal::get_instance(args.buffer.get()), &info,
+	VKTRACE(vkCmdBeginRenderPass(vcc::internal::get_instance(get_command_buffer(build)), &info,
 		render_pass.contents));
-	util::tuple_foreach(call_cmd_type{ args }, render_pass.commands);
-	VKTRACE(vkCmdEndRenderPass(
-		vcc::internal::get_instance(args.buffer.get())));
-	args.references.add(render_pass.renderPass);
-	args.references.add(render_pass.framebuffer);
+	util::tuple_foreach(call_cmd_type{ build }, render_pass.commands);
+	VKTRACE(vkCmdEndRenderPass(vcc::internal::get_instance(get_command_buffer(build))));
+	get_references(build).add(render_pass.renderPass, render_pass.framebuffer);
 }
 
 }  // namespace internal
 
+template<typename... CommandsT>
+void compile(build_type &begin, CommandsT&&... commands) {
+	// int array guarantees order of execution with older GCC compilers.
+	const int dummy[] = { (internal::cmd(begin, std::forward<CommandsT>(commands)), 0)... };
+}
+
+template<typename... CommandsT>
+void compile(build_type &&begin, CommandsT&&... commands) {
+	// int array guarantees order of execution with older GCC compilers.
+	const int dummy[] = { (internal::cmd(begin, std::forward<CommandsT>(commands)), 0)... };
+}
+
 }  // namespace command
-
-namespace command_buffer {
-
-template<typename... CommandsT>
-void compile(command_buffer_type &command_buffer,
-		VkCommandBufferUsageFlags flags,
-		const type::supplier<const render_pass::render_pass_type> &render_pass,
-		uint32_t subpass,
-		const type::supplier<const framebuffer::framebuffer_type> &framebuffer,
-		VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
-		VkQueryPipelineStatisticFlags pipelineStatistics,
-		CommandsT&&... commands) {
-	begin_type begin_instance(begin(std::ref(command_buffer), flags,
-		render_pass, subpass, framebuffer, occlusionQueryEnable,
-		queryFlags, pipelineStatistics));
-	command::internal::cmd_args args = { command_buffer };
-	args.references.add(render_pass, framebuffer);
-	// int array guarantees order of execution with older GCC compilers.
-	const int dummy[] = { (command::internal::cmd(args, std::forward<CommandsT>(commands)), 0)... };
-	command_buffer.references = std::move(args.references);
-	command_buffer.pre_execute_hook = std::move(args.pre_execute_callbacks);
-}
-
-template<typename... CommandsT>
-void compile(command_buffer_type &command_buffer,
-		VkCommandBufferUsageFlags flags,
-		VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
-		VkQueryPipelineStatisticFlags pipelineStatistics,
-		CommandsT&&... commands) {
-	begin_type begin_instance(begin(std::ref(command_buffer), flags,
-		occlusionQueryEnable, queryFlags, pipelineStatistics));
-	command::internal::cmd_args args = { command_buffer };
-	// int array guarantees order of execution with older GCC compilers.
-	const int dummy[] = { (command::internal::cmd(args, std::forward<CommandsT>(commands)), 0)... };
-	command_buffer.references = std::move(args.references);
-	command_buffer.pre_execute_hook = std::move(args.pre_execute_callbacks);
-}
-
-}  // namespace command_buffer
 }  // namespace vcc
 
 #endif  // _VCC_COMMAND_H_

@@ -213,10 +213,11 @@ instance_type load_instance(vcc::device::device_type &device,
 	vcc::command_buffer::command_buffer_type command_buffer(
 		std::move(vcc::command_buffer::allocate(std::ref(device),
 			std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_SECONDARY, 1).front()));
-	vcc::command_buffer::compile(command_buffer,
-		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-		| VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-		std::ref(render_pass), 0, std::ref(framebuffer), VK_FALSE, 0, 0,
+	vcc::command::compile(
+		vcc::command::build(std::ref(command_buffer),
+			VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+			| VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+			std::ref(render_pass), 0, std::ref(framebuffer), VK_FALSE, 0, 0),
 		vcc::command::bind_pipeline{
 		VK_PIPELINE_BIND_POINT_GRAPHICS, std::ref(pipeline) },
 		vcc::command::bind_descriptor_sets{ VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -249,8 +250,7 @@ vcc::command_buffer::command_buffer_type recalculate_command_buffer(
 	vcc::command_buffer::command_buffer_type command_buffer(
 		std::move(vcc::command_buffer::allocate(std::ref(device),
 			std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-	vcc::command_buffer::compile(command_buffer, 0, VK_FALSE,
-		0, 0,
+	vcc::command::compile(vcc::command::build(std::ref(command_buffer), 0, VK_FALSE, 0, 0),
 		vcc::command::render_pass(std::ref(render_pass),
 			std::ref(framebuffer), VkRect2D{ { 0, 0 }, extent },
 			{
@@ -441,7 +441,7 @@ int main(int argc, char **argv) {
 		vcc::command_buffer::command_buffer_type command_buffer(
 			std::move(vcc::command_buffer::allocate(std::ref(device),
 				std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-		vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
+		vcc::command::compile(vcc::command::build(std::ref(command_buffer), 0, VK_FALSE, 0, 0),
 			vcc::command::pipeline_barrier(
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},

@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <vcc/command.h>
 #include <vcc/command_buffer.h>
 #include <vcc/queue.h>
 #include <vcc/pipeline_layout.h>
@@ -62,7 +63,7 @@ void flush(const type::supplier<const type::serialize_type> &constants,
 			command_buffer::allocate(device, std::ref(command_pool),
 				VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 		{
-			command_buffer::begin_type begin(command_buffer::begin(
+			command::build_type begin(command::build(
 				std::ref(cmd), VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 				VK_FALSE, 0, 0));
 			for (const VkPushConstantRange &range : push_constant_ranges) {

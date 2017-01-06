@@ -495,7 +495,7 @@ int main(int argc, const char **argv) {
 		vcc::command_buffer::command_buffer_type command_buffer(std::move(
 			vcc::command_buffer::allocate(std::ref(device), std::ref(cmd_pool),
 				VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-		vcc::command_buffer::compile(command_buffer, 0, VK_FALSE, 0, 0,
+		vcc::command::compile(vcc::command::build(std::ref(command_buffer), 0, VK_FALSE, 0, 0),
 			vcc::command::pipeline_barrier(
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
@@ -512,7 +512,8 @@ int main(int argc, const char **argv) {
 		command_buffers = vcc::command_buffer::allocate(std::ref(device), std::ref(cmd_pool),
 			VK_COMMAND_BUFFER_LEVEL_PRIMARY, (uint32_t) swapchain_images.size());
 		for (std::size_t i = 0; i < swapchain_images.size(); ++i) {
-			vcc::command_buffer::compile(command_buffers[i], 0, VK_FALSE, 0, 0,
+			vcc::command::compile(
+				vcc::command::build(std::ref(command_buffers[i]), 0, VK_FALSE, 0, 0),
 				vcc::command::render_pass(std::ref(render_pass),
 					vcc::framebuffer::create(std::ref(device), std::ref(render_pass),
 						{

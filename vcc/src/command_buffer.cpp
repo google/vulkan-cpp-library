@@ -44,57 +44,6 @@ std::vector<command_buffer_type> allocate(
 	return std::move(command_buffers);
 }
 
-begin_type::~begin_type() {
-	if (command_buffer) {
-		VKCHECK(vkEndCommandBuffer(
-			vcc::internal::get_instance(*command_buffer)));
-	}
-}
-
-begin_type::begin_type(
-	const type::supplier<const command_buffer_type> &command_buffer)
-	: command_buffer(command_buffer),
-	  command_buffer_lock(vcc::internal::get_mutex(*command_buffer)) {}
-
-begin_type begin(const type::supplier<const command_buffer_type> &command_buffer,
-	VkCommandBufferUsageFlags flags,
-	const type::supplier<const render_pass::render_pass_type> &render_pass,
-	uint32_t subpass,
-	const type::supplier<const framebuffer::framebuffer_type> &framebuffer,
-	VkBool32 occlusionQueryEnable, VkQueryControlFlags queryFlags,
-	VkQueryPipelineStatisticFlags pipelineStatistics) {
-	VkCommandBufferInheritanceInfo inheritance_info = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO, NULL };
-	inheritance_info.renderPass = VkRenderPass(vcc::internal::get_instance(*render_pass));
-	inheritance_info.subpass = subpass;
-	inheritance_info.framebuffer = VkFramebuffer(vcc::internal::get_instance(*framebuffer));
-	inheritance_info.occlusionQueryEnable = occlusionQueryEnable;
-	inheritance_info.queryFlags = queryFlags;
-	inheritance_info.pipelineStatistics = pipelineStatistics;
-	VkCommandBufferBeginInfo info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, NULL};
-	info.flags = flags;
-	info.pInheritanceInfo = &inheritance_info;
-	VKCHECK(vkBeginCommandBuffer(vcc::internal::get_instance(*command_buffer), &info));
-	return begin_type(command_buffer);
-}
-
-begin_type begin(const type::supplier<const command_buffer_type> &command_buffer,
-		VkCommandBufferUsageFlags flags, VkBool32 occlusionQueryEnable,
-		VkQueryControlFlags queryFlags, VkQueryPipelineStatisticFlags pipelineStatistics) {
-	VkCommandBufferInheritanceInfo inheritance_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO, NULL };
-	inheritance_info.renderPass = VK_NULL_HANDLE;
-	inheritance_info.subpass = 0;
-	inheritance_info.framebuffer = VK_NULL_HANDLE;
-	inheritance_info.occlusionQueryEnable = occlusionQueryEnable;
-	inheritance_info.queryFlags = queryFlags;
-	inheritance_info.pipelineStatistics = pipelineStatistics;
-	VkCommandBufferBeginInfo info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, NULL };
-	info.flags = flags;
-	info.pInheritanceInfo = &inheritance_info;
-	VKCHECK(vkBeginCommandBuffer(vcc::internal::get_instance(*command_buffer), &info));
-	return begin_type(command_buffer);
-}
-
 }  // namespace command_buffer
 }  // namespace vcc
 

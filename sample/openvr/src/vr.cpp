@@ -140,8 +140,9 @@ int vr_type::run(const draw_callback_type &draw_callback,
 			vcc::internal::get_parent(*queue), std::ref(command_pool),
 			VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 
-	vcc::command_buffer::compile(std::ref(pre_draw_command_buffer),
-		0, VK_FALSE, 0, 0, vcc::command::pipeline_barrier(
+	vcc::command::compile(
+		vcc::command::build(std::ref(pre_draw_command_buffer), 0, VK_FALSE, 0, 0),
+		vcc::command::pipeline_barrier(
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, {},
 			{}, {
@@ -154,8 +155,9 @@ int vr_type::run(const draw_callback_type &draw_callback,
 					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
 				}
 			}));
-	vcc::command_buffer::compile(std::ref(post_draw_command_buffer),
-		0, VK_FALSE, 0, 0, vcc::command::pipeline_barrier(
+	vcc::command::compile(
+		vcc::command::build(std::ref(post_draw_command_buffer), 0, VK_FALSE, 0, 0),
+		vcc::command::pipeline_barrier(
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_TRANSFER_BIT, 0, {}, {},
 			{
