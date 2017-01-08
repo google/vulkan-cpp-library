@@ -124,6 +124,24 @@ typedef writable_t_array<glm::mat4> writable_mat4_array;
 typedef writable_t_array<uint8_t> writable_ubyte_array;
 typedef writable_t_array<uint16_t> writable_ushort_array;
 
+typedef writable_t_primitive<float> writable_float;
+
+typedef writable_t_primitive<glm::vec2> writable_vec2;
+typedef writable_t_primitive<glm::vec3> writable_vec3;
+typedef writable_t_primitive<glm::vec4> writable_vec4;
+
+typedef writable_t_primitive<int> writable_int;
+typedef writable_t_primitive<glm::ivec2> writable_ivec2;
+typedef writable_t_primitive<glm::ivec3> writable_ivec3;
+typedef writable_t_primitive<glm::ivec4> writable_ivec4;
+
+typedef writable_t_primitive<glm::mat2> writable_mat2;
+typedef writable_t_primitive<glm::mat3> writable_mat3;
+typedef writable_t_primitive<glm::mat4> writable_mat4;
+
+typedef writable_t_primitive<uint8_t> writable_ubyte;
+typedef writable_t_primitive<uint16_t> writable_ushort;
+
 typedef readable_t_array<float, true> readable_float_array;
 
 typedef readable_t_array<glm::vec2, true> readable_vec2_array;
@@ -141,6 +159,24 @@ typedef readable_t_array<glm::mat4, true> readable_mat4_array;
 
 typedef readable_t_array<uint8_t, true> readable_ubyte_array;
 typedef readable_t_array<uint16_t, true> readable_ushort_array;
+
+typedef readable_t_primitive<float, true> readable_float;
+
+typedef readable_t_primitive<glm::vec2, true> readable_vec2;
+typedef readable_t_primitive<glm::vec3, true> readable_vec3;
+typedef readable_t_primitive<glm::vec4, true> readable_vec4;
+
+typedef readable_t_primitive<int, true> readable_int;
+typedef readable_t_primitive<glm::ivec2, true> readable_ivec2;
+typedef readable_t_primitive<glm::ivec3, true> readable_ivec3;
+typedef readable_t_primitive<glm::ivec4, true> readable_ivec4;
+
+typedef readable_t_primitive<glm::mat2, true> readable_mat2;
+typedef readable_t_primitive<glm::mat3, true> readable_mat3;
+typedef readable_t_primitive<glm::mat4, true> readable_mat4;
+
+typedef readable_t_primitive<uint8_t, true> readable_ubyte;
+typedef readable_t_primitive<uint16_t, true> readable_ushort;
 
 typedef readable_t_array<float, false> readable_const_float_array;
 
@@ -160,6 +196,24 @@ typedef readable_t_array<glm::mat4, false> readable_const_mat4_array;
 typedef readable_t_array<uint8_t, false> readable_const_ubyte_array;
 typedef readable_t_array<uint16_t, false> readable_const_ushort_array;
 
+typedef readable_t_primitive<float, false> readable_const_float;
+
+typedef readable_t_primitive<glm::vec2, false> readable_const_vec2;
+typedef readable_t_primitive<glm::vec3, false> readable_const_vec3;
+typedef readable_t_primitive<glm::vec4, false> readable_const_vec4;
+
+typedef readable_t_primitive<int, false> readable_const_int;
+typedef readable_t_primitive<glm::ivec2, false> readable_const_ivec2;
+typedef readable_t_primitive<glm::ivec3, false> readable_const_ivec3;
+typedef readable_t_primitive<glm::ivec4, false> readable_const_ivec4;
+
+typedef readable_t_primitive<glm::mat2, false> readable_const_mat2;
+typedef readable_t_primitive<glm::mat3, false> readable_const_mat3;
+typedef readable_t_primitive<glm::mat4, false> readable_const_mat4;
+
+typedef readable_t_primitive<uint8_t, false> readable_const_ubyte;
+typedef readable_t_primitive<uint16_t, false> readable_const_ushort;
+
 enum element_enum {
 	type_unknown = 0,
 	type_float,
@@ -173,9 +227,9 @@ namespace internal {
 
 	template<element_enum Element, std::size_t Cols, std::size_t Rows, bool IsArray>
 	struct type_information_traits {
-		const element_enum element = Element;
-		const static std::size_t cols = Cols, rows = Rows;
-		const static bool is_array = IsArray;
+		constexpr static element_enum element = Element;
+		constexpr static std::size_t cols = Cols, rows = Rows;
+		constexpr static bool is_array = IsArray;
 	};
 
 }  // namespace internal
