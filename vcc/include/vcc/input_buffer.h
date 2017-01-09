@@ -67,10 +67,10 @@ auto get_serialize(const T &value)->const decltype(value.serialize)& {
  */
 
 class input_buffer_type {
-	template<typename... StorageType>
-	friend input_buffer_type create(type::memory_layout,
-		const type::supplier<const device::device_type> &, VkBufferCreateFlags, VkBufferUsageFlags,
-		VkSharingMode, const std::vector<uint32_t> &, StorageType...);
+	template<type::memory_layout Layout, typename... StorageType>
+	friend input_buffer_type create(const type::supplier<const device::device_type> &,
+		VkBufferCreateFlags, VkBufferUsageFlags, VkSharingMode, const std::vector<uint32_t> &,
+		StorageType... );
 	friend VCC_LIBRARY bool flush(const input_buffer_type &buffer);
 	friend VCC_LIBRARY bool flush(const queue::queue_type &queue, const input_buffer_type &buffer);
 	template<typename U>
@@ -102,13 +102,12 @@ public:
 	}
 
 private:
-	template<typename... StorageType>
-	input_buffer_type(type::memory_layout layout,
-		const type::supplier<const device::device_type> &device, VkBufferCreateFlags flags,
-		VkBufferUsageFlags usage, VkSharingMode sharingMode,
-		const std::vector<uint32_t> &queueFamilyIndices, StorageType... storages)
-		: serialize(type::make_serialize(layout,
-			std::forward<StorageType>(storages)...)),
+	template<typename Serialize>
+	input_buffer_type(const type::supplier<const device::device_type> &device,
+		VkBufferCreateFlags flags, VkBufferUsageFlags usage, VkSharingMode sharingMode,
+		const std::vector<uint32_t> &queueFamilyIndices,
+		Serialize serialize)
+		: serialize(std::forward<Serialize>(serialize)),
 		  buffer(std::forward<buffer::buffer_type>(
 			  buffer::create(device, flags, type::size(serialize), usage,
 				  sharingMode, queueFamilyIndices))) {}
@@ -122,16 +121,13 @@ private:
  * Creates a buffer_type containing the given data.
  * Notice: The buffer must be bound to memory before usage.
  */
-template<typename... StorageType>
-input_buffer_type create(type::memory_layout layout,
-		const type::supplier<const device::device_type> &device,
-		VkBufferCreateFlags flags,
-		VkBufferUsageFlags usage,
-		VkSharingMode sharingMode,
+template<type::memory_layout Layout, typename... StorageType>
+input_buffer_type create(const type::supplier<const device::device_type> &device,
+		VkBufferCreateFlags flags, VkBufferUsageFlags usage, VkSharingMode sharingMode,
 		const std::vector<uint32_t> &queueFamilyIndices,
 		StorageType... storages) {
-	return input_buffer_type(layout, device, flags, usage, sharingMode, queueFamilyIndices,
-			std::forward<StorageType>(storages)...);
+	return input_buffer_type(device, flags, usage, sharingMode, queueFamilyIndices,
+		type::make_serialize<Layout>(type::make_supplier(std::forward<StorageType>(storages))...));
 }
 
 // Flushes content of the buffer to the GPU if there is data with an old revision.

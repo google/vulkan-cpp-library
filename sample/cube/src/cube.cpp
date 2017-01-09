@@ -189,21 +189,22 @@ int main(int argc, const char **argv) {
 
 	glm::mat4 projection_matrix;
 	type::mat4 projection_modelview_matrix;
-	vcc::input_buffer::input_buffer_type matrix_uniform_buffer(vcc::input_buffer::create(
-		type::linear, std::ref(device), 0, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		VK_SHARING_MODE_EXCLUSIVE, {}, std::ref(projection_modelview_matrix)));
+	vcc::input_buffer::input_buffer_type matrix_uniform_buffer(
+		vcc::input_buffer::create<type::linear>(std::ref(device), 0,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
+			std::ref(projection_modelview_matrix)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 		matrix_uniform_buffer);
 
-	vcc::input_buffer::input_buffer_type vertex_buffer(vcc::input_buffer::create(
-		type::interleaved_std140, std::ref(device), 0,
-		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
-		std::ref(vertices), std::ref(texcoords)));
+	vcc::input_buffer::input_buffer_type vertex_buffer(
+		vcc::input_buffer::create<type::interleaved_std140>(std::ref(device), 0,
+			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
+			std::ref(vertices), std::ref(texcoords)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 		vertex_buffer);
 
-	vcc::input_buffer::input_buffer_type index_buffer(vcc::input_buffer::create(
-		type::linear, std::ref(device), 0, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+	vcc::input_buffer::input_buffer_type index_buffer(vcc::input_buffer::create<type::linear>(
+		std::ref(device), 0, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 		VK_SHARING_MODE_EXCLUSIVE, {}, std::ref(indices)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 		index_buffer);

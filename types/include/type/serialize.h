@@ -16,148 +16,243 @@
 #ifndef TYPE_SERIALIZE_H_
 #define TYPE_SERIALIZE_H_
 
+#include <algorithm>
+#include <array>
 #include <type/memory.h>
-#include <type/view.h>
+#include <type/supplier.h>
+#include <type/types.h>
 
 namespace type {
-
 namespace internal {
 
-const std::size_t base_alignment(16);
-
-struct adapter {
-	adapter(std::size_t element_size, std::size_t offset, std::size_t stride, std::size_t count)
-		: element_size(element_size), offset(offset), stride(stride), count(count) {}
-
-	virtual ~adapter() {}
-
-	virtual bool dirty() const = 0;
-	// Takes offset, stride for the layout into consideration.
-	virtual void copy(void *destination) = 0;
-
-	const std::size_t element_size, offset, stride, count;
-};
-
-template<typename T>
-struct copy_type {
-	typedef T value_type;
-
-	static void copy(const value_type &value, void *destination) {
-		value_type &target = *((value_type *)destination);
-		target = value;
-	}
-};
-
-template<typename T>
-struct view_adapter : public adapter {
-
-	view_adapter(memory_layout layout,
-			const supplier<view_type<T>> &view,
-			std::size_t offset, std::size_t stride)
-		: adapter(calculate_element_size<T>(layout, view->size() > 1), offset, stride, view->size()),
-		  view(view),
-		  revision(REVISION_NONE) {}
-
-	virtual bool dirty() const {
-		return view->revision() > revision;
-	}
-
-	void copy(void *destination) {
-		auto read(view->read());
-		if (view->revision() > revision) {
-			uint8_t *const d = (uint8_t *)destination + offset;
-			for (std::size_t i = 0; i < count; ++i) {
-				internal::copy_type<T>::copy(read[int(i)], &d[i * stride]);
-			}
-			revision = view->revision();
-		}
-	}
-
-	const supplier<view_type<T>> view;
-	revision_type revision;
-};
-
-template<typename T>
-std::unique_ptr<adapter> make_adapter(memory_layout layout,
-		const supplier<view_type<T>> &view,
-		std::size_t offset, std::size_t stride) {
-	return std::unique_ptr<adapter>(new view_adapter<T>(layout, view, offset, stride));
-}
-
-template<std::size_t N>
-struct create_adapters_type {
-
-	template<typename... T>
-	static void create(memory_layout layout, const std::size_t *offsets, const std::size_t *strides,
-			const std::tuple<supplier<view_type<T>>...>& views, std::vector<std::unique_ptr<adapter>> &adapters) {
-		constexpr std::size_t index(N - 1);
-		adapters[index] = make_adapter(layout, std::get<index>(views), offsets[index], strides[index]);
-		create_adapters_type<index>::create(layout, offsets, strides, views, adapters);
-	}
-};
-template<>
-struct create_adapters_type<0> {
-
-	template<typename... T>
-	static void create(memory_layout layout, const std::size_t *offsets, const std::size_t *strides,
-			const std::tuple<supplier<view_type<T>>...>& views, std::vector<std::unique_ptr<adapter>> &adapters) {}
-};
-
-template<typename... T>
-static std::vector<std::unique_ptr<adapter>> create_adapters(
-		memory_layout layout, const std::size_t *offsets,
-		const std::size_t *strides, const std::tuple<supplier<view_type<T>>...>& views) {
-	std::vector<std::unique_ptr<adapter>> adapters(sizeof...(T));
-	create_adapters_type<sizeof...(T)>::create(layout, offsets, strides, views, adapters);
-	return std::move(adapters);
-}
-
-}  // namespace internal
-
-class serialize_type {
-	friend std::size_t size(const serialize_type &serialize);
-	friend void flush(const serialize_type &serialize, void *output);
-	friend bool dirty(const serialize_type &serialize);
-	friend memory_layout layout(const serialize_type &serialize);
-private:
-	typedef std::vector<std::unique_ptr<internal::adapter>> adapter_container_type;
-	memory_layout layout;
-	adapter_container_type adapters;
+template<std::size_t I>
+struct layout_type {
+	typedef std::array<std::size_t, I> indices_type;
+	indices_type offset, stride;
 	std::size_t size;
+};
 
-	static std::size_t calculate_layout(memory_layout layout, std::size_t num_views,
-			const std::size_t *sizes, const std::size_t *element_sizes,
-			const std::size_t *base_alignments, std::size_t *offsets, std::size_t *strides);
+template<memory_layout layout>
+struct alignment_type {
 
-public:
+	constexpr static std::size_t align_offset(std::size_t base_offset, std::size_t alignment) {
+		return base_offset + (alignment - base_offset % alignment) % alignment;
+	}
+
+	template<typename T>
+	static std::size_t size() {
+		auto primitive_alignment(primitive_type_information<typename T::value_type>::alignment);
+		auto std140(layout == linear_std140 || layout == interleaved_std140);
+		auto interleaved(layout == interleaved_std140 || layout == interleaved_std430);
+		auto alignment(std140 ? (std::max)(primitive_alignment, sizeof(float) * 4)
+			: primitive_alignment);
+		auto columns(primitive_type_information<typename T::value_type>::columns);
+		auto is_array(columns != 1 || (!interleaved && T::is_array));
+		return is_array ? columns * alignment
+			: primitive_type_information<typename T::value_type>::size;
+	}
+
+	template<typename T>
+	static std::size_t alignment() {
+		typedef primitive_type_information<typename T::value_type> type_info;
+		return layout == linear_std140 && T::is_array
+			? (std::max)(type_info::alignment, sizeof(float) * 4) : type_info::alignment;
+	}
+
+	static std::size_t struct_alignment(std::size_t max_alignment) {
+		auto std140(layout == linear_std140 || layout == interleaved_std140);
+		return std140 ? (std::max)(max_alignment, sizeof(float) * 4) : max_alignment;
+	}
+};
+
+template<>
+struct alignment_type<linear> {
+
+	constexpr static std::size_t align_offset(std::size_t base_offset, std::size_t alignment) {
+		return base_offset;
+	}
+
+	template<typename T>
+	constexpr static std::size_t size() {
+		return primitive_type_information<typename T::value_type>::size;
+	}
+
+	template<typename T>
+	static std::size_t alignment() {
+		return 1;
+	}
+
+	static std::size_t struct_alignment(std::size_t max_alignment) {
+		return 1;
+	}
+};
+
+template<memory_layout layout>
+struct calculate_linear_layout_type {
+	template<typename... Storage>
+	static layout_type<sizeof...(Storage)> calculate(const Storage &... storage) {
+		typedef alignment_type<layout> alignment_type;
+		typedef std::array<std::size_t, sizeof...(Storage)> indices_type;
+
+		const indices_type alignment{ alignment_type::alignment<Storage>()... },
+			elements{ storage.size()... }, size{ alignment_type::size<Storage>()... };
+
+		indices_type offset;
+		offset.front() = 0;
+		for (std::size_t i = 1; i < sizeof...(Storage); ++i) {
+			offset[i] = alignment_type::align_offset(offset[i - 1] + elements[i - 1] * size[i - 1],
+				alignment[i]);
+		}
+		return{ offset, size, offset.back() + elements.back() * size.back() };
+	}
+};
+
+template<memory_layout layout>
+struct calculate_interleaved_layout_type {
+
+	template<typename... Storage>
+	static layout_type<sizeof...(Storage)> calculate(const Storage &... storage) {
+		typedef alignment_type<layout> alignment_type;
+		typedef std::array<std::size_t, sizeof...(Storage)> indices_type;
+
+		const indices_type alignment{ alignment_type::alignment<Storage>()... },
+			elements{ storage.size()... }, size{ alignment_type::size<Storage>()... };
+
+		indices_type offsets, strides;
+		std::size_t start = 0;
+		std::size_t offset = 0;
+		for (std::size_t i = 1; i <= sizeof...(Storage); ++i) {
+			if (i == sizeof...(Storage) || elements[i] != elements[start]) {
+				const std::size_t end = i;
+				const std::size_t struct_alignment(alignment_type::struct_alignment(*std::max_element(
+					std::begin(alignment) + start, std::begin(alignment) + end)));
+				offsets[start] = alignment_type::align_offset(offset, struct_alignment);
+				for (std::size_t j = start + 1; j < end; ++j) {
+					offsets[j] = alignment_type::align_offset(offsets[j - 1] + size[j - 1],
+						alignment[j]);
+				}
+				std::size_t stride = alignment_type::align_offset(offsets[end - 1]
+					+ size.back() - offsets[start], struct_alignment);
+				std::fill(std::begin(strides) + start, std::begin(strides) + end,
+					stride);
+				offset = offsets[start] + stride * elements[start];
+				start = end;
+			}
+		}
+		return{ offsets, strides, offset };
+	}
+};
+
+template<memory_layout, typename... Storage>
+struct calculate_layout_type;
+
+template<> struct calculate_layout_type<linear>
+	: calculate_linear_layout_type<linear> {};
+template<> struct calculate_layout_type<linear_std140>
+	: calculate_linear_layout_type<linear_std140> {};
+template<> struct calculate_layout_type<linear_std430>
+	: calculate_linear_layout_type<linear_std430> {};
+
+template<> struct calculate_layout_type<interleaved_std140>
+	: calculate_interleaved_layout_type<interleaved_std140> {};
+
+template<> struct calculate_layout_type<interleaved_std430>
+	: calculate_interleaved_layout_type<interleaved_std430> {};
+
+template<typename... Storage>
+struct serialize_type {
+
+	typedef layout_type<sizeof...(Storage)> layout_type;
+
+	template<memory_layout layout>
+	serialize_type(const supplier<Storage>&... storages)
+		: layout(calculate_layout_type<layout, Storage...>::calculate(*storages...))
+		, storages(storages...) {}
+
+	void operator()(void *target) const {
+
+	}
+
+	const layout_type layout;
+	const std::tuple<supplier<Storage>&...> storages;
+};
+
+template<typename Storage>
+void serialize(const Storage &storage, std::size_t offset, std::size_t stride, void *target) {
+	uint8_t *bytes(reinterpret_cast<uint8_t *>(target) + offset);
+
+	auto read(read(storage));
+	for (const auto &value : read) {
+		uint8_t *row_bytes(bytes);
+		for (std::size_t i = 0;
+				i < primitive_type_information<typename Storage::value_type>::columns; ++i) {
+			std::memcpy(row_bytes, primitive_type_information<typename Storage::value_type>::ptr(value, i),
+				primitive_type_information<typename Storage::value_type>::size);
+			row_bytes += primitive_type_information<typename Storage::value_type>::alignment;
+		}
+		bytes += stride;
+	}
+}
+
+template<std::size_t I>
+struct serialize_storage_type {
+
+	template<typename Layout, typename Storages>
+	static void serialize(const Layout &layout, const Storages &storages, void *target) {
+		constexpr std::size_t index = I - 1;
+		internal::serialize(*std::get<index>(storages), std::get<index>(layout.offset),
+			std::get<index>(layout.stride), target);
+		serialize_storage_type<index>::serialize(layout, storages, target);
+	}
+};
+
+template<>
+struct serialize_storage_type<0> {
+	template<typename Layout, typename Storages>
+	static void serialize(const Layout &layout, const Storages &storages, void *target) {}
+};
+
+template<typename... Storage>
+void serialize_storages(const layout_type<sizeof...(Storage)> &layout,
+		const supplier<Storage>&... storages, void *target) {
+	serialize_storage_type<sizeof...(Storage)>::serialize(layout, std::tie(storages...), target);
+}
+
+} // namespace internal
+
+struct serialize_type {
+
+	typedef std::function<void(void *)> function_type;
 
 	serialize_type() = default;
-	serialize_type(const serialize_type&) = delete;
-	serialize_type(serialize_type&&) = default;
-	serialize_type &operator=(const serialize_type&) = delete;
-	serialize_type &operator=(serialize_type&&) = default;
 
-	template<typename... T>
-	serialize_type(memory_layout layout, const supplier<view_type<T>>&... views)
-		: layout(layout) {
-		constexpr std::size_t num_views(sizeof...(views));
-		const std::size_t sizes[] = { views->size()... };
-		const std::size_t element_sizes[] = { internal::calculate_element_size<T>(layout, views->is_array())... };
-		const std::size_t base_alignments[] = { internal::calculate_base_alignment<T>(layout, views->is_array())... };
-		std::size_t offsets[num_views], strides[num_views];
-		size = calculate_layout(layout, num_views, sizes, element_sizes, base_alignments, offsets, strides);
-		adapters = internal::create_adapters(layout, offsets, strides, std::make_tuple(views...));
-	}
+	template<typename Layout, typename... Storage>
+	explicit serialize_type(Layout &&layout, const supplier<Storage>&... storages)
+		: function(std::bind(&internal::serialize_storages<Storage...>,
+			std::forward<Layout>(layout), storages..., std::placeholders::_1))
+		, size(layout.size) {}
+
+	function_type function;
+	std::size_t size;
 };
 
-void flush(const serialize_type &serialize, void *output);
-bool dirty(const serialize_type &serialize);
-std::size_t size(const serialize_type &serialize);
-memory_layout layout(const serialize_type &serialize);
+template<memory_layout Layout, typename... Storages>
+serialize_type make_serialize(const type::supplier<Storages> &... storages) {
+	return serialize_type(internal::calculate_layout_type<Layout>::calculate(*storages...),
+		storages...);
+}
 
-template<typename... StorageType>
-serialize_type make_serialize(memory_layout layout, StorageType... storages) {
-	return serialize_type(layout, make_supplier(make_view(std::forward<StorageType>(storages)))...);
+inline void flush(const serialize_type &serialize, void *target) {
+	serialize.function(target);
+}
+
+inline std::size_t size(const serialize_type &serialize) {
+	return serialize.size;
+}
+
+inline bool dirty(const serialize_type &serialize) {
+	// TODO(gardell): serialize must store revisions
+	return true;
 }
 
 }  // namespace type

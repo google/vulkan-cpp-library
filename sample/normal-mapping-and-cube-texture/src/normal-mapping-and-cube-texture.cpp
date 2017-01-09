@@ -285,21 +285,21 @@ int main(int argc, const char **argv) {
 		glm::vec3(0, 0, 0), glm::vec3(0.0f, 1.0f, 0.0)));
 
 	type::mat4 projection_matrix;
-	type::mat4_array modelview_matrix_array(1);
-	type::mat3_array normal_matrix_array(1);
+	type::mat4 modelview_matrix;
+	type::mat3 normal_matrix;
 
-	vcc::input_buffer::input_buffer_type matrix_uniform_buffer(vcc::input_buffer::create(
-		type::linear, std::ref(device), 0, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		VK_SHARING_MODE_EXCLUSIVE, {}, std::ref(projection_matrix), std::ref(modelview_matrix_array),
-			std::ref(normal_matrix_array)));
+	vcc::input_buffer::input_buffer_type matrix_uniform_buffer(
+		vcc::input_buffer::create<type::linear_std140>(std::ref(device), 0,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
+			std::ref(projection_matrix), std::ref(modelview_matrix), std::ref(normal_matrix)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, matrix_uniform_buffer);
 
-	vcc::input_buffer::input_buffer_type vertex_buffer(vcc::input_buffer::create(
-		type::interleaved_std140, std::ref(device), 0,
-		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
-		std::ref(vertices), std::ref(texcoords), std::ref(normals)));
+	vcc::input_buffer::input_buffer_type vertex_buffer(
+		vcc::input_buffer::create<type::interleaved_std140>(std::ref(device), 0,
+			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
+			std::ref(vertices), std::ref(texcoords), std::ref(normals)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, vertex_buffer);
-	vcc::input_buffer::input_buffer_type index_buffer(vcc::input_buffer::create(type::linear,
+	vcc::input_buffer::input_buffer_type index_buffer(vcc::input_buffer::create<type::linear>(
 		std::ref(device), 0, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
 		std::ref(indices)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, index_buffer);
@@ -357,8 +357,7 @@ int main(int argc, const char **argv) {
 						VK_COMPONENT_SWIZZLE_IDENTITY,
 						VK_COMPONENT_SWIZZLE_IDENTITY,
 						VK_COMPONENT_SWIZZLE_IDENTITY
-					},
-					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 6 }),
+					}, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 6 }),
 				VK_IMAGE_LAYOUT_GENERAL
 			}
 		} });
@@ -369,13 +368,6 @@ int main(int argc, const char **argv) {
 				vcc::descriptor_set::image_info{
 					std::ref(normal_sampler),
 					vcc::image_view::create(std::move(normal_image),
-						VK_IMAGE_VIEW_TYPE_2D, normal_image_format,
-						{
-							VK_COMPONENT_SWIZZLE_IDENTITY,
-							VK_COMPONENT_SWIZZLE_IDENTITY,
-							VK_COMPONENT_SWIZZLE_IDENTITY,
-							VK_COMPONENT_SWIZZLE_IDENTITY
-						},
 						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }),
 					VK_IMAGE_LAYOUT_GENERAL
 				}
@@ -541,15 +533,15 @@ int main(int argc, const char **argv) {
 		},
 		[]() {},
 		[&](uint32_t index) {
-			const glm::mat4 view_matrix(glm::lookAt(glm::vec3(0, 0, camera_distance),
+			const glm::mat4 look_at(glm::lookAt(glm::vec3(0, 0, camera_distance),
 			  glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
 
-			const glm::mat4 modelview_matrix(view_matrix
+			const glm::mat4 view_matrix(look_at
 				* glm::rotate(angle.y, glm::vec3(1, 0, 0))
 				* glm::rotate(angle.x, glm::vec3(0, 1, 0)));
-			type::write(modelview_matrix_array)[0] = modelview_matrix;
-			type::write(normal_matrix_array)[0] =
-				glm::mat3(glm::transpose(glm::inverse(modelview_matrix)));
+			type::write(modelview_matrix)[0] = view_matrix;
+			type::write(normal_matrix)[0] =
+				glm::mat3(glm::transpose(glm::inverse(view_matrix)));
 			vcc::queue::submit(queue, {}, { command_buffers[index] }, {});
 		},
 		vcc::window::input_callbacks_type()

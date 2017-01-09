@@ -40,9 +40,7 @@ struct descriptor_set_type : public internal::movable_allocated_with_pool_parent
 
 	descriptor_set_type() = default;
 	descriptor_set_type(const descriptor_set_type &) = delete;
-	descriptor_set_type(descriptor_set_type &&copy)
-		: movable_allocated_with_pool_parent2(std::forward<descriptor_set_type>(copy)),
-		  pre_execute_callbacks(std::move(copy.pre_execute_callbacks)) {}
+	descriptor_set_type(descriptor_set_type &&) = default;
 	descriptor_set_type &operator=(const descriptor_set_type&) = delete;
 	descriptor_set_type(VkDescriptorSet instance,
 		const type::supplier<const descriptor_pool::descriptor_pool_type> &pool,

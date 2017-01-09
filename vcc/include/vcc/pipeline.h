@@ -48,8 +48,8 @@ shader_stage_type shader_stage(VkShaderStageFlagBits stage,
 	const std::string &name,
 	const std::vector<VkSpecializationMapEntry> &map_entries,
 	StorageType... storages) {
-	type::serialize_type serialize(type::make_serialize(
-		type::memory_layout::linear, std::forward<StorageType>(storages)...));
+	type::serialize_type serialize(type::make_serialize<type::memory_layout::linear>(
+		type::make_supplier(std::forward<StorageType>(storages))...));
 	std::string data(type::size(serialize), '\0');
 	type::flush(serialize, &data[0]);
 	return shader_stage(stage, module, name, map_entries, data);
