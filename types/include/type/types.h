@@ -225,6 +225,9 @@ namespace internal {
 			return &value;
 		}
 	};
+	template<typename T> constexpr std::size_t primitive_primitive_type_information<T>::size;
+	template<typename T> constexpr std::size_t primitive_primitive_type_information<T>::alignment;
+	template<typename T> constexpr std::size_t primitive_primitive_type_information<T>::columns;
 
 	template<> struct primitive_type_information<float>
 		: primitive_primitive_type_information<float> {};
@@ -253,6 +256,12 @@ namespace internal {
 			return glm::value_ptr(value);
 		}
 	};
+	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
+	constexpr std::size_t glm_vec_type_information<T, Size, Alignment, Columns>::size;
+	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
+	constexpr std::size_t glm_vec_type_information<T, Size, Alignment, Columns>::alignment;
+	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
+	constexpr std::size_t glm_vec_type_information<T, Size, Alignment, Columns>::columns;
 
 	template<> struct primitive_type_information<glm::vec2>
 		: glm_vec_type_information<glm::vec2, sizeof(float) * 2> {};
@@ -289,6 +298,12 @@ namespace internal {
 			return glm::value_ptr(value[index]);
 		}
 	};
+	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
+	constexpr std::size_t glm_mat_type_information<T, Size, Alignment, Columns>::size;
+	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
+	constexpr std::size_t glm_mat_type_information<T, Size, Alignment, Columns>::alignment;
+	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
+	constexpr std::size_t glm_mat_type_information<T, Size, Alignment, Columns>::columns;
 
 	template<> struct primitive_type_information<glm::mat2>
 		: glm_mat_type_information<glm::mat2, sizeof(float) * 2, sizeof(float) * 2, 2> {};

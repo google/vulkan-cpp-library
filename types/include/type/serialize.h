@@ -94,8 +94,8 @@ struct calculate_linear_layout_type {
 		typedef alignment_type<layout> alignment_type;
 		typedef std::array<std::size_t, sizeof...(Storage)> indices_type;
 
-		const indices_type alignment{ alignment_type::alignment<Storage>()... },
-			elements{ storage.size()... }, size{ alignment_type::size<Storage>()... };
+		const indices_type alignment{ alignment_type::template alignment<Storage>()... },
+			elements{ storage.size()... }, size{ alignment_type::template size<Storage>()... };
 
 		indices_type offset;
 		offset.front() = 0;
@@ -115,8 +115,8 @@ struct calculate_interleaved_layout_type {
 		typedef alignment_type<layout> alignment_type;
 		typedef std::array<std::size_t, sizeof...(Storage)> indices_type;
 
-		const indices_type alignment{ alignment_type::alignment<Storage>()... },
-			elements{ storage.size()... }, size{ alignment_type::size<Storage>()... };
+		const indices_type alignment{ alignment_type::template alignment<Storage>()... },
+			elements{ storage.size()... }, size{ alignment_type::template size<Storage>()... };
 
 		indices_type offsets, strides;
 		std::size_t start = 0;
@@ -162,8 +162,6 @@ template<> struct calculate_layout_type<interleaved_std430>
 template<typename... Storage>
 struct serialize_type {
 
-	typedef layout_type<sizeof...(Storage)> layout_type;
-
 	template<memory_layout layout>
 	serialize_type(const supplier<Storage>&... storages)
 		: layout(calculate_layout_type<layout, Storage...>::calculate(*storages...))
@@ -173,7 +171,7 @@ struct serialize_type {
 
 	}
 
-	const layout_type layout;
+	const layout_type<sizeof...(Storage)> layout;
 	const std::tuple<supplier<Storage>&...> storages;
 };
 
@@ -181,8 +179,8 @@ template<typename Storage>
 void serialize(const Storage &storage, std::size_t offset, std::size_t stride, void *target) {
 	uint8_t *bytes(reinterpret_cast<uint8_t *>(target) + offset);
 
-	auto read(read(storage));
-	for (const auto &value : read) {
+	auto values(read(storage));
+	for (const auto &value : values) {
 		uint8_t *row_bytes(bytes);
 		for (std::size_t i = 0;
 				i < primitive_type_information<typename Storage::value_type>::columns; ++i) {
@@ -228,8 +226,10 @@ struct serialize_type {
 
 	template<typename Layout, typename... Storage>
 	explicit serialize_type(Layout &&layout, const supplier<Storage>&... storages)
-		: function(std::bind(&internal::serialize_storages<Storage...>,
-			std::forward<Layout>(layout), storages..., std::placeholders::_1))
+	  // std::bind seem broken in clang with templated function.
+		: function(std::bind([storages...](Layout &layout, void *target) {
+		    internal::serialize_storages<Storage...>(layout, storages..., target);
+		  }, std::forward<Layout>(layout), std::placeholders::_1))
 		, size(layout.size) {}
 
 	function_type function;
