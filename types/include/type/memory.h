@@ -41,26 +41,6 @@ enum memory_layout {
 	num_layouts
 };
 
-namespace internal {
-
-std::size_t calculate_element_size(memory_layout layout, std::size_t type_size, bool array);
-
-template<typename T>
-std::size_t calculate_element_size(memory_layout layout, bool array) {
-	return calculate_element_size(layout, sizeof(T), array);
-}
-
-std::size_t calculate_base_alignment(memory_layout layout, std::size_t type_size, bool array);
-
-template<typename T>
-std::size_t calculate_base_alignment(memory_layout layout, bool array) {
-	return calculate_base_alignment(layout, sizeof(T), array);
-}
-
-bool interleaved(memory_layout layout);
-
-}  // namespace internal
-
 }  // namespace type
 
 #endif // GTYPE_MEMORY_H_

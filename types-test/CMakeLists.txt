@@ -11,6 +11,7 @@
 # limitations under the License.
 #
 
+include_directories(${GLM_SRC_DIR})
 include_directories(../types/include)
 include_directories(${gtest_SOURCE_DIR}/include)
 

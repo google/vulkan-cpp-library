@@ -140,14 +140,14 @@ struct model_type {
 model_type load_model(vcc::device::device_type &device, vr_model &&model) {
 	const uint32_t indices_size((uint32_t)model.indices.size());
 	vcc::input_buffer::input_buffer_type index_buffer(
-		vcc::input_buffer::create(type::linear, std::ref(device), 0,
+		vcc::input_buffer::create<type::linear>(std::ref(device), 0,
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
 			std::move(model.indices)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 		index_buffer);
 	// TODO(gardell): normals
 	vcc::input_buffer::input_buffer_type vertex_buffer(
-		vcc::input_buffer::create(type::interleaved_std140, std::ref(device),
+		vcc::input_buffer::create<type::interleaved_std140>(std::ref(device),
 			0, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE,
 			{}, std::move(model.vertices), std::move(model.texcoords)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
@@ -189,9 +189,10 @@ instance_type load_instance(vcc::device::device_type &device,
 	std::shared_ptr<type::mat4_array> projection_modelview_matrix(
 		std::make_shared<type::mat4_array>(2));
 
-	vcc::input_buffer::input_buffer_type matrix_uniform_buffer(vcc::input_buffer::create(
-		type::linear, std::ref(device), 0, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		VK_SHARING_MODE_EXCLUSIVE, {}, projection_modelview_matrix));
+	vcc::input_buffer::input_buffer_type matrix_uniform_buffer(
+		vcc::input_buffer::create<type::linear>(std::ref(device), 0,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
+			projection_modelview_matrix));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 		matrix_uniform_buffer);
 

@@ -110,7 +110,11 @@ private:
 		return array;
 	}
 
-	std::mutex &get_lock() {
+	const container_type &get_container() const {
+		return array;
+	}
+
+	std::mutex &get_lock() const {
 		return lock;
 	}
 
@@ -184,7 +188,7 @@ protected:
 	typedef storage_type<T, Mutable, IsArray> target_type;
 	typedef std::unique_lock<std::mutex> lock_type;
 
-	readable_storage_type(target_type &array, lock_type &&lock)
+	readable_storage_type(const target_type &array, lock_type &&lock)
 		: lock(std::forward<lock_type>(lock)), array(&array) {}
 
 public:
@@ -230,7 +234,7 @@ public:
 
 private:
 	lock_type lock;
-	target_type *array;
+	const target_type *array;
 };
 
 }  // namespace internal
@@ -249,18 +253,18 @@ class readable_storage_type<T, Mutable, true>
 
 	template<typename U, bool _Mutable, bool _IsArray>
 	friend readable_storage_type<U, _Mutable, _IsArray> read(
-		storage_type<U, _Mutable, _IsArray> &array);
+		const storage_type<U, _Mutable, _IsArray> &array);
 	template<typename U, bool _Mutable, bool _IsArray>
 	friend readable_storage_type<U, _Mutable, _IsArray> read(
-		storage_type<U, _Mutable, _IsArray> &array, std::defer_lock_t t);
+		const storage_type<U, _Mutable, _IsArray> &array, std::defer_lock_t t);
 	template<typename U, bool _Mutable, bool _IsArray>
 	friend readable_storage_type<U, _Mutable, _IsArray> read(
-		storage_type<U, _Mutable, _IsArray> &array, std::try_to_lock_t t);
+		const storage_type<U, _Mutable, _IsArray> &array, std::try_to_lock_t t);
 	template<typename U, bool _Mutable, bool _IsArray>
 	friend readable_storage_type<U, _Mutable, _IsArray> read(
-		storage_type<U, _Mutable, _IsArray> &array, std::adopt_lock_t t);
+		const storage_type<U, _Mutable, _IsArray> &array, std::adopt_lock_t t);
 private:
-	readable_storage_type(target_type &array, lock_type &&lock)
+	readable_storage_type(const target_type &array, lock_type &&lock)
 		: internal::readable_storage_type<T, Mutable, true>(array,
 			std::forward<lock_type>(lock)) {}
 
@@ -290,19 +294,19 @@ class readable_storage_type<T, Mutable, false>
 
 	template<typename U, bool _Mutable, bool _IsArray>
 	friend readable_storage_type<U, _Mutable, _IsArray> read(
-		storage_type<U, _Mutable, _IsArray> &array);
+		const storage_type<U, _Mutable, _IsArray> &array);
 	template<typename U, bool _Mutable, bool _IsArray>
 	friend readable_storage_type<U, _Mutable, _IsArray> read(
-		storage_type<U, _Mutable, _IsArray> &array, std::defer_lock_t t);
+		const storage_type<U, _Mutable, _IsArray> &array, std::defer_lock_t t);
 	template<typename U, bool _Mutable, bool _IsArray>
 	friend readable_storage_type<U, _Mutable, _IsArray> read(
-		storage_type<U, _Mutable, _IsArray> &array, std::try_to_lock_t t);
+		const storage_type<U, _Mutable, _IsArray> &array, std::try_to_lock_t t);
 	template<typename U, bool _Mutable, bool _IsArray>
 	friend readable_storage_type<U, _Mutable, _IsArray> read(
-		storage_type<U, _Mutable, _IsArray> &array, std::adopt_lock_t t);
+		const storage_type<U, _Mutable, _IsArray> &array, std::adopt_lock_t t);
 
 private:
-	readable_storage_type(target_type &array, lock_type &&lock)
+	readable_storage_type(const target_type &array, lock_type &&lock)
 		: internal::readable_storage_type<T, Mutable, false>(array,
 			std::forward<lock_type>(lock)) {}
 
@@ -331,7 +335,7 @@ public:
 
 template<typename T, bool Mutable, bool IsArray>
 readable_storage_type<T, Mutable, IsArray> read(
-	storage_type<T, Mutable, IsArray> &array) {
+	const storage_type<T, Mutable, IsArray> &array) {
 	typedef readable_storage_type<T, Mutable, IsArray> readable_storage_t;
 	return readable_storage_t(array, typename readable_storage_t::lock_type(
 		internal::get_lock(array)));
@@ -339,7 +343,7 @@ readable_storage_type<T, Mutable, IsArray> read(
 
 template<typename T, bool Mutable, bool IsArray>
 readable_storage_type<T, Mutable, IsArray> read(
-	storage_type<T, Mutable, IsArray> &array, std::defer_lock_t t) {
+	const storage_type<T, Mutable, IsArray> &array, std::defer_lock_t t) {
 	typedef readable_storage_type<T, Mutable, IsArray> readable_storage_t;
 	return readable_storage_t(array, readable_storage_t::lock_type(
 		internal::get_lock(array), t));
@@ -347,7 +351,7 @@ readable_storage_type<T, Mutable, IsArray> read(
 
 template<typename T, bool Mutable, bool IsArray>
 readable_storage_type<T, Mutable, IsArray> read(
-	storage_type<T, Mutable, IsArray> &array, std::try_to_lock_t t) {
+	const storage_type<T, Mutable, IsArray> &array, std::try_to_lock_t t) {
 	typedef readable_storage_type<T, Mutable, IsArray> readable_storage_t;
 	return readable_storage_t(array, readable_storage_t::lock_type(
 		internal::get_lock(array), t));
@@ -355,7 +359,7 @@ readable_storage_type<T, Mutable, IsArray> read(
 
 template<typename T, bool Mutable, bool IsArray>
 readable_storage_type<T, Mutable, IsArray> read(
-	storage_type<T, Mutable, IsArray> &array, std::adopt_lock_t t) {
+	const storage_type<T, Mutable, IsArray> &array, std::adopt_lock_t t) {
 	typedef readable_storage_type<T, Mutable, IsArray> readable_storage_t;
 	return readable_storage_t(array, readable_storage_t::lock_type(
 		internal::get_lock(array), t));
