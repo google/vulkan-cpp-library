@@ -210,10 +210,67 @@ struct serialize_storage_type<0> {
 	static void serialize(const Layout &layout, const Storages &storages, void *target) {}
 };
 
-template<typename... Storage>
-void serialize_storages(const layout_type<sizeof...(Storage)> &layout,
-		const supplier<Storage>&... storages, void *target) {
-	serialize_storage_type<sizeof...(Storage)>::serialize(layout, std::tie(storages...), target);
+template<std::size_t I>
+struct serialize_revision_type {
+
+	template<typename Layout, typename Storages>
+	static std::array<revision_type, std::tuple_size<Storages>::value> revision(
+			const Layout &layout, const Storages &storages) {
+		auto revision(serialize_revision_type<I - 1>::revision(layout, storages));
+		std::get<I - 1>(revision) = get_revision(*std::get<I - 1>(storages));
+		return revision;
+	}
+};
+
+template<>
+struct serialize_revision_type<0> {
+
+	template<typename Layout, typename Storages>
+	static std::array<revision_type, std::tuple_size<Storages>::value> revision(
+			const Layout &layout, const Storages &storages) {
+		return std::array<revision_type, std::tuple_size<Storages>::value>();
+	}
+};
+
+struct serialize_type_impl {
+
+	virtual void flush(void *target) = 0;
+	virtual bool dirty() const = 0;
+};
+
+template<typename Layout, typename Storages>
+struct template_serialize_type_impl : serialize_type_impl {
+
+	template_serialize_type_impl(Layout &&layout, const Storages &storages)
+		: layout(std::forward<Layout>(layout)), storages(storages) {
+		std::fill(std::begin(revision), std::end(revision), REVISION_NONE);
+	}
+
+	virtual void flush(void *target) override {
+		serialize_storage_type<std::tuple_size<Storages>::value>
+			::serialize(layout, storages, target);
+		revision = serialize_revision_type<std::tuple_size<Storages>::value>::revision(layout,
+			storages);
+	}
+
+	virtual bool dirty() const override {
+		auto current_revision(serialize_revision_type<std::tuple_size<Storages>::value>::revision(
+			layout, storages));
+		return current_revision > revision;
+	}
+
+	Layout layout;
+	Storages storages;
+	std::array<revision_type, std::tuple_size<Storages>::value> revision;
+};
+
+template<typename Layout, typename... Storage>
+std::unique_ptr<serialize_type_impl> create_serialize_impl(Layout &&layout,
+		const supplier<Storage>&... storages) {
+	typedef std::tuple<const supplier<Storage>...> storage_type;
+	return std::unique_ptr<serialize_type_impl>(
+		new internal::template_serialize_type_impl<Layout, storage_type>(
+			std::forward<Layout>(layout), std::make_tuple(storages...)));
 }
 
 } // namespace internal
@@ -226,13 +283,10 @@ struct serialize_type {
 
 	template<typename Layout, typename... Storage>
 	explicit serialize_type(Layout &&layout, const supplier<Storage>&... storages)
-	  // std::bind seem broken in clang with templated function.
-		: function(std::bind([storages...](Layout &layout, void *target) {
-		    internal::serialize_storages<Storage...>(layout, storages..., target);
-		  }, std::forward<Layout>(layout), std::placeholders::_1))
-		, size(layout.size) {}
+		: size(layout.size)
+		, impl(internal::create_serialize_impl(std::forward<Layout>(layout), storages...)) {}
 
-	function_type function;
+	std::unique_ptr<internal::serialize_type_impl> impl;
 	std::size_t size;
 };
 
@@ -243,7 +297,7 @@ serialize_type make_serialize(const type::supplier<Storages> &... storages) {
 }
 
 inline void flush(const serialize_type &serialize, void *target) {
-	serialize.function(target);
+	serialize.impl->flush(target);
 }
 
 inline std::size_t size(const serialize_type &serialize) {
@@ -251,8 +305,7 @@ inline std::size_t size(const serialize_type &serialize) {
 }
 
 inline bool dirty(const serialize_type &serialize) {
-	// TODO(gardell): serialize must store revisions
-	return true;
+	return serialize.impl->dirty();
 }
 
 }  // namespace type
