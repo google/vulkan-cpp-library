@@ -31,13 +31,11 @@ bool flush(const input_buffer_type &buffer) {
 				vcc::internal::get_memory(buffer.buffer),
 				vcc::internal::get_offset(buffer.buffer),
 				type::size(buffer.serialize)));
-			type::flush(buffer.serialize,
-				(uint8_t *)map.data + vcc::internal::get_offset(buffer.buffer));
+			type::flush(buffer.serialize, (uint8_t *)map.data);
+			return true;
 		}
-		return true;
-	} else {
-		return false;
 	}
+	return false;
 }
 
 bool flush(const queue::queue_type &queue, const input_buffer_type &buffer) {

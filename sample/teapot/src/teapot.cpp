@@ -227,14 +227,11 @@ int main(int argc, const char **argv) {
 		vcc::input_buffer::create<type::linear>(std::ref(device), 0,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
 			std::ref(projection_matrix)));
-	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, matrix_uniform_buffer);
 
 	vcc::input_buffer::input_buffer_type modelview_matrix_uniform_buffer(
 		vcc::input_buffer::create<type::interleaved_std140>(std::ref(device), 0,
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
 			std::ref(modelview_matrix_array), std::ref(normal_matrix_array)));
-	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-		modelview_matrix_uniform_buffer);
 	vcc::input_buffer::input_buffer_type light_uniform_buffer(
 		vcc::input_buffer::create<type::linear_std140>(std::ref(device), 0,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
@@ -242,7 +239,6 @@ int main(int argc, const char **argv) {
 			std::ref(light.spot_direction), std::ref(light.spot_cos_cutoff),
 			std::ref(light.ambient), std::ref(light.diffuse),
 			std::ref(light.specular), std::ref(light.spot_exponent)));
-	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, light_uniform_buffer);
 
 	vcc::input_buffer::input_buffer_type vertex_buffer(
 		vcc::input_buffer::create<type::interleaved_std140>(std::ref(device), 0,
@@ -251,8 +247,8 @@ int main(int argc, const char **argv) {
 	vcc::input_buffer::input_buffer_type index_buffer(vcc::input_buffer::create<type::linear>(
 		std::ref(device), 0, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
 		std::ref(teapot::indices)));
-	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, index_buffer);
-	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, vertex_buffer);
+	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, light_uniform_buffer,
+		index_buffer, vertex_buffer, matrix_uniform_buffer, modelview_matrix_uniform_buffer);
 	const VkFormat depth_format = VK_FORMAT_D16_UNORM;
 
 	vcc::sampler::sampler_type sampler(vcc::sampler::create(

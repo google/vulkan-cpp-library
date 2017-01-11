@@ -143,15 +143,13 @@ model_type load_model(vcc::device::device_type &device, vr_model &&model) {
 		vcc::input_buffer::create<type::linear>(std::ref(device), 0,
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
 			std::move(model.indices)));
-	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-		index_buffer);
 	// TODO(gardell): normals
 	vcc::input_buffer::input_buffer_type vertex_buffer(
 		vcc::input_buffer::create<type::interleaved_std140>(std::ref(device),
 			0, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE,
 			{}, std::move(model.vertices), std::move(model.texcoords)));
 	vcc::memory::bind(std::ref(device), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-		vertex_buffer);
+		index_buffer, vertex_buffer);
 
 	vcc::image_view::image_view_type image_view(vcc::image_view::create(
 		std::move(model.image), { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }));
