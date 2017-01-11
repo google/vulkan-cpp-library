@@ -19,15 +19,15 @@
 namespace vcc {
 namespace memory {
 
-memory_type allocate(const type::supplier<const device::device_type> &device,
-		VkDeviceSize allocationSize, uint32_t memoryTypeIndex) {
+memory_type memory_type::allocate(const type::supplier<const device::device_type> &device,
+		VkDeviceSize allocationSize, uint32_t memoryTypeIndex, VkMemoryType type) {
 	VkMemoryAllocateInfo allocate = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, NULL};
 	allocate.allocationSize = allocationSize;
 	allocate.memoryTypeIndex = memoryTypeIndex;
 	VkDeviceMemory memory;
 	VKCHECK(vkAllocateMemory(vcc::internal::get_instance(*device), &allocate, NULL,
 		&memory));
-	return memory_type(memory, device, allocationSize);
+	return memory_type(memory, device, allocationSize, type);
 }
 
 namespace internal {
@@ -92,20 +92,36 @@ map_type::~map_type() {
 		vkUnmapMemory(
 			vcc::internal::get_instance(*vcc::internal::get_parent(*memory)),
 			vcc::internal::get_instance(*memory));
-		// TODO(gardell): Flush depending on memory type.
+		if (!(memory->type.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+			flush(*memory, offset, size);
+		}
 	}
 }
 
 map_type map(const type::supplier<const memory_type> &memory, VkDeviceSize offset,
 		VkDeviceSize size) {
-	map_type mapped(memory);
+	void *data;
 	{
 		std::lock_guard<std::mutex> lock(vcc::internal::get_mutex(*memory));
 		VKCHECK(vkMapMemory(
-			vcc::internal::get_instance(*vcc::internal::get_parent(*mapped.memory)),
-			vcc::internal::get_instance(*mapped.memory), offset, size, 0, &mapped.data));
+			vcc::internal::get_instance(*vcc::internal::get_parent(*memory)),
+			vcc::internal::get_instance(*memory), offset, size, 0, &data));
 	}
-	return std::move(mapped);
+	return map_type(memory, offset, size, data);
+}
+
+void flush(const memory_type &memory, VkDeviceSize offset, VkDeviceSize size) {
+	VkMappedMemoryRange range = { VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr,
+		vcc::internal::get_instance(memory), offset, size };
+	VKCHECK(vkFlushMappedMemoryRanges(
+		vcc::internal::get_instance(*vcc::internal::get_parent(memory)), 1, &range));
+}
+
+void invalidate(const memory_type &memory, VkDeviceSize offset, VkDeviceSize size) {
+	VkMappedMemoryRange range = { VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr,
+		vcc::internal::get_instance(memory), offset, size };
+	VKCHECK(vkInvalidateMappedMemoryRanges(
+		vcc::internal::get_instance(*vcc::internal::get_parent(memory)), 1, &range));
 }
 
 }  // namespace memory

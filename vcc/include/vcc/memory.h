@@ -29,25 +29,28 @@ namespace memory {
 
 struct memory_type : vcc::internal::movable_destructible_with_parent<
 		VkDeviceMemory, const device::device_type, vkFreeMemory> {
-	friend VCC_LIBRARY memory_type allocate(
+
+	template<typename... ArgsT>
+	friend type::supplier<const memory_type> bind(
 		const type::supplier<const device::device_type> &device,
-		VkDeviceSize allocationSize, uint32_t memoryTypeIndex);
+		VkMemoryPropertyFlags propertyFlags, ArgsT&... args);
+	friend struct map_type;
+
 	memory_type() = default;
-	memory_type(memory_type &&instance) = default;
+	memory_type(memory_type &&) = default;
 
 private:
-	memory_type(VkDeviceMemory instance,
-		const type::supplier<const device::device_type> &parent, VkDeviceSize size)
-		: vcc::internal::movable_destructible_with_parent<VkDeviceMemory,
-			const device::device_type, vkFreeMemory>(instance, parent),
-		  size(size) {}
+	VCC_LIBRARY static memory_type allocate(
+		const type::supplier<const device::device_type> &device, VkDeviceSize allocationSize,
+		uint32_t memoryTypeIndex, VkMemoryType type);
+
+	memory_type(VkDeviceMemory instance, const type::supplier<const device::device_type> &parent,
+		VkDeviceSize size, VkMemoryType type)
+		: movable_destructible_with_parent(instance, parent), size(size), type(type) {}
 
 	VkDeviceSize size;
+	VkMemoryType type;
 };
-
-VCC_LIBRARY memory_type allocate(
-	const type::supplier<const device::device_type> &device,
-	VkDeviceSize allocationSize, uint32_t memoryTypeIndex);
 
 namespace internal {
 
@@ -87,17 +90,14 @@ type::supplier<const memory_type> bind(
 		VkMemoryPropertyFlags propertyFlags,
 		ArgsT&... args) {
 	constexpr size_t num_args(sizeof...(ArgsT));
-	static_assert(num_args == 1, "Using multiple arguments with bind is currently buggy");
 	const VkMemoryRequirements memory_requirements[] = { internal::get_memory_requirements(args)... };
 	VkDeviceSize offsets[num_args];
 	offsets[0] = 0;
 	uint32_t memoryTypeBits(memory_requirements[0].memoryTypeBits);
 	for (int i = 1; i < num_args; ++i) {
+		auto alignment(memory_requirements[i].alignment);
 		offsets[i] = offsets[i - 1] + memory_requirements[i - 1].size;
-		VkDeviceSize alignment(offsets[i] % memory_requirements[i].alignment);
-		if (alignment) {
-			offsets[i] += memory_requirements[i].alignment - alignment;
-		}
+		offsets[i] += (alignment - (offsets[i] % alignment)) % alignment;
 		memoryTypeBits &= memory_requirements[i].memoryTypeBits;
 	}
 	const VkDeviceSize size = offsets[num_args - 1] + memory_requirements[num_args - 1].size;
@@ -117,8 +117,8 @@ type::supplier<const memory_type> bind(
 	if (memoryTypeIndex == memory_properties.memoryTypeCount) {
 		throw vcc_exception("Failed to find valid memoryTypeBits that fits the propertyFlags");
 	}
-	std::shared_ptr<memory_type> memory(std::make_shared<memory_type>(
-			allocate(device, size, memoryTypeIndex)));
+	std::shared_ptr<memory_type> memory(std::make_shared<memory_type>(memory_type::allocate(device,
+		size, memoryTypeIndex, memory_properties.memoryTypes[memoryTypeIndex])));
 	internal::bind_t<num_args>::bind(memory, offsets, std::tie(args...));
 	return memory;
 }
@@ -126,21 +126,29 @@ type::supplier<const memory_type> bind(
 struct map_type {
 	map_type() = delete;
 	map_type(const map_type&) = delete;
-	map_type(map_type &&copy) : memory(copy.memory), data(copy.data) {
+	map_type(map_type &&copy)
+		: memory(copy.memory), offset(copy.offset), size(copy.size), data(copy.data) {
 		copy.memory = type::supplier<const memory_type>();
 		copy.data = nullptr;
+		copy.offset = copy.size = 0;
 	}
 	VCC_LIBRARY ~map_type();
-	explicit map_type(const type::supplier<const memory_type> &memory)
-		: memory(memory) {}
+	map_type(const type::supplier<const memory_type> &memory, VkDeviceSize offset,
+		VkDeviceSize size, void *data) : memory(memory) , offset(offset), size(size), data(data) {}
 	type::supplier<const memory_type> memory;
 
+	VkDeviceSize offset, size;
 	void *data;
 };
 
 // Returns a map_type which will automatically unmap the memory, RAII style.
 // map_type::data is the pointer to the area where the memory is mapped.
 VCC_LIBRARY map_type map(const type::supplier<const memory_type> &memory, VkDeviceSize offset = 0,
+	VkDeviceSize size = VK_WHOLE_SIZE);
+
+VCC_LIBRARY void flush(const memory_type &memory, VkDeviceSize offset = 0,
+	VkDeviceSize size = VK_WHOLE_SIZE);
+VCC_LIBRARY void invalidate(const memory_type &memory, VkDeviceSize offset = 0,
 	VkDeviceSize size = VK_WHOLE_SIZE);
 
 }  // namespace memory
