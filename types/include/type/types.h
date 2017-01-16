@@ -283,6 +283,28 @@ namespace internal {
 	template<> struct primitive_type_information<glm::bvec4>
 		: glm_vec_type_information<glm::bvec4, sizeof(bool) * 4> {};
 
+	// TODO(gardell): Write test!
+	// TODO(gardell): Alignment is dependent on std140/std430!
+	template<typename T, std::size_t Size>
+	struct primitive_type_information<std::array<T, Size>> {
+		constexpr static std::size_t alignment = primitive_type_information<T>::alignment,
+			element_size = primitive_type_information<T>::size,
+			size = Size * alignment;
+
+		static void copy(const T &value, void *target) {
+			uint8_t *bytes(reinterpret_cast<uint8_t *>(target));
+			for (std::size_t column = 0; column < Size; ++column) {
+				std::memcpy(bytes, glm::value_ptr(value[column]), element_size);
+				bytes += alignment;
+			}
+		}
+	};
+
+	template<typename... Ts>
+	struct primitive_type_information<std::tuple<Ts...>> {
+
+	};
+
 	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
 	struct glm_mat_type_information {
 
@@ -296,6 +318,7 @@ namespace internal {
 			}
 		}
 	};
+
 	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
 	constexpr std::size_t glm_mat_type_information<T, Size, Alignment, Columns>::size;
 	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>

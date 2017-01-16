@@ -39,48 +39,48 @@ struct alignment_type {
 		return base_offset + (alignment - base_offset % alignment) % alignment;
 	}
 
-	template<typename T>
-	static std::size_t size() {
-		typedef primitive_type_information<typename T::value_type> type_info;
-		auto primitive_alignment(type_info::alignment);
-		auto std140(layout == linear_std140 || layout == interleaved_std140);
-		auto interleaved(layout == interleaved_std140 || layout == interleaved_std430);
-		auto alignment(std140 ? (std::max)(primitive_alignment, sizeof(float) * 4)
-			: primitive_alignment);
-		return !interleaved && T::is_array ? alignment : type_info::size;
+	constexpr static std::size_t array_alignment(std::size_t alignment) {
+		return layout == linear_std140 || layout == interleaved_std140
+			? (std::max)(alignment, sizeof(float) * 4) : alignment;
 	}
 
-	template<typename T>
-	static std::size_t alignment() {
-		typedef primitive_type_information<typename T::value_type> type_info;
-		return layout == linear_std140 && T::is_array
+	template<typename T, bool IsArray>
+	constexpr static std::size_t size() {
+		typedef primitive_type_information<T> type_info;
+		return layout != interleaved_std140 && layout != interleaved_std430 && IsArray
+			? array_alignment(type_info::alignment) : type_info::size;
+	}
+
+	template<typename T, bool IsArray>
+	constexpr static std::size_t alignment() {
+		typedef primitive_type_information<T> type_info;
+		return layout == linear_std140 && IsArray
 			? (std::max)(type_info::alignment, sizeof(float) * 4) : type_info::alignment;
 	}
 
-	static std::size_t struct_alignment(std::size_t max_alignment) {
-		auto std140(layout == linear_std140 || layout == interleaved_std140);
-		return std140 ? (std::max)(max_alignment, sizeof(float) * 4) : max_alignment;
+	constexpr static std::size_t struct_alignment(std::size_t max_alignment) {
+		return array_alignment(max_alignment);
 	}
 };
 
 template<>
 struct alignment_type<linear> {
 
-	constexpr static std::size_t align_offset(std::size_t base_offset, std::size_t alignment) {
-		return base_offset;
+	constexpr static std::size_t align_offset(std::size_t offset, std::size_t) {
+		return offset;
 	}
 
-	template<typename T>
+	template<typename T, bool IsArray>
 	constexpr static std::size_t size() {
-		return primitive_type_information<typename T::value_type>::size;
+		return primitive_type_information<T>::size;
 	}
 
-	template<typename T>
-	static std::size_t alignment() {
+	template<typename T, bool IsArray>
+	constexpr static std::size_t alignment() {
 		return 1;
 	}
 
-	static std::size_t struct_alignment(std::size_t max_alignment) {
+	constexpr static std::size_t struct_alignment(std::size_t) {
 		return 1;
 	}
 };
@@ -92,8 +92,11 @@ struct calculate_linear_layout_type {
 		typedef alignment_type<layout> alignment_type;
 		typedef std::array<std::size_t, sizeof...(Storage)> indices_type;
 
-		const indices_type alignment{ alignment_type::template alignment<Storage>()... },
-			elements{ storage.size()... }, size{ alignment_type::template size<Storage>()... };
+		const indices_type alignment{ alignment_type
+				::template alignment<typename Storage::value_type, Storage::is_array>()... },
+			elements{ storage.size()... },
+			size{ alignment_type
+				::template size<typename Storage::value_type, Storage::is_array>()... };
 
 		indices_type offset;
 		offset.front() = 0;
@@ -113,8 +116,11 @@ struct calculate_interleaved_layout_type {
 		typedef alignment_type<layout> alignment_type;
 		typedef std::array<std::size_t, sizeof...(Storage)> indices_type;
 
-		const indices_type alignment{ alignment_type::template alignment<Storage>()... },
-			elements{ storage.size()... }, size{ alignment_type::template size<Storage>()... };
+		const indices_type alignment{ alignment_type
+				::template alignment<typename Storage::value_type, Storage::is_array>()... },
+			elements{ storage.size()... },
+			size{ alignment_type
+				::template size<typename Storage::value_type, Storage::is_array>()... };
 
 		indices_type offsets, strides;
 		std::size_t start = 0;
