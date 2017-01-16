@@ -41,15 +41,13 @@ struct alignment_type {
 
 	template<typename T>
 	static std::size_t size() {
-		auto primitive_alignment(primitive_type_information<typename T::value_type>::alignment);
+		typedef primitive_type_information<typename T::value_type> type_info;
+		auto primitive_alignment(type_info::alignment);
 		auto std140(layout == linear_std140 || layout == interleaved_std140);
 		auto interleaved(layout == interleaved_std140 || layout == interleaved_std430);
 		auto alignment(std140 ? (std::max)(primitive_alignment, sizeof(float) * 4)
 			: primitive_alignment);
-		auto columns(primitive_type_information<typename T::value_type>::columns);
-		auto is_array(columns != 1 || (!interleaved && T::is_array));
-		return is_array ? columns * alignment
-			: primitive_type_information<typename T::value_type>::size;
+		return !interleaved && T::is_array ? alignment : type_info::size;
 	}
 
 	template<typename T>
@@ -159,35 +157,13 @@ template<> struct calculate_layout_type<interleaved_std140>
 template<> struct calculate_layout_type<interleaved_std430>
 	: calculate_interleaved_layout_type<interleaved_std430> {};
 
-template<typename... Storage>
-struct serialize_type {
-
-	template<memory_layout layout>
-	serialize_type(const supplier<Storage>&... storages)
-		: layout(calculate_layout_type<layout, Storage...>::calculate(*storages...))
-		, storages(storages...) {}
-
-	void operator()(void *target) const {
-
-	}
-
-	const layout_type<sizeof...(Storage)> layout;
-	const std::tuple<supplier<Storage>&...> storages;
-};
-
 template<typename Storage>
 void serialize(const Storage &storage, std::size_t offset, std::size_t stride, void *target) {
 	uint8_t *bytes(reinterpret_cast<uint8_t *>(target) + offset);
 
 	auto values(read(storage));
 	for (const auto &value : values) {
-		uint8_t *row_bytes(bytes);
-		for (std::size_t i = 0;
-				i < primitive_type_information<typename Storage::value_type>::columns; ++i) {
-			std::memcpy(row_bytes, primitive_type_information<typename Storage::value_type>::ptr(value, i),
-				primitive_type_information<typename Storage::value_type>::size);
-			row_bytes += primitive_type_information<typename Storage::value_type>::alignment;
-		}
+		primitive_type_information<typename Storage::value_type>::copy(value, bytes);
 		bytes += stride;
 	}
 }

@@ -218,16 +218,14 @@ namespace internal {
 
 	template<typename T> struct primitive_primitive_type_information {
 
-		constexpr static std::size_t size = sizeof(T), alignment = sizeof(T), columns = 1;
+		constexpr static std::size_t size = sizeof(T), alignment = sizeof(T);
 
-		static const T *ptr(const T &value, std::size_t index) {
-			assert(index == 0);
-			return &value;
+		static void copy(const T &value, void *target) {
+			*reinterpret_cast<T *>(target) = value;
 		}
 	};
 	template<typename T> constexpr std::size_t primitive_primitive_type_information<T>::size;
 	template<typename T> constexpr std::size_t primitive_primitive_type_information<T>::alignment;
-	template<typename T> constexpr std::size_t primitive_primitive_type_information<T>::columns;
 
 	template<> struct primitive_type_information<float>
 		: primitive_primitive_type_information<float> {};
@@ -246,22 +244,19 @@ namespace internal {
 	template<> struct primitive_type_information<uint32_t>
 		: primitive_primitive_type_information<uint32_t> {};
 
-	template<typename T, std::size_t Size, std::size_t Alignment = Size, std::size_t Columns = 1>
+	template<typename T, std::size_t Size, std::size_t Alignment = Size>
 	struct glm_vec_type_information {
 
-		constexpr static std::size_t size = Size, alignment = Alignment, columns = Columns;
+		constexpr static std::size_t size = Size, alignment = Alignment;
 
-		static auto ptr(const T &value, std::size_t index)->decltype(glm::value_ptr(value)) {
-			assert(index == 0);
-			return glm::value_ptr(value);
+		static void copy(const T &value, void *target) {
+			std::memcpy(target, glm::value_ptr(value), size);
 		}
 	};
-	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
-	constexpr std::size_t glm_vec_type_information<T, Size, Alignment, Columns>::size;
-	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
-	constexpr std::size_t glm_vec_type_information<T, Size, Alignment, Columns>::alignment;
-	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
-	constexpr std::size_t glm_vec_type_information<T, Size, Alignment, Columns>::columns;
+	template<typename T, std::size_t Size, std::size_t Alignment>
+	constexpr std::size_t glm_vec_type_information<T, Size, Alignment>::size;
+	template<typename T, std::size_t Size, std::size_t Alignment>
+	constexpr std::size_t glm_vec_type_information<T, Size, Alignment>::alignment;
 
 	template<> struct primitive_type_information<glm::vec2>
 		: glm_vec_type_information<glm::vec2, sizeof(float) * 2> {};
@@ -288,22 +283,23 @@ namespace internal {
 	template<> struct primitive_type_information<glm::bvec4>
 		: glm_vec_type_information<glm::bvec4, sizeof(bool) * 4> {};
 
-	template<typename T, std::size_t Size, std::size_t Alignment = Size, std::size_t Columns = 1>
+	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
 	struct glm_mat_type_information {
 
-		constexpr static std::size_t size = Size, alignment = Alignment, columns = Columns;
+		constexpr static std::size_t size = Columns * Alignment, alignment = Alignment;
 
-		static auto ptr(const T &value, typename T::length_type index)
-				->decltype(glm::value_ptr(value[index])) {
-			return glm::value_ptr(value[index]);
+		static void copy(const T &value, void *target) {
+			uint8_t *bytes(reinterpret_cast<uint8_t *>(target));
+			for (std::size_t column = 0; column < Columns; ++column) {
+				std::memcpy(bytes, glm::value_ptr(value[column]), Size);
+				bytes += alignment;
+			}
 		}
 	};
 	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
 	constexpr std::size_t glm_mat_type_information<T, Size, Alignment, Columns>::size;
 	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
 	constexpr std::size_t glm_mat_type_information<T, Size, Alignment, Columns>::alignment;
-	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
-	constexpr std::size_t glm_mat_type_information<T, Size, Alignment, Columns>::columns;
 
 	template<> struct primitive_type_information<glm::mat2>
 		: glm_mat_type_information<glm::mat2, sizeof(float) * 2, sizeof(float) * 2, 2> {};
