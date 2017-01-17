@@ -210,6 +210,15 @@ enum element_enum {
 
 namespace internal {
 
+// Only C++14 implements constexpr std::max.
+template<typename T>
+constexpr const T& constexpr_max(const T& a, const T& b) {
+  return a < b ? b : a;
+}
+
+template<memory_layout layout, typename T>
+struct primitive_type_information;
+
 template<memory_layout layout>
 struct alignment_type {
 
@@ -219,7 +228,7 @@ struct alignment_type {
 
 	constexpr static std::size_t array_alignment(std::size_t alignment) {
 		return layout == linear_std140 || layout == interleaved_std140
-			? (std::max)(alignment, sizeof(float) * 4) : alignment;
+			? constexpr_max(alignment, sizeof(float) * 4) : alignment;
 	}
 
 	template<typename T, bool IsArray>
@@ -233,7 +242,7 @@ struct alignment_type {
 	constexpr static std::size_t alignment() {
 		typedef primitive_type_information<layout, T> type_info;
 		return layout == linear_std140 && IsArray
-			? (std::max)(type_info::alignment, sizeof(float) * 4) : type_info::alignment;
+			? constexpr_max(type_info::alignment, sizeof(float) * 4) : type_info::alignment;
 	}
 
 	constexpr static std::size_t struct_alignment(std::size_t max_alignment) {
@@ -356,7 +365,7 @@ template<memory_layout layout, typename T, std::size_t Size>
 struct primitive_type_information<layout, std::array<T, Size>> {
 	constexpr static std::size_t primitive_alignment = primitive_type_information<layout, T>::alignment;
 	constexpr static std::size_t alignment = layout == linear_std140 || layout == interleaved_std140
-		? (std::max)(primitive_alignment, sizeof(float) * 4) : primitive_alignment,
+		? constexpr_max(primitive_alignment, sizeof(float) * 4) : primitive_alignment,
 		size = Size * alignment, array_size = size;
 
 	static void copy(const std::array<T, Size> &value, void *target) {
@@ -382,16 +391,16 @@ struct tuple_type_information_size_type {
 
 	template<typename Tuple>
 	constexpr static std::size_t offset() {
-		typedef typename std::decay<std::tuple_element<I - 1, Tuple>::type>::type type;
+		typedef typename std::decay<typename std::tuple_element<I - 1, Tuple>::type>::type type;
 		typedef primitive_type_information<layout, type> type_info;
 		return alignment_type<layout>::align_offset(
-			tuple_type_information_size_type<layout, I - 1>::size<Tuple>(), type_info::alignment);
+			tuple_type_information_size_type<layout, I - 1>::template size<Tuple>(), type_info::alignment);
 
 	}
 
 	template<typename Tuple>
 	constexpr static std::size_t size() {
-		typedef typename std::decay<std::tuple_element<I - 1, Tuple>::type>::type type;
+		typedef typename std::decay<typename std::tuple_element<I - 1, Tuple>::type>::type type;
 		typedef primitive_type_information<layout, type> type_info;
 		return offset<Tuple>()
 			+ alignment_type<layout>::template size<type, is_array_type<type>::value>();
@@ -399,14 +408,15 @@ struct tuple_type_information_size_type {
 
 	template<typename Tuple>
 	constexpr static std::size_t alignment() {
-		typedef typename std::decay<std::tuple_element<I - 1, Tuple>::type>::type type;
-		return (std::max)(tuple_type_information_size_type<layout, I - 1>::alignment<Tuple>(),
-			alignment_type<layout>::template alignment<type, is_array_type<type>::value>());
+		typedef typename std::decay<typename std::tuple_element<I - 1, Tuple>::type>::type type;
+		return constexpr_max(tuple_type_information_size_type<layout, I - 1>
+			::template alignment<Tuple>(), alignment_type<layout>
+				::template alignment<type, is_array_type<type>::value>());
 	}
 
 	template<typename Tuple>
 	static void copy(const Tuple &value, void *target) {
-		typedef typename std::decay<std::tuple_element<I - 1, Tuple>::type>::type type;
+		typedef typename std::decay<typename std::tuple_element<I - 1, Tuple>::type>::type type;
 		typedef primitive_type_information<layout, type> type_info;
 		tuple_type_information_size_type<layout, I - 1>::copy(value, target);
 		type_info::copy(std::get<I - 1>(value), reinterpret_cast<uint8_t *>(target)

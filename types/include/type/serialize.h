@@ -27,7 +27,7 @@ namespace internal {
 
 template<memory_layout Layout, std::size_t I>
 struct layout_type {
-	constexpr static memory_layout memory_layout = Layout;
+	constexpr static memory_layout layout = Layout;
 	typedef std::array<std::size_t, I> indices_type;
 	indices_type offset, stride;
 	std::size_t size;
@@ -128,7 +128,7 @@ struct serialize_storage_type {
 	template<typename Layout, typename Storages>
 	static void serialize(const Layout &layout, const Storages &storages, void *target) {
 		constexpr std::size_t index = I - 1;
-		internal::serialize<Layout::memory_layout>(*std::get<index>(storages),
+		internal::serialize<Layout::layout>(*std::get<index>(storages),
 			std::get<index>(layout.offset), std::get<index>(layout.stride), target);
 		serialize_storage_type<index>::serialize(layout, storages, target);
 	}
