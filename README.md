@@ -9,7 +9,7 @@ vec3_array vertices;
 vec3_array normals;
 vec2_array texcoords;
 
-buffer_type vertex_buffer(create(interleaved_std140, ...,
+buffer_type vertex_buffer(create<interleaved_std140>(...,
   std::ref(vertices), std::ref(texcoords), std::ref(normals)));
 ```
 The above `vertices`, `normals` and `texcoords` can be read or written to at any time, using the following syntax:
@@ -26,6 +26,48 @@ queue::submit(queue, {}, command_buffers, {});
 ```
 Locking the array with the `writable_*_array` types will increase its reference count when it goes out of scope. Locking the array with `readable_*_array` makes sure no concurrent read/write occurs.
 The `writable_*_array` provides a full `std::vector` like interface where `readable_*_array` provides a read-only `const std::vector` like interface.
+
+Custom types are supported too. The following GLSL definition
+```GLSL
+struct light_type {
+  vec4 position;
+  vec3 attenuation;
+  vec3 spot_direction;
+  float spot_cos_cutoff;
+  vec4 ambient;
+  vec4 diffuse;
+  vec4 specular;
+  float spot_exponent;
+};
+
+layout(std140, binding = 1) uniform lights {
+        light_type lights[max_lights];
+} lightsbuf;
+```
+
+can be matched with the following host/C++ code:
+
+```C++
+struct light_type {
+  vec4 position;
+  vec3 attenuation;
+  vec3 spot_direction;
+  float spot_cos_cutoff;
+  vec4 ambient;
+  vec4 diffuse;
+  vec4 specular;
+  float spot_exponent;
+
+  VCC_STRUCT_SERIALIZABLE(position, attenuation, spot_direction,
+    spot_cos_cutoff, ambient, diffuse, specular, spot_exponent);
+};
+t_array<light_type> lights(max_lights);
+
+auto light_uniform_buffer(input_buffer::create<linear_std140>(
+  std::ref(device), 0, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+  VK_SHARING_MODE_EXCLUSIVE, {}, std::ref(lights)));
+```
+See ```sample/lighting``` for an example.
 
 *Because the data is strongly typed, there are a lot of opportunities for type checking, especially against SPIR-V. This is in the works!*
 The library includes the spirv-reflection project. It parses SPIR-V and extracts uniforms, inputs and outputs. The library will be used to do runtime validation on SPIR-V assembly against the C++ declared arrays. This is currently being worked on.
