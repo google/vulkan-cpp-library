@@ -107,30 +107,28 @@ int main(int argc, const char **argv) {
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
 			std::ref(projection_matrix), std::ref(modelview_matrix), std::ref(normal_matrix)));
 
-	struct {
-		type::vec4 position;
-		type::vec3 attenuation;
-		type::vec3 spot_direction;
-		type::float_type spot_cos_cutoff;
-		type::vec4 ambient;
-		type::vec4 diffuse;
-		type::vec4 specular;
-		type::float_type spot_exponent;
-	} light{
-		type::vec4(glm::vec4(0.f, 10.f, 0.f, 1.f)),
-		type::vec3(glm::vec3(1, 0, 0)), type::vec3(glm::vec3(0, 0, -1)),
-		type::float_type(-1), type::vec4(glm::vec4(0.2f, 0.2f, 0.2f, 1)),
-		type::vec4(glm::vec4(0.9f, 0.9f, 0.9f, 1.f)),
-		type::vec4(glm::vec4(1.f, 1.f, 1.f, 1.f)), type::float_type(120.f)
-	};
+	struct light_type {
+		glm::vec4 position;
+		glm::vec3 attenuation, spot_direction;
+		float spot_cos_cutoff;
+		glm::vec4 ambient, diffuse, specular;
+		float spot_exponent;
 
+		VCC_STRUCT_SERIALIZABLE(position, attenuation, spot_direction, spot_cos_cutoff, ambient,
+			diffuse, specular, spot_exponent);
+	};
+	type::t_array<light_type> lights{ {
+		{ 0, 10, 0, 1 },
+		{ 1, 0, 0 },
+		{ 0, 0, -1 },
+		-1,
+		{ .2f, .2f, .2f, 1 },
+		{ .9f, .9f, .9f, 1 },
+		{ 1, 1, 1, 1 },
+		120 } };
 	vcc::input_buffer::input_buffer_type light_uniform_buffer(
 		vcc::input_buffer::create<type::linear_std140>(std::ref(device), 0,
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {},
-			std::ref(light.position), std::ref(light.attenuation),
-			std::ref(light.spot_direction), std::ref(light.spot_cos_cutoff),
-			std::ref(light.ambient), std::ref(light.diffuse),
-			std::ref(light.specular), std::ref(light.spot_exponent)));
+		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, {}, std::ref(lights)));
 
 	vcc::input_buffer::input_buffer_type vertex_buffer(
 		vcc::input_buffer::create<type::interleaved_std140>(std::ref(device), 0,
