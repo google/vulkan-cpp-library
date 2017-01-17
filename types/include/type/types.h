@@ -22,6 +22,9 @@
 #include <type/memory.h>
 #include <type/storage.h>
 
+#define VCC_STRUCT_SERIALIZABLE(...) auto vcc_serialize() const \
+	->decltype(std::tie(__VA_ARGS__)) { return std::tie(__VA_ARGS__); }
+
 namespace type {
 
 typedef t_array<float> float_array;
@@ -268,7 +271,17 @@ struct type_information_traits {
 };
 
 template<memory_layout layout, typename T>
-struct primitive_type_information;
+struct primitive_type_information
+	: std::enable_if<true, primitive_type_information<layout,
+		typename std::decay<decltype(std::declval<T>().vcc_serialize())>::type>>::type {
+
+	typedef primitive_type_information<layout,
+		typename std::decay<decltype(std::declval<T>().vcc_serialize())>::type> parent_type;
+
+	static void copy(const T &value, void *target) {
+		parent_type::copy(value.vcc_serialize(), target);
+	}
+};
 
 template<typename T> struct primitive_primitive_type_information {
 
@@ -369,7 +382,7 @@ struct tuple_type_information_size_type {
 
 	template<typename Tuple>
 	constexpr static std::size_t offset() {
-		typedef typename std::tuple_element<I - 1, Tuple>::type type;
+		typedef typename std::decay<std::tuple_element<I - 1, Tuple>::type>::type type;
 		typedef primitive_type_information<layout, type> type_info;
 		return alignment_type<layout>::align_offset(
 			tuple_type_information_size_type<layout, I - 1>::size<Tuple>(), type_info::alignment);
@@ -378,7 +391,7 @@ struct tuple_type_information_size_type {
 
 	template<typename Tuple>
 	constexpr static std::size_t size() {
-		typedef typename std::tuple_element<I - 1, Tuple>::type type;
+		typedef typename std::decay<std::tuple_element<I - 1, Tuple>::type>::type type;
 		typedef primitive_type_information<layout, type> type_info;
 		return offset<Tuple>()
 			+ alignment_type<layout>::template size<type, is_array_type<type>::value>();
@@ -386,14 +399,14 @@ struct tuple_type_information_size_type {
 
 	template<typename Tuple>
 	constexpr static std::size_t alignment() {
-		typedef typename std::tuple_element<I - 1, Tuple>::type type;
+		typedef typename std::decay<std::tuple_element<I - 1, Tuple>::type>::type type;
 		return (std::max)(tuple_type_information_size_type<layout, I - 1>::alignment<Tuple>(),
 			alignment_type<layout>::template alignment<type, is_array_type<type>::value>());
 	}
 
 	template<typename Tuple>
 	static void copy(const Tuple &value, void *target) {
-		typedef std::tuple_element<I - 1, Tuple>::type type;
+		typedef typename std::decay<std::tuple_element<I - 1, Tuple>::type>::type type;
 		typedef primitive_type_information<layout, type> type_info;
 		tuple_type_information_size_type<layout, I - 1>::copy(value, target);
 		type_info::copy(std::get<I - 1>(value), reinterpret_cast<uint8_t *>(target)
