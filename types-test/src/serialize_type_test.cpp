@@ -234,14 +234,164 @@ TEST(SerializeTypeTest, LinearPrimitiveLayout1) {
 	ASSERT_EQ(type::read(primitive3), *((glm::vec3 *) &output[4]));
 }
 
+TEST(SerializeTypeTest, LinearStd140Array) {
+	type::t_primitive<std::array<float, 2>> float_array({1, 2 });
+	type::t_array<std::array<glm::vec2, 2>> vec_array(
+		{ { glm::vec2(3, 4), glm::vec2(5, 6) }, { glm::vec2(7, 8), glm::vec2(9, 10) } });
+	auto serialized(type::make_serialize<type::linear_std140>(
+		type::make_supplier(std::ref(float_array)),
+		type::make_supplier(std::ref(vec_array))));
+	const std::size_t size(24);
+	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
+	float output[size];
+	type::flush(serialized, output);
+	ASSERT_EQ(output[0], 1);
+	ASSERT_EQ(output[4], 2);
+	ASSERT_EQ(output[8], 3);
+	ASSERT_EQ(output[9], 4);
+	ASSERT_EQ(output[12], 5);
+	ASSERT_EQ(output[13], 6);
+	ASSERT_EQ(output[16], 7);
+	ASSERT_EQ(output[17], 8);
+	ASSERT_EQ(output[20], 9);
+	ASSERT_EQ(output[21], 10);
+}
+
+TEST(SerializeTypeTest, LinearStd430Array) {
+	type::t_primitive<std::array<float, 2>> float_array({ 1, 2 });
+	type::t_array<std::array<glm::vec2, 2>> vec_array(
+	{ { glm::vec2(3, 4), glm::vec2(5, 6) },{ glm::vec2(7, 8), glm::vec2(9, 10) } });
+	auto serialized(type::make_serialize<type::linear_std430>(
+		type::make_supplier(std::ref(float_array)),
+		type::make_supplier(std::ref(vec_array))));
+	const std::size_t size(10);
+	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
+	float output[size];
+	type::flush(serialized, output);
+	for (std::size_t i = 0; i < size; ++i) {
+		ASSERT_EQ(output[i], 1 + i);
+	}
+}
+
+TEST(SerializeTypeTest, LinearStd140Tuple1) {
+	type::t_primitive<std::tuple<glm::vec3, float>> struct_primitive(
+		std::make_tuple(glm::vec3(1, 2, 3), 4));
+	type::t_array<std::tuple<glm::vec2, float>> struct_array({
+		std::make_tuple(glm::vec2(5, 6), 7), std::make_tuple(glm::vec2(8, 9), 10) });
+	auto serialized(type::make_serialize<type::linear_std140>(
+		type::make_supplier(std::ref(struct_primitive)),
+		type::make_supplier(std::ref(struct_array))));
+	const std::size_t size(12);
+	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
+	float output[size];
+	type::flush(serialized, output);
+	for (std::size_t i = 0; i < 7; ++i) {
+		ASSERT_EQ(output[i], 1 + i);
+	}
+	for (std::size_t i = 0; i < 3; ++i) {
+		ASSERT_EQ(output[8 + i], 8 + i);
+	}
+}
+
+TEST(SerializeTypeTest, LinearStd140Tuple2) {
+	type::t_array<std::tuple<glm::vec2, std::array<float, 2>>> struct_array({
+		std::make_tuple(glm::vec2(1, 2), std::array<float, 2>{ 3, 4 }),
+		std::make_tuple(glm::vec2(5, 6), std::array<float, 2>{ 7, 8 }) });
+	auto serialized(type::make_serialize<type::linear_std140>(
+		type::make_supplier(std::ref(struct_array))));
+	const std::size_t size(24);
+	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
+	float output[size];
+	type::flush(serialized, output);
+	ASSERT_EQ(output[0], 1);
+	ASSERT_EQ(output[1], 2);
+	ASSERT_EQ(output[4], 3);
+	ASSERT_EQ(output[8], 4);
+	ASSERT_EQ(output[12], 5);
+	ASSERT_EQ(output[13], 6);
+	ASSERT_EQ(output[16], 7);
+	ASSERT_EQ(output[20], 8);
+}
+
+TEST(SerializeTypeTest, LinearStd140Tuple3) {
+	typedef std::tuple<glm::vec4, glm::vec3, glm::vec3, float, glm::vec4, glm::vec4, glm::vec4,
+		float> light_type;
+	type::t_array<light_type> lights{ light_type{
+		{ 1, 2, 3, 4 },
+		{ 5, 6, 7 },
+		{ 8, 9, 10 },
+		11,
+		{ 12, 13, 14, 15 },
+		{ 16, 17, 18, 19 },
+		{ 20, 21, 22, 23 },
+		24 } };
+	auto serialized(type::make_serialize<type::linear_std430>(
+		type::make_supplier(std::ref(lights))));
+	const std::size_t size(28);
+	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
+	float output[size];
+	type::flush(serialized, output);
+	for (std::size_t i = 0; i < 7; ++i) {
+		ASSERT_EQ(output[i], i + 1);
+	}
+	for (std::size_t i = 8; i < 25; ++i) {
+		ASSERT_EQ(output[i], i);
+	}
+}
+
+TEST(SerializeTypeTest, LinearStd140Tuple4) {
+	typedef std::tuple<glm::vec4, glm::vec3, std::array<glm::vec3, 1>, float,
+		std::array<glm::vec4, 2>, glm::vec4, glm::vec4, float> light_type;
+	type::t_array<light_type> lights{ light_type{
+		{ 1, 2, 3, 4 },
+		{ 5, 6, 7 },
+		{ glm::vec3{ 8, 9, 10 } },
+		11,
+		{ glm::vec4{ 12, 13, 14, 15 }, glm::vec4{ 16, 17, 18, 19 } },
+		{ 20, 21, 22, 23 },
+		{ 24, 25, 26, 27 },
+		28 } };
+	auto serialized(type::make_serialize<type::linear_std430>(
+		type::make_supplier(std::ref(lights))));
+	const std::size_t size(36);
+	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
+	float output[size];
+	type::flush(serialized, output);
+	for (std::size_t i = 0; i < 7; ++i) {
+		ASSERT_EQ(output[i], i + 1);
+	}
+	for (std::size_t i = 8; i < 11; ++i) {
+		ASSERT_EQ(output[i], i);
+	}
+	ASSERT_EQ(output[12], 11);
+	for (std::size_t i = 16; i < 33; ++i) {
+		ASSERT_EQ(output[i], i - 4);
+	}
+}
+
+TEST(SerializeTypeTest, LinearStd430Tuple1) {
+	type::t_array<std::tuple<glm::vec2, std::array<float, 2>>> struct_array({
+		std::make_tuple(glm::vec2(1, 2), std::array<float, 2>{ 3, 4 }),
+		std::make_tuple(glm::vec2(5, 6), std::array<float, 2>{ 7, 8 }) });
+	auto serialized(type::make_serialize<type::linear_std430>(
+		type::make_supplier(std::ref(struct_array))));
+	const std::size_t size(8);
+	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
+	float output[size];
+	type::flush(serialized, output);
+	for (std::size_t i = 0; i < size; ++i) {
+		ASSERT_EQ(output[i], 1 + i);
+	}
+}
+
 TEST(SerializeTypeTest, InterleavedStd140ArrayLayout1) {
 	type::t_array<float> array1({ 1, 2, 3 });
 	type::t_array<glm::vec2> array2{{ {1, 2}, {2, 3}, {3, 4} }};
 	type::t_array<glm::vec3> array3{{ {1, 2, 3}, {4, 5, 6}, {7, 8, 9} }};
 	auto serialized(type::make_serialize<type::interleaved_std140>(
-			type::make_supplier(std::ref(array1)),
-			type::make_supplier(std::ref(array2)),
-			type::make_supplier(std::ref(array3))));
+		type::make_supplier(std::ref(array1)),
+		type::make_supplier(std::ref(array2)),
+		type::make_supplier(std::ref(array3))));
 	const std::size_t size(8 * 3);
 	ASSERT_EQ(type::size(serialized), sizeof(float) * size);
 	float output[size];

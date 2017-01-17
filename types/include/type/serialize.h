@@ -25,70 +25,18 @@
 namespace type {
 namespace internal {
 
-template<std::size_t I>
+template<memory_layout Layout, std::size_t I>
 struct layout_type {
+	constexpr static memory_layout memory_layout = Layout;
 	typedef std::array<std::size_t, I> indices_type;
 	indices_type offset, stride;
 	std::size_t size;
 };
 
 template<memory_layout layout>
-struct alignment_type {
-
-	constexpr static std::size_t align_offset(std::size_t base_offset, std::size_t alignment) {
-		return base_offset + (alignment - base_offset % alignment) % alignment;
-	}
-
-	constexpr static std::size_t array_alignment(std::size_t alignment) {
-		return layout == linear_std140 || layout == interleaved_std140
-			? (std::max)(alignment, sizeof(float) * 4) : alignment;
-	}
-
-	template<typename T, bool IsArray>
-	constexpr static std::size_t size() {
-		typedef primitive_type_information<T> type_info;
-		return layout != interleaved_std140 && layout != interleaved_std430 && IsArray
-			? array_alignment(type_info::alignment) : type_info::size;
-	}
-
-	template<typename T, bool IsArray>
-	constexpr static std::size_t alignment() {
-		typedef primitive_type_information<T> type_info;
-		return layout == linear_std140 && IsArray
-			? (std::max)(type_info::alignment, sizeof(float) * 4) : type_info::alignment;
-	}
-
-	constexpr static std::size_t struct_alignment(std::size_t max_alignment) {
-		return array_alignment(max_alignment);
-	}
-};
-
-template<>
-struct alignment_type<linear> {
-
-	constexpr static std::size_t align_offset(std::size_t offset, std::size_t) {
-		return offset;
-	}
-
-	template<typename T, bool IsArray>
-	constexpr static std::size_t size() {
-		return primitive_type_information<T>::size;
-	}
-
-	template<typename T, bool IsArray>
-	constexpr static std::size_t alignment() {
-		return 1;
-	}
-
-	constexpr static std::size_t struct_alignment(std::size_t) {
-		return 1;
-	}
-};
-
-template<memory_layout layout>
 struct calculate_linear_layout_type {
 	template<typename... Storage>
-	static layout_type<sizeof...(Storage)> calculate(const Storage &... storage) {
+	static layout_type<layout, sizeof...(Storage)> calculate(const Storage &... storage) {
 		typedef alignment_type<layout> alignment_type;
 		typedef std::array<std::size_t, sizeof...(Storage)> indices_type;
 
@@ -112,7 +60,7 @@ template<memory_layout layout>
 struct calculate_interleaved_layout_type {
 
 	template<typename... Storage>
-	static layout_type<sizeof...(Storage)> calculate(const Storage &... storage) {
+	static layout_type<layout, sizeof...(Storage)> calculate(const Storage &... storage) {
 		typedef alignment_type<layout> alignment_type;
 		typedef std::array<std::size_t, sizeof...(Storage)> indices_type;
 
@@ -163,13 +111,13 @@ template<> struct calculate_layout_type<interleaved_std140>
 template<> struct calculate_layout_type<interleaved_std430>
 	: calculate_interleaved_layout_type<interleaved_std430> {};
 
-template<typename Storage>
+template<memory_layout Layout, typename Storage>
 void serialize(const Storage &storage, std::size_t offset, std::size_t stride, void *target) {
 	uint8_t *bytes(reinterpret_cast<uint8_t *>(target) + offset);
 
 	auto values(read(storage));
 	for (const auto &value : values) {
-		primitive_type_information<typename Storage::value_type>::copy(value, bytes);
+		primitive_type_information<Layout, typename Storage::value_type>::copy(value, bytes);
 		bytes += stride;
 	}
 }
@@ -180,8 +128,8 @@ struct serialize_storage_type {
 	template<typename Layout, typename Storages>
 	static void serialize(const Layout &layout, const Storages &storages, void *target) {
 		constexpr std::size_t index = I - 1;
-		internal::serialize(*std::get<index>(storages), std::get<index>(layout.offset),
-			std::get<index>(layout.stride), target);
+		internal::serialize<Layout::memory_layout>(*std::get<index>(storages),
+			std::get<index>(layout.offset), std::get<index>(layout.stride), target);
 		serialize_storage_type<index>::serialize(layout, storages, target);
 	}
 };

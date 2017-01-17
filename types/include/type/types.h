@@ -19,6 +19,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <inttypes.h>
+#include <type/memory.h>
 #include <type/storage.h>
 
 namespace type {
@@ -206,142 +207,269 @@ enum element_enum {
 
 namespace internal {
 
-	template<element_enum Element, std::size_t Cols, std::size_t Rows, bool IsArray>
-	struct type_information_traits {
-		constexpr static element_enum element = Element;
-		constexpr static std::size_t cols = Cols, rows = Rows;
-		constexpr static bool is_array = IsArray;
-	};
+template<memory_layout layout>
+struct alignment_type {
 
-	template<typename T>
-	struct primitive_type_information;
+	constexpr static std::size_t align_offset(std::size_t base_offset, std::size_t alignment) {
+		return base_offset + (alignment - base_offset % alignment) % alignment;
+	}
 
-	template<typename T> struct primitive_primitive_type_information {
+	constexpr static std::size_t array_alignment(std::size_t alignment) {
+		return layout == linear_std140 || layout == interleaved_std140
+			? (std::max)(alignment, sizeof(float) * 4) : alignment;
+	}
 
-		constexpr static std::size_t size = sizeof(T), alignment = sizeof(T);
+	template<typename T, bool IsArray>
+	constexpr static std::size_t size() {
+		typedef primitive_type_information<layout, T> type_info;
+		return layout != interleaved_std140 && layout != interleaved_std430 && IsArray
+			? array_alignment(type_info::array_size) : type_info::size;
+	}
 
-		static void copy(const T &value, void *target) {
-			*reinterpret_cast<T *>(target) = value;
+	template<typename T, bool IsArray>
+	constexpr static std::size_t alignment() {
+		typedef primitive_type_information<layout, T> type_info;
+		return layout == linear_std140 && IsArray
+			? (std::max)(type_info::alignment, sizeof(float) * 4) : type_info::alignment;
+	}
+
+	constexpr static std::size_t struct_alignment(std::size_t max_alignment) {
+		return array_alignment(max_alignment);
+	}
+};
+
+template<>
+struct alignment_type<linear> {
+
+	constexpr static std::size_t align_offset(std::size_t offset, std::size_t) {
+		return offset;
+	}
+
+	template<typename T, bool IsArray>
+	constexpr static std::size_t size() {
+		return primitive_type_information<linear, T>::size;
+	}
+
+	template<typename T, bool IsArray>
+	constexpr static std::size_t alignment() {
+		return 1;
+	}
+
+	constexpr static std::size_t struct_alignment(std::size_t) {
+		return 1;
+	}
+};
+
+template<element_enum Element, std::size_t Cols, std::size_t Rows, bool IsArray>
+struct type_information_traits {
+	constexpr static element_enum element = Element;
+	constexpr static std::size_t cols = Cols, rows = Rows;
+	constexpr static bool is_array = IsArray;
+};
+
+template<memory_layout layout, typename T>
+struct primitive_type_information;
+
+template<typename T> struct primitive_primitive_type_information {
+
+	constexpr static std::size_t size = sizeof(T), alignment = sizeof(T), array_size = size;
+
+	static void copy(const T &value, void *target) {
+		*reinterpret_cast<T *>(target) = value;
+	}
+};
+template<typename T>
+constexpr std::size_t primitive_primitive_type_information<T>::size;
+template<typename T>
+constexpr std::size_t primitive_primitive_type_information<T>::alignment;
+
+template<memory_layout layout> struct primitive_type_information<layout, float>
+	: primitive_primitive_type_information<float> {};
+template<memory_layout layout> struct primitive_type_information<layout, double>
+	: primitive_primitive_type_information<double> {};
+template<memory_layout layout> struct primitive_type_information<layout, int8_t>
+	: primitive_primitive_type_information<int8_t> {};
+template<memory_layout layout> struct primitive_type_information<layout, uint8_t>
+	: primitive_primitive_type_information<uint8_t> {};
+template<memory_layout layout> struct primitive_type_information<layout, int16_t>
+	: primitive_primitive_type_information<int16_t> {};
+template<memory_layout layout> struct primitive_type_information<layout, uint16_t>
+	: primitive_primitive_type_information<uint16_t> {};
+template<memory_layout layout> struct primitive_type_information<layout, int32_t>
+	: primitive_primitive_type_information<int32_t> {};
+template<memory_layout layout> struct primitive_type_information<layout, uint32_t>
+	: primitive_primitive_type_information<uint32_t> {};
+
+template<typename T, std::size_t Size, std::size_t Alignment = Size>
+struct glm_vec_type_information {
+
+	constexpr static std::size_t size = Size, alignment = Alignment, array_size = alignment;
+
+	static void copy(const T &value, void *target) {
+		std::memcpy(target, glm::value_ptr(value), size);
+	}
+};
+template<typename T, std::size_t Size, std::size_t Alignment>
+constexpr std::size_t glm_vec_type_information<T, Size, Alignment>::size;
+template<typename T, std::size_t Size, std::size_t Alignment>
+constexpr std::size_t glm_vec_type_information<T, Size, Alignment>::alignment;
+
+template<memory_layout layout> struct primitive_type_information<layout, glm::vec2>
+	: glm_vec_type_information<glm::vec2, sizeof(float) * 2> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::vec3>
+	: glm_vec_type_information<glm::vec3, sizeof(float) * 3, sizeof(float) * 4> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::vec4>
+	: glm_vec_type_information<glm::vec4, sizeof(float) * 4> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::ivec2>
+	: glm_vec_type_information<glm::ivec2, sizeof(int32_t) * 2> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::ivec3>
+	: glm_vec_type_information<glm::ivec3, sizeof(int32_t) * 3, sizeof(float) * 4> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::ivec4>
+	: glm_vec_type_information<glm::ivec4, sizeof(int32_t) * 4> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::uvec2>
+	: glm_vec_type_information<glm::uvec2, sizeof(uint32_t) * 2> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::uvec3>
+	: glm_vec_type_information<glm::uvec3, sizeof(uint32_t) * 3, sizeof(float) * 4> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::uvec4>
+	: glm_vec_type_information<glm::uvec4, sizeof(uint32_t) * 4> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::bvec2>
+	: glm_vec_type_information<glm::bvec2, sizeof(bool) * 2> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::bvec3>
+	: glm_vec_type_information<glm::bvec3, sizeof(bool) * 3, sizeof(bool) * 4> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::bvec4>
+	: glm_vec_type_information<glm::bvec4, sizeof(bool) * 4> {};
+
+template<memory_layout layout, typename T, std::size_t Size>
+struct primitive_type_information<layout, std::array<T, Size>> {
+	constexpr static std::size_t primitive_alignment = primitive_type_information<layout, T>::alignment;
+	constexpr static std::size_t alignment = layout == linear_std140 || layout == interleaved_std140
+		? (std::max)(primitive_alignment, sizeof(float) * 4) : primitive_alignment,
+		size = Size * alignment, array_size = size;
+
+	static void copy(const std::array<T, Size> &value, void *target) {
+		uint8_t *bytes(reinterpret_cast<uint8_t *>(target));
+		for (const T &element : value) {
+			primitive_type_information<layout, T>::copy(element, bytes);
+			bytes += alignment;
 		}
-	};
-	template<typename T> constexpr std::size_t primitive_primitive_type_information<T>::size;
-	template<typename T> constexpr std::size_t primitive_primitive_type_information<T>::alignment;
+	}
+};
 
-	template<> struct primitive_type_information<float>
-		: primitive_primitive_type_information<float> {};
-	template<> struct primitive_type_information<double>
-		: primitive_primitive_type_information<double> {};
-	template<> struct primitive_type_information<int8_t>
-		: primitive_primitive_type_information<int8_t> {};
-	template<> struct primitive_type_information<uint8_t>
-		: primitive_primitive_type_information<uint8_t> {};
-	template<> struct primitive_type_information<int16_t>
-		: primitive_primitive_type_information<int16_t> {};
-	template<> struct primitive_type_information<uint16_t>
-		: primitive_primitive_type_information<uint16_t> {};
-	template<> struct primitive_type_information<int32_t>
-		: primitive_primitive_type_information<int32_t> {};
-	template<> struct primitive_type_information<uint32_t>
-		: primitive_primitive_type_information<uint32_t> {};
+template<typename T>
+struct is_array_type {
+	constexpr static bool value = false;
+};
+template<typename T, std::size_t Size>
+struct is_array_type<std::array<T, Size>> {
+	constexpr static bool value = true;
+};
 
-	template<typename T, std::size_t Size, std::size_t Alignment = Size>
-	struct glm_vec_type_information {
+template<memory_layout layout, std::size_t I>
+struct tuple_type_information_size_type {
 
-		constexpr static std::size_t size = Size, alignment = Alignment;
+	template<typename Tuple>
+	constexpr static std::size_t offset() {
+		typedef typename std::tuple_element<I - 1, Tuple>::type type;
+		typedef primitive_type_information<layout, type> type_info;
+		return alignment_type<layout>::align_offset(
+			tuple_type_information_size_type<layout, I - 1>::size<Tuple>(), type_info::alignment);
 
-		static void copy(const T &value, void *target) {
-			std::memcpy(target, glm::value_ptr(value), size);
+	}
+
+	template<typename Tuple>
+	constexpr static std::size_t size() {
+		typedef typename std::tuple_element<I - 1, Tuple>::type type;
+		typedef primitive_type_information<layout, type> type_info;
+		return offset<Tuple>()
+			+ alignment_type<layout>::template size<type, is_array_type<type>::value>();
+	}
+
+	template<typename Tuple>
+	constexpr static std::size_t alignment() {
+		typedef typename std::tuple_element<I - 1, Tuple>::type type;
+		return (std::max)(tuple_type_information_size_type<layout, I - 1>::alignment<Tuple>(),
+			alignment_type<layout>::template alignment<type, is_array_type<type>::value>());
+	}
+
+	template<typename Tuple>
+	static void copy(const Tuple &value, void *target) {
+		typedef std::tuple_element<I - 1, Tuple>::type type;
+		typedef primitive_type_information<layout, type> type_info;
+		tuple_type_information_size_type<layout, I - 1>::copy(value, target);
+		type_info::copy(std::get<I - 1>(value), reinterpret_cast<uint8_t *>(target)
+			+ offset<Tuple>());
+	}
+};
+
+template<memory_layout layout>
+struct tuple_type_information_size_type<layout, 0> {
+
+	template<typename Tuple>
+	constexpr static std::size_t size() {
+		return 0;
+	}
+
+	template<typename Tuple>
+	constexpr static std::size_t alignment() {
+		return layout == linear_std140 || layout == interleaved_std140 ? sizeof(float) * 4 : 0;
+	}
+
+	template<typename Tuple>
+	static std::size_t copy(const Tuple &value, void *target) {
+		return 0;
+	}
+};
+
+template<memory_layout Layout, typename... Ts>
+struct primitive_type_information<Layout, std::tuple<Ts...>> {
+	typedef tuple_type_information_size_type<Layout, sizeof...(Ts)> type_info;
+	constexpr static std::size_t size = type_info::template size<std::tuple<Ts...>>();
+	constexpr static std::size_t alignment = type_info::template alignment<std::tuple<Ts...>>();
+	constexpr static std::size_t array_size = alignment_type<Layout>::align_offset(size,
+		alignment_type<Layout>::array_alignment(alignment));
+
+	static void copy(const std::tuple<Ts...> &value, void *target) {
+		type_info::copy(value, target);
+	}
+};
+
+template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
+struct glm_mat_type_information {
+
+	constexpr static std::size_t size = Columns * Alignment, alignment = Alignment, array_size = size;
+
+	static void copy(const T &value, void *target) {
+		uint8_t *bytes(reinterpret_cast<uint8_t *>(target));
+		for (std::size_t column = 0; column < Columns; ++column) {
+			std::memcpy(bytes, glm::value_ptr(value[column]), Size);
+			bytes += alignment;
 		}
-	};
-	template<typename T, std::size_t Size, std::size_t Alignment>
-	constexpr std::size_t glm_vec_type_information<T, Size, Alignment>::size;
-	template<typename T, std::size_t Size, std::size_t Alignment>
-	constexpr std::size_t glm_vec_type_information<T, Size, Alignment>::alignment;
+	}
+};
 
-	template<> struct primitive_type_information<glm::vec2>
-		: glm_vec_type_information<glm::vec2, sizeof(float) * 2> {};
-	template<> struct primitive_type_information<glm::vec3>
-		: glm_vec_type_information<glm::vec3, sizeof(float) * 3, sizeof(float) * 4> {};
-	template<> struct primitive_type_information<glm::vec4>
-		: glm_vec_type_information<glm::vec4, sizeof(float) * 4> {};
-	template<> struct primitive_type_information<glm::ivec2>
-		: glm_vec_type_information<glm::ivec2, sizeof(int32_t) * 2> {};
-	template<> struct primitive_type_information<glm::ivec3>
-		: glm_vec_type_information<glm::ivec3, sizeof(int32_t) * 3, sizeof(float) * 4> {};
-	template<> struct primitive_type_information<glm::ivec4>
-		: glm_vec_type_information<glm::ivec4, sizeof(int32_t) * 4> {};
-	template<> struct primitive_type_information<glm::uvec2>
-		: glm_vec_type_information<glm::uvec2, sizeof(uint32_t) * 2> {};
-	template<> struct primitive_type_information<glm::uvec3>
-		: glm_vec_type_information<glm::uvec3, sizeof(uint32_t) * 3, sizeof(float) * 4> {};
-	template<> struct primitive_type_information<glm::uvec4>
-		: glm_vec_type_information<glm::uvec4, sizeof(uint32_t) * 4> {};
-	template<> struct primitive_type_information<glm::bvec2>
-		: glm_vec_type_information<glm::bvec2, sizeof(bool) * 2> {};
-	template<> struct primitive_type_information<glm::bvec3>
-		: glm_vec_type_information<glm::bvec3, sizeof(bool) * 3, sizeof(bool) * 4> {};
-	template<> struct primitive_type_information<glm::bvec4>
-		: glm_vec_type_information<glm::bvec4, sizeof(bool) * 4> {};
+template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
+constexpr std::size_t glm_mat_type_information<T, Size, Alignment, Columns>::size;
+template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
+constexpr std::size_t glm_mat_type_information<T, Size, Alignment, Columns>::alignment;
 
-	// TODO(gardell): Write test!
-	// TODO(gardell): Alignment is dependent on std140/std430!
-	template<typename T, std::size_t Size>
-	struct primitive_type_information<std::array<T, Size>> {
-		constexpr static std::size_t alignment = primitive_type_information<T>::alignment,
-			element_size = primitive_type_information<T>::size,
-			size = Size * alignment;
-
-		static void copy(const T &value, void *target) {
-			uint8_t *bytes(reinterpret_cast<uint8_t *>(target));
-			for (std::size_t column = 0; column < Size; ++column) {
-				std::memcpy(bytes, glm::value_ptr(value[column]), element_size);
-				bytes += alignment;
-			}
-		}
-	};
-
-	template<typename... Ts>
-	struct primitive_type_information<std::tuple<Ts...>> {
-
-	};
-
-	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
-	struct glm_mat_type_information {
-
-		constexpr static std::size_t size = Columns * Alignment, alignment = Alignment;
-
-		static void copy(const T &value, void *target) {
-			uint8_t *bytes(reinterpret_cast<uint8_t *>(target));
-			for (std::size_t column = 0; column < Columns; ++column) {
-				std::memcpy(bytes, glm::value_ptr(value[column]), Size);
-				bytes += alignment;
-			}
-		}
-	};
-
-	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
-	constexpr std::size_t glm_mat_type_information<T, Size, Alignment, Columns>::size;
-	template<typename T, std::size_t Size, std::size_t Alignment, std::size_t Columns>
-	constexpr std::size_t glm_mat_type_information<T, Size, Alignment, Columns>::alignment;
-
-	template<> struct primitive_type_information<glm::mat2>
-		: glm_mat_type_information<glm::mat2, sizeof(float) * 2, sizeof(float) * 2, 2> {};
-	template<> struct primitive_type_information<glm::mat2x3>
-		: glm_mat_type_information<glm::mat2x3, sizeof(float) * 3, sizeof(float) * 4, 2> {};
-	template<> struct primitive_type_information<glm::mat2x4>
-		: glm_mat_type_information<glm::mat2x4, sizeof(float) * 4, sizeof(float) * 4, 2> {};
-	template<> struct primitive_type_information<glm::mat3x2>
-		: glm_mat_type_information<glm::mat3x2, sizeof(float) * 2, sizeof(float) * 2, 3> {};
-	template<> struct primitive_type_information<glm::mat3>
-		: glm_mat_type_information<glm::mat3, sizeof(float) * 3, sizeof(float) * 4, 3> {};
-	template<> struct primitive_type_information<glm::mat3x4>
-		: glm_mat_type_information<glm::mat3x4, sizeof(float) * 4, sizeof(float) * 4, 3> {};
-	template<> struct primitive_type_information<glm::mat4>
-		: glm_mat_type_information<glm::mat4, sizeof(float) * 4, sizeof(float) * 4, 4> {};
-	template<> struct primitive_type_information<glm::mat4x2>
-		: glm_mat_type_information<glm::mat4x2, sizeof(float) * 2, sizeof(float) * 2, 4> {};
-	template<> struct primitive_type_information<glm::mat4x3>
-		: glm_mat_type_information<glm::mat4x3, sizeof(float) * 3, sizeof(float) * 4, 4> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::mat2>
+	: glm_mat_type_information<glm::mat2, sizeof(float) * 2, sizeof(float) * 2, 2> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::mat2x3>
+	: glm_mat_type_information<glm::mat2x3, sizeof(float) * 3, sizeof(float) * 4, 2> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::mat2x4>
+	: glm_mat_type_information<glm::mat2x4, sizeof(float) * 4, sizeof(float) * 4, 2> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::mat3x2>
+	: glm_mat_type_information<glm::mat3x2, sizeof(float) * 2, sizeof(float) * 2, 3> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::mat3>
+	: glm_mat_type_information<glm::mat3, sizeof(float) * 3, sizeof(float) * 4, 3> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::mat3x4>
+	: glm_mat_type_information<glm::mat3x4, sizeof(float) * 4, sizeof(float) * 4, 3> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::mat4>
+	: glm_mat_type_information<glm::mat4, sizeof(float) * 4, sizeof(float) * 4, 4> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::mat4x2>
+	: glm_mat_type_information<glm::mat4x2, sizeof(float) * 2, sizeof(float) * 2, 4> {};
+template<memory_layout layout> struct primitive_type_information<layout, glm::mat4x3>
+	: glm_mat_type_information<glm::mat4x3, sizeof(float) * 3, sizeof(float) * 4, 4> {};
 
 }  // namespace internal
 
