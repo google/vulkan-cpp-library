@@ -257,29 +257,6 @@ int main(int argc, const char **argv) {
 		std::ref(instance), std::ref(device), std::ref(queue),
 		VkExtent2D{ 500, 500 }, VK_FORMAT_A8B8G8R8_UINT_PACK32, "Cube demo"));
 
-	vcc::render_pass::render_pass_type render_pass(vcc::render_pass::create(
-		std::ref(device),
-		{
-			VkAttachmentDescription{ 0, vcc::window::get_format(window),
-				VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR,
-				VK_ATTACHMENT_STORE_OP_STORE, VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
-			VkAttachmentDescription{ 0, VK_FORMAT_D16_UNORM,
-				VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR,
-				VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL }
-		},
-		{
-			vcc::render_pass::subpass_description_type{
-				{}, { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL } }, {},
-				{ 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL }, {}
-			}
-		}, {}));
-
 	vcc::shader_module::shader_module_type vert_shader_module(
 		vcc::shader_module::create(std::ref(device),
 #if defined(__ANDROID__) || defined(ANDROID)
@@ -301,54 +278,12 @@ int main(int argc, const char **argv) {
 
 	vcc::pipeline_cache::pipeline_cache_type pipeline_cache(
 		vcc::pipeline_cache::create(std::ref(device)));
-	vcc::pipeline::pipeline_type pipeline(
-		vcc::pipeline::create_graphics(std::ref(device), pipeline_cache, 0,
-		{
-			vcc::pipeline::shader_stage(VK_SHADER_STAGE_VERTEX_BIT,
-				std::ref(vert_shader_module), "main"),
-			vcc::pipeline::shader_stage(VK_SHADER_STAGE_FRAGMENT_BIT,
-				std::ref(frag_shader_module), "main")
-		},
-		vcc::pipeline::vertex_input_state{
-			{
-				VkVertexInputBindingDescription{ 0, sizeof(glm::vec4) * 2,
-					VK_VERTEX_INPUT_RATE_VERTEX }
-			},
-			{
-				VkVertexInputAttributeDescription{ 0, 0,
-					VK_FORMAT_R32G32B32_SFLOAT, 0 },
-				VkVertexInputAttributeDescription{ 1, 0,
-					VK_FORMAT_R32G32_SFLOAT, sizeof(glm::vec4) }
-			}
-		},
-		vcc::pipeline::input_assembly_state
-			{VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_FALSE },
-		vcc::pipeline::viewport_state(1, 1),
-		vcc::pipeline::rasterization_state{ VK_FALSE, VK_FALSE,
-			VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE,
-			VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_FALSE, 0, 0, 0, 0 },
-		vcc::pipeline::multisample_state{ VK_SAMPLE_COUNT_1_BIT,
-			VK_FALSE, 0,{}, VK_FALSE, VK_FALSE },
-		vcc::pipeline::depth_stencil_state{
-			VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS_OR_EQUAL, VK_FALSE, VK_FALSE,
-			{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
-				VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
-			{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
-				VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
-			0, 0 },
-		vcc::pipeline::color_blend_state{ VK_FALSE, VK_LOGIC_OP_CLEAR,
-			{ VkPipelineColorBlendAttachmentState{ VK_FALSE, VK_BLEND_FACTOR_ZERO,
-				VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD,
-				VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
-				VK_BLEND_OP_ADD, 0xF } },
-			{ 0, 0, 0, 0 } },
-		vcc::pipeline::dynamic_state{ { VK_DYNAMIC_STATE_VIEWPORT,
-			VK_DYNAMIC_STATE_SCISSOR } },
-		std::ref(pipeline_layout), std::ref(render_pass), 0));
 
 	vcc::command_pool::command_pool_type cmd_pool(vcc::command_pool::create(
 		std::ref(device), 0, vcc::queue::get_family_index(queue)));
 	std::vector<vcc::command_buffer::command_buffer_type> command_buffers;
+	vcc::render_pass::render_pass_type render_pass;
+	vcc::pipeline::pipeline_type pipeline;
 
 	const float camera_scroll_delta_multiplier(.01f);
 	float start_camera_distance = 6.f;
@@ -366,6 +301,74 @@ int main(int argc, const char **argv) {
 			std::vector<std::shared_ptr<vcc::image::image_type>> &&swapchain_images) {
 			projection_matrix = glm::perspective(45.f,
 				float(extent.width) / extent.height, 1.f, 100.f);
+
+			render_pass = vcc::render_pass::create(
+				std::ref(device),
+				{
+					VkAttachmentDescription{ 0, format,
+						VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR,
+						VK_ATTACHMENT_STORE_OP_STORE, VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+						VK_ATTACHMENT_STORE_OP_DONT_CARE,
+						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
+					VkAttachmentDescription{ 0, VK_FORMAT_D16_UNORM,
+						VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR,
+						VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+						VK_ATTACHMENT_STORE_OP_DONT_CARE,
+						VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+						VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL }
+				},
+				{
+					vcc::render_pass::subpass_description_type{
+						{}, { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL } }, {},
+						{ 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL }, {}
+					}
+				}, {});
+
+			pipeline = vcc::pipeline::create_graphics(
+				std::ref(device), pipeline_cache, 0,
+				{
+					vcc::pipeline::shader_stage(VK_SHADER_STAGE_VERTEX_BIT,
+						std::ref(vert_shader_module), "main"),
+					vcc::pipeline::shader_stage(VK_SHADER_STAGE_FRAGMENT_BIT,
+						std::ref(frag_shader_module), "main")
+				},
+				vcc::pipeline::vertex_input_state{
+					{
+						VkVertexInputBindingDescription{ 0, sizeof(glm::vec4) * 2,
+							VK_VERTEX_INPUT_RATE_VERTEX }
+					},
+					{
+						VkVertexInputAttributeDescription{ 0, 0,
+							VK_FORMAT_R32G32B32_SFLOAT, 0 },
+						VkVertexInputAttributeDescription{ 1, 0,
+							VK_FORMAT_R32G32_SFLOAT, sizeof(glm::vec4) }
+					}
+				},
+				vcc::pipeline::input_assembly_state
+					{VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_FALSE },
+				vcc::pipeline::viewport_state(1, 1),
+				vcc::pipeline::rasterization_state{ VK_FALSE, VK_FALSE,
+					VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE,
+					VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_FALSE, 0, 0, 0, 0 },
+				vcc::pipeline::multisample_state{ VK_SAMPLE_COUNT_1_BIT,
+					VK_FALSE, 0,{}, VK_FALSE, VK_FALSE },
+				vcc::pipeline::depth_stencil_state{
+					VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS_OR_EQUAL, VK_FALSE, VK_FALSE,
+					{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
+						VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
+					{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
+						VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
+					0, 0 },
+				vcc::pipeline::color_blend_state{ VK_FALSE, VK_LOGIC_OP_CLEAR,
+					{ VkPipelineColorBlendAttachmentState{ VK_FALSE, VK_BLEND_FACTOR_ZERO,
+						VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD,
+						VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
+						VK_BLEND_OP_ADD, 0xF } },
+					{ 0, 0, 0, 0 } },
+				vcc::pipeline::dynamic_state{ { VK_DYNAMIC_STATE_VIEWPORT,
+					VK_DYNAMIC_STATE_SCISSOR } },
+				std::ref(pipeline_layout), std::ref(render_pass), 0);
 
 			command_buffers = vcc::command_buffer::allocate(std::ref(device),
 				std::ref(cmd_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY,
@@ -399,8 +402,7 @@ int main(int argc, const char **argv) {
 			vcc::queue::wait_idle(queue);
 
 			for (std::size_t i = 0; i < swapchain_images.size(); ++i) {
-				auto framebuffer(vcc::framebuffer::create(std::ref(device),
-					std::ref(render_pass),
+				auto framebuffer(vcc::framebuffer::create(std::ref(device), std::ref(render_pass),
 					{
 						vcc::image_view::create(swapchain_images[i],
 							{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }),

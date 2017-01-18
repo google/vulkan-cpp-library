@@ -93,7 +93,6 @@ struct input_callbacks_type {
 };
 
 struct window_type {
-	friend VkFormat get_format(const window_type &window);
 	friend window_type create(
 #ifdef _WIN32
 		HINSTANCE hinstance,
@@ -189,10 +188,6 @@ private:
 	VkColorSpaceKHR color_space;
 	command_pool::command_pool_type cmd_pool;
 };
-
-inline VkFormat get_format(const window_type &window) {
-	return window.format;
-}
 
 VCC_LIBRARY window_type create(
 #ifdef _WIN32

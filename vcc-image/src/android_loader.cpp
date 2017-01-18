@@ -53,7 +53,7 @@ VkFormat android_format(AndroidBitmapFormat format) {
 }
 
 image::image_type create(
-	const type::supplier<vcc::queue::queue_type> &queue, VkImageCreateFlags flags,
+	const type::supplier<const vcc::queue::queue_type> &queue, VkImageCreateFlags flags,
 	VkImageUsageFlags usage, VkFormatFeatureFlags feature_flags,
 	VkSharingMode sharingMode, const std::vector<uint32_t> &queueFamilyIndices,
 	JNIEnv *env, jobject context, const char *resource_identifier) {
@@ -129,7 +129,7 @@ image::image_type create(
 
 	const VkFormat format(android_format(AndroidBitmapFormat(info.format)));
 	const VkExtent3D extent{ info.width, info.height, 1 };
-	const type::supplier<device::device_type> device(
+	const type::supplier<const device::device_type> device(
 		vcc::internal::get_parent(*queue));
 	image::image_type image(image::create(device, 0, VK_IMAGE_TYPE_2D,
 		format, extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR,
