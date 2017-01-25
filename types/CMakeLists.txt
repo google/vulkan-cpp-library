@@ -20,7 +20,6 @@ set(TYPES_INCLUDES
   "include/type/internal.h"
   "include/type/transform.h"
   "include/type/memory.h"
-  "include/type/merge.h"
   "include/type/revision.h"
   "include/type/supplier.h"
 )
