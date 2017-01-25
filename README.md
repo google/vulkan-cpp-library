@@ -85,14 +85,10 @@ Samples include an OpenVR example. This simple demo renders the models of the co
 ##Install
 ###Linux/XCB
 `cmake .` downloads all the dependencies needed. `cmake --build .` compiles the libraries and samples. 
-There seem to be an issue with the multi threaded renderer with xcb. To force single threaded drawing use
-`cmake -DXCB_SINGLE_THREAD_DRAWING:BOOL=true .`
 ###Android
-Install `Android Studio` and the `NDK`. `SDK 24` is required. Import the root project directory. Initial building and synchronizing will take a very long time, as it will download the dependency projects needed.
+Install `Android Studio` and the `NDK`. `SDK 25` is required. Import the root project directory. Initial building and synchronizing will take a very long time, as it will download the dependency projects needed.
 
 **Note:** Textures are copied to the `assets/` and `res/` folders of the respective projects. However, `*.spv` compiled shaders are not generated. These must be copied to the `assets/` folder. 
-To compile and install the library and samples, run:
-`ANDROID_NDK_HOME=/#your-path#/android-ndk-r11c/ ANDROID_HOME=/#your-path#/android-sdk-linux/ ./gradlew installDebug`
 ###Visual Studio 2015
 Only 2015 is supported. The C++11 support in previous versions is not sufficient.
 `cmake -DVULKAN_SDK_DIR:PATH=<path-to-vulkan-sdk> .` downloads all the dependencies and sets up the projects.
