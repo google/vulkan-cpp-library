@@ -171,7 +171,9 @@ std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer
 						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
 					}
 				}));
-		vcc::queue::submit(window.present_queue, {}, { command_buffer }, {});
+		vcc::fence::fence_type fence(vcc::fence::create(window.device));
+		vcc::queue::submit(window.present_queue, {}, { command_buffer }, {}, fence);
+		vcc::fence::wait(*window.device, { fence }, true);
 
 		vcc::command_buffer::command_buffer_type pre_draw_command(std::move(
 			vcc::command_buffer::allocate(window.device, std::ref(window.cmd_pool),

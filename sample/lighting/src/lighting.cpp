@@ -283,7 +283,7 @@ int main(int argc, const char **argv) {
 				vcc::pipeline::viewport_state(1, 1),
 				vcc::pipeline::rasterization_state{ VK_FALSE, VK_FALSE,
 					VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE,
-					VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_FALSE, 0, 0, 0, 0 },
+					VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_FALSE, 0, 0, 0, 1 },
 				vcc::pipeline::multisample_state{ VK_SAMPLE_COUNT_1_BIT, VK_FALSE, 0,
 					{}, VK_FALSE, VK_FALSE },
 				vcc::pipeline::depth_stencil_state{
