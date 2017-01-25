@@ -729,23 +729,20 @@ int run(window_type &window, const swapchain_create_callback_type &swapchain_cre
 				break;
 			case APP_CMD_INIT_WINDOW:
 				// The window is being shown, get it ready.
-				if (app.window != NULL) {
-					vcc::window::initialize(window, app.window);
-					extent = { (uint32_t) ANativeWindow_getWidth(app.window),
-							   (uint32_t) ANativeWindow_getHeight(app.window) };
-					swapchain = swapchain::swapchain_type();
-					std::tie(swapchain, pre_draw_commands, post_draw_commands) = resize(window, extent,
-						swapchain_create_callback, swapchain_destroy_callback, swapchain);
-				}
+				extent = { (uint32_t) ANativeWindow_getWidth(app.window),
+						(uint32_t) ANativeWindow_getHeight(app.window) };
+				vcc::window::initialize(window, app.window);
+				std::tie(swapchain, pre_draw_commands, post_draw_commands) = resize(window, extent,
+					swapchain_create_callback, swapchain_destroy_callback, swapchain);
 				break;
 			case APP_CMD_GAINED_FOCUS:
 				running = true;
 				render_thread = std::thread([&]() {
 					while (running) {
-						draw(window, swapchain, pre_draw_commands,
-							 post_draw_commands, image_acquired_semaphore, present_semaphore,
-							 draw_semaphore, draw_callback, swapchain_create_callback, swapchain_destroy_callback,
-							 extent);
+						draw(window, swapchain, pre_draw_commands, post_draw_commands,
+							image_acquired_semaphore, present_semaphore, draw_semaphore,
+							draw_callback, swapchain_create_callback, swapchain_destroy_callback,
+							extent);
 					}
 				});
 				break;
@@ -758,6 +755,9 @@ int run(window_type &window, const swapchain_create_callback_type &swapchain_cre
 				if (render_thread.joinable()) {
 					render_thread.join();
 				}
+				swapchain = swapchain::swapchain_type();
+				pre_draw_commands.clear();
+				post_draw_commands.clear();
 				break;
 		}
 	});
