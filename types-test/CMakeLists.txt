@@ -19,7 +19,6 @@ set(TYPES_TEST_SRCS
   "src/merge_type_test.cpp"
   "src/serialize_type_test.cpp"
   "src/transform_type_test.cpp"
-  "src/view_type_test.cpp"
   "src/storage_type_test.cpp"
 )
 

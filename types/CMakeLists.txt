@@ -22,7 +22,6 @@ set(TYPES_INCLUDES
   "include/type/memory.h"
   "include/type/merge.h"
   "include/type/revision.h"
-  "include/type/view.h"
   "include/type/supplier.h"
 )
 
