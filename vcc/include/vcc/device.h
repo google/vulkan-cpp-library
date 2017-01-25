@@ -44,8 +44,7 @@ struct device_type
 
 private:
 	device_type(VkDevice device, VkPhysicalDevice physical_device)
-		: internal::movable_destructible<VkDevice, vkDestroyDevice>(device),
-		  physical_device(physical_device) {}
+		: movable_destructible(device), physical_device(physical_device) {}
 
 	internal::handle_type<VkPhysicalDevice> physical_device;
 };

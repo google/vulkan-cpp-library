@@ -107,9 +107,11 @@ pipeline_type create_graphics(const type::supplier<const device::device_type> &d
 
     VkPipelineViewportStateCreateInfo viewport_state =
 		{VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, NULL, 0};
-	viewport_state.viewportCount = (uint32_t) viewportState.viewports.size();
+	viewport_state.viewportCount = !viewportState.viewports.empty()
+		? (uint32_t) viewportState.viewports.size() : viewportState.viewport_count;
 	viewport_state.pViewports = viewportState.viewports.data();
-	viewport_state.scissorCount = (uint32_t) viewportState.scissors.size();
+	viewport_state.scissorCount = !viewportState.viewports.empty()
+		? (uint32_t) viewportState.scissors.size() : viewportState.scissor_count;
 	viewport_state.pScissors = viewportState.scissors.data();
 	create.pViewportState = &viewport_state;
 

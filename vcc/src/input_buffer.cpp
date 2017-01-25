@@ -40,30 +40,28 @@ bool flush(const input_buffer_type &buffer) {
 
 bool flush(const queue::queue_type &queue, const input_buffer_type &buffer) {
 	if (flush(buffer)) {
-		// TODO(gardell): Introduce flush_type storing pool and command.
-		type::supplier<const device::device_type> device(vcc::internal::get_parent(queue));
+		std::unique_lock<std::mutex> lock(buffer.mutex);
+		type::supplier<const device::device_type> device(vcc::internal::get_parent(buffer.buffer));
 		command_pool::command_pool_type command_pool(command_pool::create(device,
 			VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, queue::get_family_index(queue)));
-		command_buffer::command_buffer_type cmd(std::move(command_buffer::allocate(device,
-			std::ref(command_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
+		command_buffer::command_buffer_type command_buffer(std::move(command_buffer::allocate(
+			device, std::ref(command_pool), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
 		command::compile(
-			vcc::command::build(std::ref(cmd), VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-				VK_FALSE, 0, 0),
+			vcc::command::build(std::ref(command_buffer),
+				VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, VK_FALSE, 0, 0),
 			command::pipeline_barrier{ VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
-				{},
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, {},
 				{
 					command::buffer_memory_barrier_type{
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
 						VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
 						std::ref(buffer.buffer) }
-				},
-				{}
-		});
+				}, {}
+			});
 		// Must block until our command finish executing.
-		fence::fence_type fence(vcc::fence::create(vcc::internal::get_parent(queue)));
-		queue::submit(queue, {}, { cmd }, {}, fence);
-		fence::wait(*device, { fence }, true, std::chrono::nanoseconds::max());
+		fence::fence_type fence(vcc::fence::create(device));
+		queue::submit(queue, {}, { command_buffer }, {}, fence);
+		fence::wait(*device, { fence }, true);
 		return true;
 	} else {
 		return false;
