@@ -21,9 +21,20 @@
 namespace vcc {
 namespace descriptor_pool {
 
+namespace internal {
+
+template<typename T>
+VkDescriptorPoolCreateFlags get_flags(const T &pool) {
+	return pool.flags;
+}
+
+} // namespace internal
+
 struct descriptor_pool_type
-	: public internal::movable_destructible_with_parent<VkDescriptorPool,
+	: public vcc::internal::movable_destructible_with_parent<VkDescriptorPool,
 		const device::device_type, vkDestroyDescriptorPool> {
+	template<typename T>
+	friend VkDescriptorPoolCreateFlags internal::get_flags(const T &);
 	friend VCC_LIBRARY descriptor_pool_type create(
 		const type::supplier<const device::device_type> &, VkDescriptorPoolCreateFlags, uint32_t,
 		const std::vector<VkDescriptorPoolSize> &);
@@ -36,8 +47,11 @@ struct descriptor_pool_type
 
 private:
 	descriptor_pool_type(VkDescriptorPool instance,
-		const type::supplier<const device::device_type> &parent)
-		: movable_destructible_with_parent(instance, parent) {}
+		const type::supplier<const device::device_type> &parent,
+		VkDescriptorPoolCreateFlags flags)
+		: movable_destructible_with_parent(instance, parent), flags(flags) {}
+
+	VkDescriptorPoolCreateFlags flags;
 };
 
 VCC_LIBRARY descriptor_pool_type create(

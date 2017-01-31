@@ -373,6 +373,7 @@ protected:
 		instance = std::move(copy.instance);
 		pool = std::move(copy.pool);
 		parent = std::move(copy.parent);
+		destructible = copy.destructible;
 	}
 	movable_allocated_with_pool_parent2 &operator=(
 		const movable_allocated_with_pool_parent2 &) = delete;
@@ -383,6 +384,7 @@ protected:
 		instance = std::move(copy.instance);
 		pool = std::move(copy.pool);
 		parent = std::move(copy.parent);
+		destructible = copy.destructible;
 		return *this;
 	}
 
@@ -392,17 +394,18 @@ protected:
 
 	movable_allocated_with_pool_parent2(T instance,
 		const type::supplier<PoolT> &pool,
-		const type::supplier<ParentT> &parent)
-		: instance(instance), pool(pool), parent(parent) {}
+		const type::supplier<ParentT> &parent, bool destructible)
+		: instance(instance), pool(pool), parent(parent), destructible(destructible) {}
 
 private:
 	handle_type<T> instance;
 	type::supplier<PoolT> pool;
 	type::supplier<ParentT> parent;
+	bool destructible;
 	mutable std::mutex mutex;
 
 	void destroy() {
-		if (instance && pool && parent) {
+		if (destructible && instance && pool && parent) {
 			std::lock(internal::get_mutex(*pool), mutex);
 			std::lock_guard<std::mutex> pool_lock(internal::get_mutex(*pool), std::adopt_lock);
 			std::lock_guard<std::mutex> lock(mutex, std::adopt_lock);

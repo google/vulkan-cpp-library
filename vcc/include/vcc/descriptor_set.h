@@ -45,7 +45,9 @@ struct descriptor_set_type : public internal::movable_allocated_with_pool_parent
 	descriptor_set_type(VkDescriptorSet instance,
 		const type::supplier<const descriptor_pool::descriptor_pool_type> &pool,
 		const type::supplier<const device::device_type> &parent)
-		: movable_allocated_with_pool_parent2(instance, pool, parent) {}
+		: movable_allocated_with_pool_parent2(instance, pool, parent,
+			!!(descriptor_pool::internal::get_flags(*pool)
+				& VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT)) {}
 
 	internal::hook_map_type<std::pair<uint32_t, uint32_t>,
 		util::hash_pair<uint32_t, uint32_t>, const queue::queue_type &> pre_execute_callbacks;

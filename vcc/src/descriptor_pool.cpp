@@ -21,16 +21,15 @@ namespace descriptor_pool {
 descriptor_pool_type create(const type::supplier<const device::device_type> &device,
 		VkDescriptorPoolCreateFlags flags, uint32_t maxSets,
 		const std::vector<VkDescriptorPoolSize> &poolSizes) {
-	VkDescriptorPoolCreateInfo create = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, NULL};
+	VkDescriptorPoolCreateInfo create = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, NULL};
 	create.flags = flags;
 	create.maxSets = maxSets;
 	create.poolSizeCount = (uint32_t) poolSizes.size();
 	create.pPoolSizes = poolSizes.empty() ? NULL : &poolSizes.front();
 	VkDescriptorPool descriptor_pool;
-	VKCHECK(vkCreateDescriptorPool(internal::get_instance(*device), &create,
-		NULL, &descriptor_pool));
-	return descriptor_pool_type(descriptor_pool, device);
+	VKCHECK(vkCreateDescriptorPool(vcc::internal::get_instance(*device), &create, NULL,
+		&descriptor_pool));
+	return descriptor_pool_type(descriptor_pool, device, flags);
 }
 
 }  // namespace descriptor_pool
