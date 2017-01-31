@@ -41,7 +41,8 @@ typedef std::function<void(VkFormat)> initialize_callback_type;
 typedef std::function<void(VkExtent2D, VkFormat,
 	std::vector<std::shared_ptr<image::image_type>> &&)> swapchain_create_callback_type;
 typedef std::function<void()> swapchain_destroy_callback_type;
-typedef std::function<void(uint32_t)> draw_callback_type;
+typedef std::function<void(uint32_t, const vcc::semaphore::semaphore_type &,
+	const vcc::semaphore::semaphore_type &)> draw_callback_type;
 
 enum mouse_button_type {
 	mouse_button_left = 0,
@@ -116,19 +117,17 @@ struct window_type {
 		xcb_connection_t *
 #endif
 		);
-	friend std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer_type>,
-		std::vector<command_buffer::command_buffer_type>> resize(window_type &, VkExtent2D,
+	friend swapchain::swapchain_type resize(window_type &, VkExtent2D,
 			const swapchain_create_callback_type &, const swapchain_destroy_callback_type &,
 			swapchain::swapchain_type &);
-	friend void draw(window_type &window, swapchain::swapchain_type &,
-		std::vector<command_buffer::command_buffer_type> &,
-		std::vector<command_buffer::command_buffer_type> &, vcc::semaphore::semaphore_type &,
+	friend void draw(window_type &, swapchain::swapchain_type &,
 		vcc::semaphore::semaphore_type &, vcc::semaphore::semaphore_type &,
 		const draw_callback_type &, const swapchain_create_callback_type &,
 		const swapchain_destroy_callback_type &, VkExtent2D);
 	friend int run(window_type &, const swapchain_create_callback_type &,
 		const swapchain_destroy_callback_type &, const draw_callback_type &,
 		const input_callbacks_type &);
+	friend const queue::queue_type &get_present_queue(const window_type &);
 
 	window_type() = default;
 	window_type(const window_type&) = delete;
@@ -208,6 +207,10 @@ VCC_LIBRARY int run(window_type &window,
 	const swapchain_destroy_callback_type &swapchain_destroy_callback,
 	const draw_callback_type &draw_callback,
 	const input_callbacks_type &input_callbacks = input_callbacks_type());
+
+inline const queue::queue_type &get_present_queue(const window_type &window) {
+	return window.present_queue;
+}
 
 }  // namespace window
 }  // namespace vcc
