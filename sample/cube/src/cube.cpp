@@ -398,6 +398,8 @@ int main(int argc, const char **argv) {
 			vcc::queue::submit(queue, {}, { command_buffer }, {});
 			vcc::queue::wait_idle(queue);
 
+			const vcc::queue::queue_type &present_queue(vcc::window::get_present_queue(window));
+
 			for (std::size_t i = 0; i < swapchain_images.size(); ++i) {
 				auto framebuffer(vcc::framebuffer::create(std::ref(device), std::ref(render_pass),
 					{
@@ -408,6 +410,21 @@ int main(int argc, const char **argv) {
 					}, extent, 1));
 				vcc::command::compile(
 					vcc::command::build(std::ref(command_buffers[i]), 0, VK_FALSE, 0, 0),
+					vcc::command::pipeline_barrier(
+						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, {}, {},
+						{
+							vcc::command::image_memory_barrier{ 0,
+								VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
+								| VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+								VK_IMAGE_LAYOUT_UNDEFINED,
+								VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+								vcc::queue::get_family_index(present_queue),
+								vcc::queue::get_family_index(queue),
+								swapchain_images[i],
+								{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+							}
+						}),
 					vcc::command::render_pass(std::ref(render_pass),
 						std::move(framebuffer), VkRect2D{ { 0, 0 }, extent },
 						{
@@ -430,17 +447,36 @@ int main(int argc, const char **argv) {
 						vcc::command::set_scissor{
 							0, { { { 0, 0 }, extent } } },
 						vcc::command::draw_indexed{
-							(uint32_t)indices.size(), 1, 0, 0, 0 }));
+							(uint32_t)indices.size(), 1, 0, 0, 0 }),
+					vcc::command::pipeline_barrier(
+						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+						VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, {}, {},
+						{
+							vcc::command::image_memory_barrier{
+								VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+								0,
+								VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+								VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+								vcc::queue::get_family_index(queue),
+								vcc::queue::get_family_index(present_queue),
+								swapchain_images[i],
+								{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } }
+						}));
 			}
 		},
 		[]() {},
-		[&](uint32_t index) {
+		[&](uint32_t index, const vcc::semaphore::semaphore_type &wait_semaphore,
+				const vcc::semaphore::semaphore_type &signal_semaphore) {
 			glm::mat4 view_matrix(glm::lookAt(glm::vec3(0, 0, camera_distance),
 				glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
 			type::write(projection_modelview_matrix)[0] = projection_matrix
 				* view_matrix * glm::rotate(angle.y, glm::vec3(1, 0, 0))
 				* glm::rotate(angle.x, glm::vec3(0, 1, 0));
-			vcc::queue::submit(queue, {}, { command_buffers[index] }, {});
+			vcc::queue::submit(queue,
+				{
+					vcc::queue::wait_semaphore{ std::ref(wait_semaphore),
+						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }
+				}, { command_buffers[index] }, { signal_semaphore });
 		},
 		vcc::window::input_callbacks_type()
 		.set_mouse_down_callback([&](

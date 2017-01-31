@@ -93,9 +93,7 @@ input_callbacks_type &input_callbacks_type::set_touch_move_callback(
 const char *class_name = "vcc-vulkan";
 #endif // WIN32
 
-std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer_type>,
-	std::vector<command_buffer::command_buffer_type>> resize(
-		window_type &window, VkExtent2D extent,
+swapchain::swapchain_type resize(window_type &window, VkExtent2D extent,
 		const swapchain_create_callback_type &swapchain_create_callback,
 		const swapchain_destroy_callback_type &swapchain_destroy_callback,
 		swapchain::swapchain_type &old_swapchain) {
@@ -145,89 +143,44 @@ std::tuple<swapchain::swapchain_type, std::vector<command_buffer::command_buffer
 	std::vector<vcc::image::image_type> images(vcc::swapchain::get_images(swapchain));
 	std::vector<std::shared_ptr<vcc::image::image_type>> swapchain_images;
 	swapchain_images.reserve(images.size());
-	std::vector<command_buffer::command_buffer_type> pre_draw_commands, post_draw_commands;
-	pre_draw_commands.reserve(images.size());
-	post_draw_commands.reserve(images.size());
-	for (vcc::image::image_type &si : images) {
-		std::shared_ptr<vcc::image::image_type> swapchain_image(
-			std::make_shared<vcc::image::image_type>(std::move(si)));
 
-		// Render loop will expect image to have been used before and in VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-		// layout and will change to COLOR_ATTACHMENT_OPTIMAL, so init the image to that state
-		vcc::command_buffer::command_buffer_type command_buffer(std::move(
-		  vcc::command_buffer::allocate(window.device, std::ref(window.cmd_pool),
-			  VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-		vcc::command::compile(vcc::command::build(std::ref(command_buffer), 0, VK_FALSE, 0, 0),
-			vcc::command::pipeline_barrier(
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
-				{
-					vcc::command::image_memory_barrier{ 0, 0,
-						VK_IMAGE_LAYOUT_UNDEFINED,
-						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-						queue::get_family_index(*window.graphics_queue),
-						queue::get_family_index(window.present_queue),
-						swapchain_image,
-						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
-					}
-				}));
-		vcc::fence::fence_type fence(vcc::fence::create(window.device));
-		vcc::queue::submit(window.present_queue, {}, { command_buffer }, {}, fence);
-		vcc::fence::wait(*window.device, { fence }, true);
+	vcc::command_buffer::command_buffer_type command_buffer(std::move(
+		vcc::command_buffer::allocate(window.device, std::ref(window.cmd_pool),
+			VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
+	{
+		vcc::command::build_type build(
+			vcc::command::build(std::ref(command_buffer), 0, VK_FALSE, 0, 0));
+		for (vcc::image::image_type &si : images) {
+			std::shared_ptr<vcc::image::image_type> swapchain_image(
+				std::make_shared<vcc::image::image_type>(std::move(si)));
 
-		vcc::command_buffer::command_buffer_type pre_draw_command(std::move(
-			vcc::command_buffer::allocate(window.device, std::ref(window.cmd_pool),
-				VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-		vcc::command::compile(vcc::command::build(std::ref(pre_draw_command), 0, VK_FALSE, 0, 0),
-			vcc::command::pipeline_barrier(
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, {}, {},
-				{
-					vcc::command::image_memory_barrier{ 0,
-						VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
-						| VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-						VK_IMAGE_LAYOUT_UNDEFINED,
-						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-						queue::get_family_index(window.present_queue),
-						queue::get_family_index(*window.graphics_queue),
-						swapchain_image,
-						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
-					}
-				}));
+			// Render loop will expect image to have been used before and in VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+			// layout and will change to COLOR_ATTACHMENT_OPTIMAL, so init the image to that state
+			vcc::command::compile(build,
+				vcc::command::pipeline_barrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, {}, {},
+					{
+						vcc::command::image_memory_barrier{ 0, 0,
+							VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+							queue::get_family_index(*window.graphics_queue),
+							queue::get_family_index(window.present_queue),
+							swapchain_image, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+						}
+					}));
 
-		vcc::command_buffer::command_buffer_type post_draw_command(std::move(
-			vcc::command_buffer::allocate(window.device, std::ref(window.cmd_pool),
-				VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).front()));
-		vcc::command::compile(vcc::command::build(std::ref(post_draw_command), 0, VK_FALSE, 0, 0),
-			vcc::command::pipeline_barrier(
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, {}, {},
-				{
-					vcc::command::image_memory_barrier{
-						VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-						0,
-						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-						queue::get_family_index(*window.graphics_queue),
-						queue::get_family_index(window.present_queue),
-						swapchain_image,
-						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } }
-				}));
-
-		swapchain_images.push_back(std::move(swapchain_image));
-		pre_draw_commands.push_back(std::move(pre_draw_command));
-		post_draw_commands.push_back(std::move(post_draw_command));
+			swapchain_images.push_back(std::move(swapchain_image));
+		}
 	}
+	vcc::fence::fence_type fence(vcc::fence::create(window.device));
+	vcc::queue::submit(window.present_queue, {}, { command_buffer }, {}, fence);
+	vcc::fence::wait(*window.device, { fence }, true);
+
 	swapchain_create_callback(extent, window.format, std::move(swapchain_images));
-	return std::make_tuple(std::move(swapchain), std::move(pre_draw_commands),
-		std::move(post_draw_commands));
+	return swapchain;
 }
 
 void draw(window_type &window, swapchain::swapchain_type &swapchain,
-		std::vector<command_buffer::command_buffer_type> &pre_draw_commands,
-		std::vector<command_buffer::command_buffer_type> &post_draw_commands,
 		vcc::semaphore::semaphore_type &image_acquired_semaphore,
-		vcc::semaphore::semaphore_type &present_semaphore,
 		vcc::semaphore::semaphore_type &draw_semaphore,
 		const draw_callback_type &draw_callback,
 		const swapchain_create_callback_type &swapchain_create_callback,
@@ -241,8 +194,8 @@ void draw(window_type &window, swapchain::swapchain_type &swapchain,
 		case VK_ERROR_OUT_OF_DATE_KHR:
 			// swapchain is out of date (e.g. the window was resized) and
 			// must be recreated:
-			std::tie(swapchain, pre_draw_commands, post_draw_commands) = resize(window, extent,
-				swapchain_create_callback, swapchain_destroy_callback, swapchain);
+			swapchain = resize(window, extent, swapchain_create_callback,
+				swapchain_destroy_callback, swapchain);
 			break;
 		case VK_SUBOPTIMAL_KHR:
 			VCC_PRINT("VK_SUBOPTIMAL_KHR");
@@ -257,30 +210,20 @@ void draw(window_type &window, swapchain::swapchain_type &swapchain,
 			break;
 		}
 	} while (err == VK_ERROR_OUT_OF_DATE_KHR);
-	// Assume the command buffer has been run on current_buffer before so
-	// we need to set the image layout back to COLOR_ATTACHMENT_OPTIMAL
-	vcc::queue::submit(*window.graphics_queue,
-		{ vcc::queue::wait_semaphore{ std::ref(image_acquired_semaphore),
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } },
-		{ pre_draw_commands[current_buffer] }, {});
 
-	draw_callback(current_buffer);
+	draw_callback(current_buffer, image_acquired_semaphore, draw_semaphore);
 
-  vcc::queue::submit(*window.graphics_queue, {}, {}, { draw_semaphore });
-
-	vcc::queue::submit(window.present_queue,
-		{ vcc::queue::wait_semaphore{ std::ref(draw_semaphore),
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } },
-		{ post_draw_commands[current_buffer] }, { present_semaphore });
-
-	err = vcc::queue::present(window.present_queue, { present_semaphore }, { swapchain },
+	err = vcc::queue::present(window.present_queue, { draw_semaphore }, { swapchain },
 		{ current_buffer });
+
+	vcc::queue::wait_idle(window.present_queue);
+
 	switch (err) {
 	case VK_ERROR_OUT_OF_DATE_KHR:
 		// swapchain is out of date (e.g. the window was resized) and
 		// must be recreated:
-		std::tie(swapchain, pre_draw_commands, post_draw_commands) = resize(window, extent,
-			swapchain_create_callback, swapchain_destroy_callback, swapchain);
+		swapchain = resize(window, extent, swapchain_create_callback, swapchain_destroy_callback,
+			swapchain);
 		break;
 	case VK_SUBOPTIMAL_KHR:
 		// swapchain is not as optimal as it could be, but the platform's
@@ -585,9 +528,7 @@ int run(window_type &window, const swapchain_create_callback_type &swapchain_cre
 	SetWindowLongPtr(window.window, GWLP_USERDATA, (LONG_PTR)&wnd_proc);
 
 	swapchain::swapchain_type swapchain;
-	std::vector<command_buffer::command_buffer_type> pre_draw_commands, post_draw_commands;
 	vcc::semaphore::semaphore_type image_acquired_semaphore(vcc::semaphore::create(window.device)),
-		present_semaphore(vcc::semaphore::create(window.device)),
 		draw_semaphore(vcc::semaphore::create(window.device));
 	std::atomic_bool running(true);
 	std::thread render_thread([&]() {
@@ -597,13 +538,11 @@ int run(window_type &window, const swapchain_create_callback_type &swapchain_cre
 			if (resize_extent.width != 0 && resize_extent.height != 0
 				&& (resize_extent.width != draw_extent.width
 					|| resize_extent.height != draw_extent.height)) {
-				std::tie(swapchain, pre_draw_commands, post_draw_commands) = resize(
-					window, resize_extent, swapchain_create_callback,
+				swapchain = resize(window, resize_extent, swapchain_create_callback,
 					swapchain_destroy_callback, swapchain);
 				draw_extent = resize_extent;
 			}
-			draw(window, swapchain, pre_draw_commands, post_draw_commands,
-				image_acquired_semaphore, present_semaphore, draw_semaphore, draw_callback,
+			draw(window, swapchain, image_acquired_semaphore, draw_semaphore, draw_callback,
 				swapchain_create_callback, swapchain_destroy_callback, draw_extent);
 		}
 	});
@@ -631,7 +570,6 @@ int run(window_type &window, const swapchain_create_callback_type &swapchain_cre
 	std::atomic_bool running(true);
 	std::atomic<VkExtent2D> extent(window.extent);
 
-	std::vector<command_buffer::command_buffer_type> pre_draw_commands, post_draw_commands;
   for (;;) {
     std::unique_ptr<xcb_generic_event_t, decltype(&free)> event(
       xcb_wait_for_event(window.connection.get()), &free);
@@ -640,14 +578,13 @@ int run(window_type &window, const swapchain_create_callback_type &swapchain_cre
       const xcb_configure_notify_event_t *cfg =
         (const xcb_configure_notify_event_t *) event.get();
       extent = VkExtent2D{ cfg->width, cfg->height };
-      std::tie(swapchain, pre_draw_commands, post_draw_commands) =
-          resize(window, extent, swapchain_create_callback, swapchain_destroy_callback, swapchain);
+      swapchain = resize(window, extent, swapchain_create_callback, swapchain_destroy_callback,
+		  swapchain);
       break;
     }
   }
 
   vcc::semaphore::semaphore_type image_acquired_semaphore(vcc::semaphore::create(window.device)),
-  present_semaphore(vcc::semaphore::create(window.device)),
     draw_semaphore(vcc::semaphore::create(window.device));
 
   std::thread event_thread([&]() {
@@ -700,13 +637,12 @@ int run(window_type &window, const swapchain_create_callback_type &swapchain_cre
   while (running) {
     VkExtent2D resize_extent(extent.exchange({ 0, 0 }));
     if (resize_extent.width != 0 && resize_extent.height != 0) {
-      std::tie(swapchain, pre_draw_commands, post_draw_commands) = resize(window, extent,
-        swapchain_create_callback, swapchain_destroy_callback, swapchain);
+      swapchain = resize(window, extent, swapchain_create_callback, swapchain_destroy_callback,
+		  swapchain);
       draw_extent = resize_extent;
     }
-    draw(window, swapchain, pre_draw_commands, post_draw_commands, image_acquired_semaphore,
-      present_semaphore, draw_semaphore, draw_callback, swapchain_create_callback,
-      swapchain_destroy_callback, draw_extent);
+    draw(window, swapchain, image_acquired_semaphore, draw_semaphore, draw_callback,
+		swapchain_create_callback, swapchain_destroy_callback, draw_extent);
   }
 
   event_thread.join();
@@ -715,9 +651,7 @@ int run(window_type &window, const swapchain_create_callback_type &swapchain_cre
 
 #elif defined(__ANDROID__)
 	swapchain::swapchain_type swapchain;
-	std::vector<command_buffer::command_buffer_type> pre_draw_commands, post_draw_commands;
 	vcc::semaphore::semaphore_type image_acquired_semaphore(vcc::semaphore::create(window.device)),
-			present_semaphore(vcc::semaphore::create(window.device)),
 			draw_semaphore(vcc::semaphore::create(window.device));
 	std::atomic_bool running;
 	std::thread render_thread;
@@ -732,15 +666,14 @@ int run(window_type &window, const swapchain_create_callback_type &swapchain_cre
 				extent = { (uint32_t) ANativeWindow_getWidth(app.window),
 						(uint32_t) ANativeWindow_getHeight(app.window) };
 				vcc::window::initialize(window, app.window);
-				std::tie(swapchain, pre_draw_commands, post_draw_commands) = resize(window, extent,
-					swapchain_create_callback, swapchain_destroy_callback, swapchain);
+				swapchain = resize(window, extent, swapchain_create_callback,
+					swapchain_destroy_callback, swapchain);
 				break;
 			case APP_CMD_GAINED_FOCUS:
 				running = true;
 				render_thread = std::thread([&]() {
 					while (running) {
-						draw(window, swapchain, pre_draw_commands, post_draw_commands,
-							image_acquired_semaphore, present_semaphore, draw_semaphore,
+						draw(window, swapchain, image_acquired_semaphore, draw_semaphore,
 							draw_callback, swapchain_create_callback, swapchain_destroy_callback,
 							extent);
 					}
@@ -756,8 +689,6 @@ int run(window_type &window, const swapchain_create_callback_type &swapchain_cre
 					render_thread.join();
 				}
 				swapchain = swapchain::swapchain_type();
-				pre_draw_commands.clear();
-				post_draw_commands.clear();
 				break;
 		}
 	});
